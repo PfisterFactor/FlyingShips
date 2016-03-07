@@ -1,8 +1,10 @@
 package com.MrPf1ster.FlyingShips
 
-import net.minecraft.block.state.{IBlockState, BlockState}
+
+import net.minecraft.block.state.IBlockState
 import net.minecraft.util.BlockPos
 import net.minecraft.world.World
+
 import scala.collection.mutable.{Map => mMap}
 
 /**
@@ -10,6 +12,7 @@ import scala.collection.mutable.{Map => mMap}
   */
 class BlocksStorage() {
   private var BlockMap: mMap[BlockPos,BlockStorage] = mMap()
+
 
   def getBlockMap = BlockMap
   def setBlock(pos:BlockPos,state:IBlockState) = BlockMap.put(pos,new BlockStorage(state))
@@ -31,7 +34,7 @@ class BlocksStorage() {
       val shipPos = correspondence._1
       val worldPos = correspondence._2
       val storage = getBlock(shipPos)
-      if (storage != None)
+      if (storage.isDefined)
         storage.get.writeToWorld(world,worldPos)
     })
   }

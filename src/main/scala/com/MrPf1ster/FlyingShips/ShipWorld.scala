@@ -4,12 +4,10 @@ import com.MrPf1ster.FlyingShips.entities.ShipEntity
 import net.minecraft.block.Block
 import net.minecraft.entity.EntityHanging
 import net.minecraft.nbt.NBTTagCompound
-import net.minecraft.profiler.Profiler
 import net.minecraft.tileentity.TileEntity
-import net.minecraft.util.BlockPos
-import net.minecraft.world.chunk.IChunkProvider
-import net.minecraft.world.{EnumSkyBlock, WorldProvider, World}
-import net.minecraft.world.storage.{WorldInfo, ISaveHandler}
+import net.minecraft.util.{BlockPos, Vec3i}
+import net.minecraft.world.{EnumSkyBlock, World}
+
 
 /**
   * Created by EJ on 3/2/2016.
@@ -31,9 +29,11 @@ class ShipWorld(originWorld:World, originPos:BlockPos, blockSet:Set[BlockPos],sh
   // THIS MOST LIKELY DOES NOT WORK
   val TileEntities : Set[TileEntity] = {
     BlockSet
-      .filter(block => {OriginWorld.getTileEntity(block) != null}) // Get rid of non TileEntities
+      .filter(blockPos => {
+        OriginWorld.getTileEntity(getWorldPos(blockPos)) != null
+      }) // Get rid of non TileEntities
       .map(blockPos => { // Create copy of all tile entities
-        val tileEntity = OriginWorld.getTileEntity(blockPos)
+    val tileEntity = OriginWorld.getTileEntity(getWorldPos(blockPos))
         def tileEntityPos = tileEntity.getPos
         val relativePosition = new BlockPos(tileEntityPos.getX - OriginPos.getX, tileEntityPos.getY - OriginPos.getY , tileEntityPos.getZ - OriginPos.getZ )
         var copyTileEntity:TileEntity = null
@@ -47,17 +47,18 @@ class ShipWorld(originWorld:World, originPos:BlockPos, blockSet:Set[BlockPos],sh
           copyTileEntity.validate()
         }
         catch {
-          case ex:Exception => println(s"There was an error moving TileEntity ${tileEntity.getClass.getName} at ${tileEntityPos}") // Error reporting
+          case ex: Exception => println(s"There was an error moving TileEntity ${tileEntity.getClass.getName} at $tileEntityPos") // Error reporting
         }
         copyTileEntity // Return our copied to ship tile entity for the map function
 
       })
   }
   // Go away ;-;
+
   val HangingEntities : Set[EntityHanging] = null
   override def getBlockState(pos:BlockPos) = {
     val got = BlockStore.getBlock(pos)
-    if (got != None)
+    if (got.isDefined)
       got.get.BlockState // Got get got get got get
     else
       Block.getStateById(0)
@@ -68,10 +69,11 @@ class ShipWorld(originWorld:World, originPos:BlockPos, blockSet:Set[BlockPos],sh
       x.getPos == pos
     }).orNull
   }
-  override def getLightFromNeighbors(pos:BlockPos) = 20
+
+  override def getLightFromNeighbors(pos: BlockPos) = 15
   override def getLightFromNeighborsFor(typ: EnumSkyBlock, pos:BlockPos) = {
     if (typ == EnumSkyBlock.SKY)
-      20
+      15
     else
       4
   }
@@ -79,6 +81,8 @@ class ShipWorld(originWorld:World, originPos:BlockPos, blockSet:Set[BlockPos],sh
 
   def isValid = !BlockSet.isEmpty
   def needsRenderUpdate = false // TODO: Implement later
+  def getWorldPos(pos: BlockPos) = OriginPos.add(pos.getX, pos.getY, pos.getZ)
 
+  def getRelativePos(pos: BlockPos) = pos.subtract(new Vec3i(OriginPos.getX, OriginPos.getY, OriginPos.getZ))
 
 }

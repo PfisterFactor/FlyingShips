@@ -1,17 +1,13 @@
 package com.MrPf1ster.FlyingShips.blocks
 
-import com.MrPf1ster.FlyingShips.FlyingShips
 import com.MrPf1ster.FlyingShips.entities.ShipEntity
 import com.MrPf1ster.FlyingShips.util.BlockUtils
-
 import net.minecraft.block.Block
 import net.minecraft.block.material.Material
 import net.minecraft.block.state.IBlockState
 import net.minecraft.creativetab.CreativeTabs
-import net.minecraft.entity.EntityLivingBase
 import net.minecraft.entity.player.EntityPlayer
-import net.minecraft.item.ItemBlock
-import net.minecraft.util.{EnumFacing, BlockPos}
+import net.minecraft.util.{BlockPos, EnumFacing}
 import net.minecraft.world.World
 import net.minecraftforge.fml.common.registry.GameRegistry
 
@@ -33,13 +29,16 @@ class ShipCreatorBlock extends Block(Material.wood) {
   }
 
   override def onBlockActivated(worldIn:World, pos: BlockPos, state: IBlockState, playerIn: EntityPlayer,side: EnumFacing,hitX: Float, hitY: Float, hitZ: Float) : Boolean = {
-    val mySet = time { BlockUtils.findAllBlocksConnected(worldIn,pos) }
+    val blocksConnected = BlockUtils.findAllBlocksConnected(worldIn, pos)
+    if (blocksConnected.size <= 100) {
+      val shipEntity = new ShipEntity(pos, worldIn, blocksConnected, pos)
+      shipEntity.setPosition(pos.getX, pos.getY, pos.getZ)
 
-    val s = new ShipEntity(pos,worldIn,mySet,pos,playerIn)
-    s.setPosition(pos.getX,pos.getY,pos.getZ)
+      worldIn.spawnEntityInWorld(shipEntity)
 
-    worldIn.spawnEntityInWorld(s)
-
+      // Destroy all the blocks
+      blocksConnected.foreach(pos => worldIn.destroyBlock(pos, false))
+    }
     true
   }
 

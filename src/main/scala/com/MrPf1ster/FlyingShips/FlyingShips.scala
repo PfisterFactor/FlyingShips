@@ -4,23 +4,24 @@ package com.MrPf1ster.FlyingShips
   * Created by MrPf1ster
   */
 import com.MrPf1ster.FlyingShips.blocks.ShipCreatorBlock
-
-import net.minecraft.client.Minecraft
-import net.minecraft.client.renderer.entity.RenderItem
-import net.minecraft.client.resources.model.ModelResourceLocation
-import net.minecraft.init.Blocks
-import net.minecraft.item.Item
+import net.minecraft.util.BlockPos
 import net.minecraftforge.fml.common.Mod
 import net.minecraftforge.fml.common.Mod.EventHandler
-import net.minecraftforge.fml.common.event.{FMLPostInitializationEvent, FMLPreInitializationEvent, FMLInitializationEvent}
+import net.minecraftforge.fml.common.event.{FMLInitializationEvent, FMLPostInitializationEvent, FMLPreInitializationEvent}
 
 
 @Mod(modid = FlyingShips.MOD_ID, name = "Flying Ships", version = FlyingShips.VERSION, modLanguage = "scala")
 object FlyingShips {
+
+  implicit class BlockPosExtension(pos: BlockPos) {
+    def -(pos2: BlockPos) = new BlockPos(pos.getX - pos2.getX, pos.getY - pos2.getY, pos.getZ - pos2.getZ)
+  }
+
   final val MOD_ID = "flyingships"
   final val VERSION = "0.01"
   var shipCreatorBlock: ShipCreatorBlock = null
   //var shipCreatorBlockItem = null
+
 
   @EventHandler
   def preInit(event: FMLPreInitializationEvent) = {

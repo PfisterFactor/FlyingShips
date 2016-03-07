@@ -1,9 +1,8 @@
 package com.MrPf1ster.FlyingShips.util
 
-import net.minecraft.util.{EnumFacing, BlockPos}
+import net.minecraft.util.{BlockPos, EnumFacing}
 import net.minecraft.world.World
 
-import scala.collection.mutable
 import scala.collection.mutable.{Queue => mQueue, Set => mSet}
 
 
@@ -11,7 +10,7 @@ import scala.collection.mutable.{Queue => mQueue, Set => mSet}
   * Created by EJ on 2/20/2016.
   */
 object BlockUtils {
-  def loadInClasses : Unit = {
+  def loadInClasses = {
     def loader = ClassLoader.getSystemClassLoader
     def className(a: Any): String = a.getClass.getName
 
@@ -47,7 +46,7 @@ object BlockUtils {
     world.getBlockState(pos).getBlock
     // Enqueue the first block, aka the ship controller block, for processing
     blockQueue.enqueue((pos, None)) // Starting direction is null
-    while (!blockQueue.isEmpty && blockSet.size < 10000) {
+    while (blockQueue.nonEmpty && blockSet.size < 10000) {
       // Max amount of blocks hardcoded for now, TODO: Move to config file
       // Get the next blockSet in queue
       val currentBlock = blockQueue.dequeue()
@@ -64,7 +63,6 @@ object BlockUtils {
 
       }
     }
-    println("findAllBlocksConnected call:")
     // Return our blocks as an array
     blockSet.toSet
   }

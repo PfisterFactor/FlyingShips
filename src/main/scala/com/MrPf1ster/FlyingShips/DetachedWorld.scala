@@ -1,16 +1,15 @@
 package com.MrPf1ster.FlyingShips
 
 import java.io.File
+
 import net.minecraft.nbt.NBTTagCompound
 import net.minecraft.profiler.Profiler
 import net.minecraft.util.BlockPos
 import net.minecraft.world.chunk.IChunkProvider
 import net.minecraft.world.chunk.storage.IChunkLoader
-import net.minecraft.world.{WorldProvider, World}
-import net.minecraft.world.storage.{IPlayerFileData, WorldInfo, ISaveHandler}
-import net.minecraftforge.fml.relauncher.Side
-import scala.tools.nsc.doc.model.Entity
-import net.minecraftforge.fml.relauncher.SideOnly
+import net.minecraft.world.storage.{IPlayerFileData, ISaveHandler, WorldInfo}
+import net.minecraft.world.{World, WorldProvider}
+import net.minecraftforge.fml.relauncher.{Side, SideOnly}
 
 /**
   * Created by EJ on 3/2/2016.
@@ -41,14 +40,14 @@ object SaveHandler extends ISaveHandler {
 
 class DetachedWorld(realWorld:World, worldName:String)
   extends World(SaveHandler, realWorld.getWorldInfo, realWorld.provider, new Profiler(), realWorld.isRemote) {
-  override def getRenderDistanceChunks: Int = 1 //TODO: I don't actually know if this needs to be 1
+  override def getRenderDistanceChunks: Int = 0
 
   override def createChunkProvider(): IChunkProvider = null
 
 
 
   @SideOnly(Side.CLIENT)
-  override def getLightBrightness(pos:BlockPos) = 0
+  override def getLightBrightness(pos: BlockPos) = 15
 
   override def getBiomeGenForCoords(pos:BlockPos) = null
   override def getBiomeGenForCoordsBody(pos:BlockPos) = null
