@@ -1,5 +1,4 @@
 # FlyingShips
-A minecraft 1.8.9 mod that allows users to fly their creations around the world!
 This mod is mainly a learning experience for me with Forge and (very non-functional like) Scala, so I apologize for any spaghetti code or redundent statements.
 
 # Build
