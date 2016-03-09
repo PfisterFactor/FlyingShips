@@ -101,9 +101,9 @@ class ShipRender(rm:RenderManager) extends Render[ShipEntity](rm) {
     def tessellator = Tessellator.getInstance()
     def worldRenderer = tessellator.getWorldRenderer
 
-    val i: Int = shipWorld.OriginPos.getX
-    val j: Int = shipWorld.OriginPos.getY
-    val k: Int = shipWorld.OriginPos.getZ
+    val i: Int = shipWorld.Ship.ShipBlockPos.getX
+    val j: Int = shipWorld.Ship.ShipBlockPos.getY
+    val k: Int = shipWorld.Ship.ShipBlockPos.getZ
     worldRenderer.setTranslation(-i,-j,-k)
     worldRenderer.begin(GL11.GL_QUADS, DefaultVertexFormats.BLOCK)
 
@@ -124,7 +124,7 @@ class ShipRender(rm:RenderManager) extends Render[ShipEntity](rm) {
     // Get the model of the block
     def bakedModel = blockRendererDispatcher.getModelFromBlockState(blockState, shipWorld, pos)
 
-    // If the block is a tile entity, don't render it. We do that later (currently not implemented)
+    // If the block is a tile entity, don't render it. We'll do that later
     val te = shipWorld.getTileEntity(pos)
     if (te == null || TileEntityRendererDispatcher.instance.getSpecialRenderer(te) == null) {
       // If our block is a normal block
@@ -143,8 +143,8 @@ class ShipRender(rm:RenderManager) extends Render[ShipEntity](rm) {
     block.setBlockBoundsBasedOnState(shipWorld, pos)
 
     val blockBB = block.getSelectedBoundingBox(shipWorld, pos).expand(delta, delta, delta)
-    //println(blockBB)
-    Tessellator.getInstance().getWorldRenderer.setTranslation(-shipWorld.OriginPos.getX, -shipWorld.OriginPos.getY, -shipWorld.OriginPos.getZ)
+    // println(blockBB)
+    Tessellator.getInstance().getWorldRenderer.setTranslation(-shipWorld.Ship.ShipBlockPos.getX, -shipWorld.Ship.ShipBlockPos.getY, -shipWorld.Ship.ShipBlockPos.getZ)
     drawBoundingBox(blockBB)
     Tessellator.getInstance().getWorldRenderer.setTranslation(0, 0, 0)
 
@@ -152,7 +152,7 @@ class ShipRender(rm:RenderManager) extends Render[ShipEntity](rm) {
 
   def debugRenderShip(shipEntity: ShipEntity) = {
     def bb = shipEntity.getRelativeBoundingBox
-    Tessellator.getInstance().getWorldRenderer.setTranslation(-shipEntity.ShipWorld.OriginPos.getX, -shipEntity.ShipWorld.OriginPos.getY, -shipEntity.ShipWorld.OriginPos.getZ)
+    Tessellator.getInstance().getWorldRenderer.setTranslation(-shipEntity.ShipBlockPos.getX, -shipEntity.ShipBlockPos.getY, -shipEntity.ShipBlockPos.getZ)
     drawBoundingBox(bb)
     Tessellator.getInstance().getWorldRenderer.setTranslation(0, 0, 0)
   }

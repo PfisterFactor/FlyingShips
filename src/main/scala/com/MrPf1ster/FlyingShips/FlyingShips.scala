@@ -3,7 +3,6 @@ package com.MrPf1ster.FlyingShips
 /**
   * Created by MrPf1ster
   */
-import com.MrPf1ster.FlyingShips.blocks.ShipCreatorBlock
 import net.minecraft.util.BlockPos
 import net.minecraftforge.fml.common.Mod
 import net.minecraftforge.fml.common.Mod.EventHandler
@@ -17,10 +16,9 @@ object FlyingShips {
     def -(pos2: BlockPos) = new BlockPos(pos.getX - pos2.getX, pos.getY - pos2.getY, pos.getZ - pos2.getZ)
   }
 
+
   final val MOD_ID = "flyingships"
   final val VERSION = "0.01"
-  var shipCreatorBlock: ShipCreatorBlock = null
-  //var shipCreatorBlockItem = null
 
 
   @EventHandler

@@ -1,12 +1,10 @@
 package com.MrPf1ster.FlyingShips.entities
 
-import java.lang.Math.{max, min}
-
 import com.MrPf1ster.FlyingShips.ShipWorld
 import net.minecraft.entity.Entity
 import net.minecraft.entity.player.EntityPlayer
 import net.minecraft.nbt.NBTTagCompound
-import net.minecraft.util.{AxisAlignedBB, BlockPos, Vec3}
+import net.minecraft.util._
 import net.minecraft.world.World
 /**
   * Created by EJ on 2/21/2016.
@@ -19,49 +17,21 @@ class ShipEntity(pos: BlockPos, world: World, blockSet: Set[BlockPos], shipBlock
   if (blockSet.isEmpty) {
     this.setDead()
   }
+  posX = pos.getX
+  posY = pos.getY
+  posZ = pos.getZ
 
-  val ShipWorld = new ShipWorld(world,pos,blockSet,this)
-  val ShipBlockPos: BlockPos = shipBlockPos
-  val InteractionHandler = new ShipInteractionHandler()
+  var ShipBlockPos: BlockPos = shipBlockPos
+  val ShipWorld: ShipWorld = new ShipWorld(world, shipBlockPos, blockSet, this)
 
-  private val AABB = {
-    if (this.isDead) {
-      new AxisAlignedBB(0, 0, 0, 0, 0, 0)
-    }
-    else {
-      var minX = Int.MaxValue
-      var minY = Int.MaxValue
-      var minZ = Int.MaxValue
-      var maxX = Int.MinValue
-      var maxY = Int.MinValue
-      var maxZ = Int.MinValue
-
-      ShipWorld.BlockSet.foreach(pos => {
-        minX = min(minX, pos.getX)
-        minY = min(minY, pos.getY)
-        minZ = min(minZ, pos.getZ)
-
-        maxX = max(maxX, pos.getX)
-        maxY = max(maxY, pos.getY)
-        maxZ = max(maxZ, pos.getZ)
+  val InteractionHandler: ShipInteractionHandler = new ShipInteractionHandler
+  private var boundingBox = ShipWorld.genBoundingBox()
+  private var relativeBoundingBox = ShipWorld.genRelativeBoundingBox()
 
 
-      })
+  override def getEntityBoundingBox = boundingBox
 
-      val minPos = ShipWorld.getWorldPos(new BlockPos(minX, minY, minZ))
-      val maxPos = ShipWorld.getWorldPos(new BlockPos(maxX + 1, maxY + 1, maxZ + 1))
-
-      new AxisAlignedBB(minPos, maxPos)
-    }
-  }
-
-  override def getEntityBoundingBox = AABB
-
-  def getRelativeBoundingBox = {
-    val relativeMinPos = ShipWorld.getRelativePos(new BlockPos(AABB.minX, AABB.minY, AABB.minZ))
-    val relativeMaxPos = ShipWorld.getRelativePos(new BlockPos(AABB.maxX, AABB.maxY, AABB.maxZ))
-    new AxisAlignedBB(relativeMinPos, relativeMaxPos)
-  }
+  def getRelativeBoundingBox = relativeBoundingBox
 
 
   override def writeEntityToNBT(tagCompound: NBTTagCompound): Unit = {
@@ -73,11 +43,33 @@ class ShipEntity(pos: BlockPos, world: World, blockSet: Set[BlockPos], shipBlock
   }
 
   override def entityInit(): Unit = {
-    println("init entity")
-
   }
   override def onUpdate() = {
+    setPosition(posX + 0.1, posY + 0.1, posZ + 0.1)
+  }
 
+  override def setPosition(x: Double, y: Double, z: Double) = {
+    if (boundingBox != null) {
+      // Get delta...
+      val deltaX = x - posX
+      val deltaY = y - posY
+      val deltaZ = z - posZ
+
+      // ..and offset the bounding box
+      boundingBox = boundingBox.offset(deltaX, deltaY, deltaZ)
+      ShipBlockPos = ShipBlockPos.add(deltaX, deltaY, deltaZ)
+    }
+    // Update positions
+    posX = x
+    posY = y
+    posZ = z
+
+  }
+
+  def getWorldPos(relativePos: BlockPos) = relativePos.add(ShipBlockPos)
+
+  def getRelativePos(worldPos: BlockPos) = {
+    worldPos.subtract(ShipBlockPos)
   }
 
   override def canBeCollidedWith = true
