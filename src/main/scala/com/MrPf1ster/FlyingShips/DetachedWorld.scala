@@ -8,7 +8,7 @@ import net.minecraft.util.BlockPos
 import net.minecraft.world.chunk.IChunkProvider
 import net.minecraft.world.chunk.storage.IChunkLoader
 import net.minecraft.world.storage.{IPlayerFileData, ISaveHandler, WorldInfo}
-import net.minecraft.world.{World, WorldProvider}
+import net.minecraft.world.{EnumSkyBlock, World, WorldProvider}
 import net.minecraftforge.fml.relauncher.{Side, SideOnly}
 
 /**
@@ -40,6 +40,15 @@ object SaveHandler extends ISaveHandler {
 
 class DetachedWorld(realWorld:World, worldName:String)
   extends World(SaveHandler, realWorld.getWorldInfo, realWorld.provider, new Profiler(), realWorld.isRemote) {
+
+
+  protected val OriginWorld = realWorld
+
+  playerEntities.addAll(OriginWorld.playerEntities)
+  playerEntities.retainAll(OriginWorld.playerEntities)
+
+
+
   override def getRenderDistanceChunks: Int = 0
 
   override def createChunkProvider(): IChunkProvider = null
@@ -55,4 +64,20 @@ class DetachedWorld(realWorld:World, worldName:String)
   override def getChunkFromChunkCoords(x:Int,z:Int) = null
   override def getProviderName = "Detached World"
   override def isBlockFullCube(pos:BlockPos) = false
+
+  override def isBlockLoaded(pos: BlockPos) = true
+
+
+  override def getLightFromNeighbors(pos: BlockPos) = 15
+
+  override def getLightFromNeighborsFor(typ: EnumSkyBlock, pos: BlockPos) = {
+    if (typ == EnumSkyBlock.SKY)
+      15
+    else
+      4
+  }
+
+
+
+
 }

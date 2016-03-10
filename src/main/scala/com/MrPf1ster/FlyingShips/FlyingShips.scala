@@ -19,6 +19,9 @@ object FlyingShips {
 
   final val MOD_ID = "flyingships"
   final val VERSION = "0.01"
+  val flyingShipEventHandlers = new FlyingShipEventHandlers
+
+
 
 
   @EventHandler

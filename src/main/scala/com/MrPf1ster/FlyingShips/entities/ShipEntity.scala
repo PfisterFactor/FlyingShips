@@ -14,9 +14,6 @@ class ShipEntity(pos: BlockPos, world: World, blockSet: Set[BlockPos], shipBlock
 
   def this(world: World) = this(new BlockPos(0, 0, 0), world, Set[BlockPos](), new BlockPos(0, 0, 0))
 
-  if (blockSet.isEmpty) {
-    this.setDead()
-  }
   posX = pos.getX
   posY = pos.getY
   posZ = pos.getZ
@@ -45,7 +42,10 @@ class ShipEntity(pos: BlockPos, world: World, blockSet: Set[BlockPos], shipBlock
   override def entityInit(): Unit = {
   }
   override def onUpdate() = {
-    setPosition(posX + 0.1, posY + 0.1, posZ + 0.1)
+    //setPosition(posX + 0.1, posY + 0.1, posZ + 0.1)
+    if (blockSet.isEmpty) {
+      this.setDead
+    }
   }
 
   override def setPosition(x: Double, y: Double, z: Double) = {

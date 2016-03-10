@@ -7,8 +7,8 @@ import net.minecraft.block.Block
 import net.minecraft.entity.EntityHanging
 import net.minecraft.nbt.NBTTagCompound
 import net.minecraft.tileentity.TileEntity
-import net.minecraft.util.{AxisAlignedBB, BlockPos}
-import net.minecraft.world.{EnumSkyBlock, World}
+import net.minecraft.util.{AxisAlignedBB, BlockPos, ITickable}
+import net.minecraft.world.World
 
 
 /**
@@ -23,20 +23,15 @@ class ShipWorld(originWorld:World, originPos:BlockPos, blockSet:Set[BlockPos],sh
   BlockStore.loadFromWorld(originWorld,originPos,blockSet)
   val BlockSet = BlockStore.getBlockMap.keys.toSet
   val OriginPos = originPos
-  val OriginWorld = originWorld
   val Ship = ship
   val BiomeID = OriginWorld.getBiomeGenForCoords(Ship.ShipBlockPos).biomeID
 
-  // THIS MOST LIKELY DOES NOT WORK
-  val TileEntities : Set[TileEntity] = {
+  def genTileEntities: Set[TileEntity] = {
     BlockSet
-      .filter(blockPos => {
-        OriginWorld.getTileEntity(Ship.getWorldPos(blockPos)) != null
-      }) // Get rid of non TileEntities
-      .map(blockPos => { // Create copy of all tile entities
-    val tileEntity = OriginWorld.getTileEntity(Ship.getWorldPos(blockPos))
-        def tileEntityPos = tileEntity.getPos
-      val relativePosition = Ship.getRelativePos(tileEntityPos)
+      .filter(pos => OriginWorld.getTileEntity(Ship.getWorldPos(pos)) != null)
+      .map(tileEntityPos => {
+        def relativePosition = tileEntityPos
+        def tileEntity = OriginWorld.getTileEntity(Ship.getWorldPos(relativePosition))
         var copyTileEntity:TileEntity = null
         try {
           val nbt = new NBTTagCompound
@@ -46,16 +41,19 @@ class ShipWorld(originWorld:World, originPos:BlockPos, blockSet:Set[BlockPos],sh
           copyTileEntity.setWorldObj(this)
           copyTileEntity.setPos(relativePosition)
           copyTileEntity.validate()
+          setTileEntity(copyTileEntity.getPos, copyTileEntity)
         }
         catch {
           case ex: Exception => println(s"There was an error moving TileEntity ${tileEntity.getClass.getName} at $tileEntityPos") // Error reporting
         }
         copyTileEntity // Return our copied to ship tile entity for the map function
-
       })
   }
-  // Go away ;-;
 
+  var TileEntities: Set[TileEntity] = genTileEntities
+
+
+  // Go away ;-;
   val HangingEntities : Set[EntityHanging] = null
 
 
@@ -111,14 +109,19 @@ class ShipWorld(originWorld:World, originPos:BlockPos, blockSet:Set[BlockPos],sh
     }).orNull
   }
 
-  override def getLightFromNeighbors(pos: BlockPos) = 15
-  override def getLightFromNeighborsFor(typ: EnumSkyBlock, pos:BlockPos) = {
-    if (typ == EnumSkyBlock.SKY)
-      15
-    else
-      4
+  override def getClosestPlayer(x: Double, y: Double, z: Double, distance: Double) = {
+    val worldPos = Ship.getWorldPos(new BlockPos(x, y, z))
+    val returnthing = super.getClosestPlayer(worldPos.getX, worldPos.getY, worldPos.getZ, distance)
+    println(returnthing)
+    returnthing
   }
-  //override def getCombinedLight(pos:BlockPos,lightValue:Int) = 0
+
+  override def updateEntities() = {
+    TileEntities
+      .map(te => te.asInstanceOf[ITickable])
+      .foreach(te => te.update())
+  }
+
 
   def isValid = !BlockSet.isEmpty
   def needsRenderUpdate = false // TODO: Implement later
