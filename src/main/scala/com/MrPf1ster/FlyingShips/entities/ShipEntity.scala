@@ -26,7 +26,7 @@ class ShipEntity(pos: BlockPos, world: World, blockSet: Set[BlockPos], shipBlock
   private var relativeBoundingBox = ShipWorld.genRelativeBoundingBox()
 
 
-  override def getEntityBoundingBox = boundingBox
+  override def getEntityBoundingBox = if (ShipWorld.BlockSet.nonEmpty) boundingBox else new AxisAlignedBB(0, 0, 0, 0, 0, 0)
 
   def getRelativeBoundingBox = relativeBoundingBox
 
@@ -43,7 +43,7 @@ class ShipEntity(pos: BlockPos, world: World, blockSet: Set[BlockPos], shipBlock
   }
   override def onUpdate() = {
     //setPosition(posX + 0.1, posY + 0.1, posZ + 0.1)
-    if (blockSet.isEmpty) {
+    if (ShipWorld.BlockSet.isEmpty) {
       this.setDead
     }
   }

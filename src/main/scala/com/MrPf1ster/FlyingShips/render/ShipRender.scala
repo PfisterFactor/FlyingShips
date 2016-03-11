@@ -26,6 +26,7 @@ class ShipRender(rm:RenderManager) extends Render[ShipEntity](rm) {
   override def doRenderShadowAndFire(entity:Entity, x:Double, y:Double, z:Double, yaw:Float,partialTickTime:Float) = {} // No shadow rendering
   override def doRender(entity:ShipEntity,x:Double,y:Double,z:Double,entityYaw:Float,partialTicks:Float) = {
     def shipWorld = entity.ShipWorld
+
     GL11.glPushMatrix()
 
     GL11.glTranslated( x, y, z )
@@ -51,6 +52,8 @@ class ShipRender(rm:RenderManager) extends Render[ShipEntity](rm) {
 
 
     // Render tile entities that have special renders
+
+
     shipWorld.TileEntities
       .filter(te => TileEntityRendererDispatcher.instance.getSpecialRenderer(te) != null)
       .foreach(te => {
@@ -59,6 +62,7 @@ class ShipRender(rm:RenderManager) extends Render[ShipEntity](rm) {
         TileEntityRendererDispatcher.instance.renderTileEntity(te, partialTicks, -1)
         te.setPos(relPos)
       })
+
 
 
 
@@ -132,6 +136,7 @@ class ShipRender(rm:RenderManager) extends Render[ShipEntity](rm) {
     GL11.glLineWidth(4.0F)
     GlStateManager.disableTexture2D
     GlStateManager.depthMask(false)
+
 
     shipWorld.BlockSet.foreach(blockPos => {
       val blockState = shipWorld.getBlockState(blockPos)

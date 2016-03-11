@@ -5,10 +5,13 @@ import java.lang.Math._
 import com.MrPf1ster.FlyingShips.entities.ShipEntity
 import net.minecraft.block.Block
 import net.minecraft.entity.EntityHanging
+import net.minecraft.entity.player.EntityPlayer
 import net.minecraft.nbt.NBTTagCompound
 import net.minecraft.tileentity.TileEntity
 import net.minecraft.util.{AxisAlignedBB, BlockPos, ITickable}
 import net.minecraft.world.World
+
+import scala.collection.mutable.{Set => mSet}
 
 
 /**
@@ -27,6 +30,9 @@ class ShipWorld(originWorld:World, originPos:BlockPos, blockSet:Set[BlockPos],sh
   val BiomeID = OriginWorld.getBiomeGenForCoords(Ship.ShipBlockPos).biomeID
 
   def genTileEntities: Set[TileEntity] = {
+    if (this.Ship.isDead) {
+      return Set()
+    }
     BlockSet
       .filter(pos => OriginWorld.getTileEntity(Ship.getWorldPos(pos)) != null)
       .map(tileEntityPos => {
@@ -54,7 +60,7 @@ class ShipWorld(originWorld:World, originPos:BlockPos, blockSet:Set[BlockPos],sh
 
 
   // Go away ;-;
-  val HangingEntities : Set[EntityHanging] = null
+  val HangingEntities: mSet[EntityHanging] = null
 
 
   def genBoundingBox() = {
@@ -109,17 +115,36 @@ class ShipWorld(originWorld:World, originPos:BlockPos, blockSet:Set[BlockPos],sh
     }).orNull
   }
 
-  override def getClosestPlayer(x: Double, y: Double, z: Double, distance: Double) = {
+  // Spoof player class to send to our getClosestPlayerMethod
+  class SpoofPlayer(player: EntityPlayer)
+    extends EntityPlayer(player.getEntityWorld, player.getGameProfile) {
+    override def isSpectator: Boolean = player.isSpectator
+
+    clonePlayer(player, false)
+  }
+
+
+  // Converts relative pos to world position and calls getClosestPlayer, then creates a spoof player with its relative pos and returns it
+  // Todo: Make less hacky, mods possibly could get screwed up with this
+  override def getClosestPlayer(x: Double, y: Double, z: Double, distance: Double): EntityPlayer = {
+
     val worldPos = Ship.getWorldPos(new BlockPos(x, y, z))
-    val returnthing = super.getClosestPlayer(worldPos.getX, worldPos.getY, worldPos.getZ, distance)
-    println(returnthing)
-    returnthing
+    val player = OriginWorld.getClosestPlayer(worldPos.getX, worldPos.getY, worldPos.getZ, distance)
+
+    if (player == null) return null
+
+
+    val spoofPlayer = new SpoofPlayer(player)
+    def worldPlayerPos = player.getPosition
+    val relativePos = Ship.getRelativePos(worldPlayerPos)
+    spoofPlayer.setPosition(relativePos.getX, relativePos.getY, relativePos.getZ)
+    spoofPlayer
+
   }
 
   override def updateEntities() = {
     TileEntities
-      .map(te => te.asInstanceOf[ITickable])
-      .foreach(te => te.update())
+      .foreach(te => te.asInstanceOf[ITickable].update)
   }
 
 
