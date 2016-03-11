@@ -66,11 +66,11 @@ class ShipEntity(pos: BlockPos, world: World, blockSet: Set[BlockPos], shipBlock
 
   }
 
+  def getWorldPosVec(x:Double,y:Double,z:Double):Vec3 = new Vec3(x + ShipBlockPos.getX,y + ShipBlockPos.getY,z + ShipBlockPos.getZ)
   def getWorldPos(relativePos: BlockPos) = relativePos.add(ShipBlockPos)
 
-  def getRelativePos(worldPos: BlockPos) = {
-    worldPos.subtract(ShipBlockPos)
-  }
+  def getRelativePosVec(x:Double,y:Double,z:Double):Vec3 = new Vec3(x - ShipBlockPos.getX,y - ShipBlockPos.getY,z - ShipBlockPos.getZ)
+  def getRelativePos(worldPos: BlockPos) = worldPos.subtract(ShipBlockPos)
 
   override def canBeCollidedWith = true
 

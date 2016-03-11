@@ -8,7 +8,7 @@ import net.minecraft.entity.EntityHanging
 import net.minecraft.entity.player.EntityPlayer
 import net.minecraft.nbt.NBTTagCompound
 import net.minecraft.tileentity.TileEntity
-import net.minecraft.util.{AxisAlignedBB, BlockPos, ITickable}
+import net.minecraft.util.{Vec3, AxisAlignedBB, BlockPos, ITickable}
 import net.minecraft.world.World
 
 import scala.collection.mutable.{Set => mSet}
@@ -126,25 +126,44 @@ class ShipWorld(originWorld:World, originPos:BlockPos, blockSet:Set[BlockPos],sh
 
   // Converts relative pos to world position and calls getClosestPlayer, then creates a spoof player with its relative pos and returns it
   // Todo: Make less hacky, mods possibly could get screwed up with this
+  /*
   override def getClosestPlayer(x: Double, y: Double, z: Double, distance: Double): EntityPlayer = {
 
-    val worldPos = Ship.getWorldPos(new BlockPos(x, y, z))
-    val player = OriginWorld.getClosestPlayer(worldPos.getX, worldPos.getY, worldPos.getZ, distance)
+    val worldPos:Vec3 = Ship.getWorldPosVec(x,y,z)
+    val player = OriginWorld.getClosestPlayer(worldPos.xCoord, worldPos.yCoord, worldPos.zCoord, distance)
+
 
     if (player == null) return null
 
 
     val spoofPlayer = new SpoofPlayer(player)
-    def worldPlayerPos = player.getPosition
-    val relativePos = Ship.getRelativePos(worldPlayerPos)
-    spoofPlayer.setPosition(relativePos.getX, relativePos.getY, relativePos.getZ)
+
+    def worldPlayerPos = player.getPositionVector
+    val relativePos = Ship.getRelativePosVec(worldPos.xCoord,worldPos.yCoord,worldPos.zCoord)
+
+    spoofPlayer.posX = relativePos.xCoord
+    spoofPlayer.posY = relativePos.yCoord
+    spoofPlayer.posZ = relativePos.zCoord
+
+    println(relativePos)
+
+    println(spoofPlayer.posX)
+    println(spoofPlayer.posY)
+    println(spoofPlayer.posZ)
+
     spoofPlayer
 
   }
+  */
 
   override def updateEntities() = {
     TileEntities
-      .foreach(te => te.asInstanceOf[ITickable].update)
+      .foreach(te => {
+        val relPos = te.getPos
+        te.setPos(Ship.getWorldPos(relPos))
+        te.asInstanceOf[ITickable].update
+        te.setPos(relPos)
+      })
   }
 
 
