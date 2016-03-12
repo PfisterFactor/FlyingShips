@@ -42,10 +42,10 @@ class ShipEntity(pos: BlockPos, world: World, blockSet: Set[BlockPos], shipBlock
   override def entityInit(): Unit = {
   }
   override def onUpdate() = {
-    //setPosition(posX + 0.1, posY + 0.1, posZ + 0.1)
-    if (ShipWorld.BlockSet.isEmpty) {
-      this.setDead
+    if (!ShipWorld.isValid) {
+      this.setDead()
     }
+    setPositionAndRotation(posX, posY, posZ, rotationYaw + 1f, rotationPitch + 0.1f)
   }
 
   override def setPosition(x: Double, y: Double, z: Double) = {
@@ -66,11 +66,12 @@ class ShipEntity(pos: BlockPos, world: World, blockSet: Set[BlockPos], shipBlock
 
   }
 
-  def getWorldPosVec(x:Double,y:Double,z:Double):Vec3 = new Vec3(x + ShipBlockPos.getX,y + ShipBlockPos.getY,z + ShipBlockPos.getZ)
-  def getWorldPos(relativePos: BlockPos) = relativePos.add(ShipBlockPos)
+  override def setPositionAndRotation(x: Double, y: Double, z: Double, yaw: Float, pitch: Float) = {
+    setPosition(x, y, z)
+    rotationYaw = yaw
+    rotationPitch = pitch
+  }
 
-  def getRelativePosVec(x:Double,y:Double,z:Double):Vec3 = new Vec3(x - ShipBlockPos.getX,y - ShipBlockPos.getY,z - ShipBlockPos.getZ)
-  def getRelativePos(worldPos: BlockPos) = worldPos.subtract(ShipBlockPos)
 
   override def canBeCollidedWith = true
 

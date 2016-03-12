@@ -39,8 +39,14 @@ class ShipRender(rm:RenderManager) extends Render[ShipEntity](rm) {
 
     // Render normal blocks and non-special tile entities
     GL11.glCallList(getDisplayList(shipWorld))
-
-
+    // Render tile entities that have special renders
+    shipWorld.TileEntities
+      .filter(pair => TileEntityRendererDispatcher.instance.getSpecialRenderer(pair._2) != null)
+      .foreach(pair => {
+        def uPos = pair._1
+        def te = pair._2
+        TileEntityRendererDispatcher.instance.renderTileEntityAt(te, -(uPos.WorldVecX - 2 * uPos.RelVecX), -(uPos.WorldVecY - 2 * uPos.RelVecY), -(uPos.WorldVecZ - 2 * uPos.RelVecZ), partialTicks, -1)
+      })
 
 
 
@@ -51,17 +57,7 @@ class ShipRender(rm:RenderManager) extends Render[ShipEntity](rm) {
     GL11.glPopMatrix()
 
 
-    // Render tile entities that have special renders
 
-
-    shipWorld.TileEntities
-      .filter(te => TileEntityRendererDispatcher.instance.getSpecialRenderer(te) != null)
-      .foreach(te => {
-        val relPos = te.getPos
-        te.setPos(entity.getWorldPos(relPos))
-        TileEntityRendererDispatcher.instance.renderTileEntity(te, partialTicks, -1)
-        te.setPos(relPos)
-      })
 
 
 
@@ -109,9 +105,9 @@ class ShipRender(rm:RenderManager) extends Render[ShipEntity](rm) {
     worldRenderer.begin(GL11.GL_QUADS, DefaultVertexFormats.BLOCK)
 
 
-    shipWorld.BlockSet.foreach(blockPos => {
-      val blockState = shipWorld.getBlockState(blockPos)
-      renderBlock(shipWorld,blockState,blockPos,worldRenderer)
+    shipWorld.BlockSet.foreach(uPos => {
+      val blockState = shipWorld.getBlockState(uPos.RelativePos)
+      renderBlock(shipWorld, blockState, uPos.RelativePos, worldRenderer)
     })
     worldRenderer.setTranslation(0,0,0)
     tessellator.draw()
@@ -130,24 +126,24 @@ class ShipRender(rm:RenderManager) extends Render[ShipEntity](rm) {
 
   def doDebugRender(shipWorld: ShipWorld) = {
 
-    GlStateManager.enableBlend
+    GlStateManager.enableBlend()
     GlStateManager.tryBlendFuncSeparate(770, 771, 1, 0)
     GlStateManager.color(1.0F, 0.0F, 0.0F, 0.4F)
     GL11.glLineWidth(4.0F)
-    GlStateManager.disableTexture2D
+    GlStateManager.disableTexture2D()
     GlStateManager.depthMask(false)
 
 
-    shipWorld.BlockSet.foreach(blockPos => {
-      val blockState = shipWorld.getBlockState(blockPos)
-      DebugRender.debugRenderBlock(shipWorld, blockState, blockPos)
+    shipWorld.BlockSet.foreach(uPos => {
+      val blockState = shipWorld.getBlockState(uPos.RelativePos)
+      DebugRender.debugRenderBlock(shipWorld, blockState, uPos.RelativePos)
 
     })
     DebugRender.debugRenderShip(shipWorld.Ship)
 
     GlStateManager.depthMask(true)
-    GlStateManager.enableTexture2D
-    GlStateManager.disableBlend
+    GlStateManager.enableTexture2D()
+    GlStateManager.disableBlend()
 
   }
 

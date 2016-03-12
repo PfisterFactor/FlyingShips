@@ -10,7 +10,8 @@ import scala.collection.mutable.{Map => mMap}
 /**
   * Created by EJ on 3/3/2016.
   */
-class BlocksStorage() {
+class BlocksStorage(shipWorld: ShipWorld) {
+
   private var BlockMap: mMap[BlockPos,BlockStorage] = mMap()
 
 
