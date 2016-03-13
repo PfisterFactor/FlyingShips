@@ -3,13 +3,16 @@ package com.MrPf1ster.FlyingShips
 import java.lang.Math._
 
 import com.MrPf1ster.FlyingShips.entities.ShipEntity
+import com.MrPf1ster.FlyingShips.network.BlocksChangedMessage
 import com.MrPf1ster.FlyingShips.util.UnifiedPos
 import net.minecraft.block.Block
+import net.minecraft.block.state.IBlockState
 import net.minecraft.entity.EntityHanging
 import net.minecraft.nbt.NBTTagCompound
 import net.minecraft.tileentity.TileEntity
 import net.minecraft.util.{AxisAlignedBB, BlockPos, ITickable}
 import net.minecraft.world.World
+import net.minecraftforge.fml.common.network.NetworkRegistry.TargetPoint
 
 import scala.collection.mutable.{Set => mSet}
 
@@ -28,6 +31,8 @@ class ShipWorld(originWorld: World, originPos: BlockPos, blockSet: Set[BlockPos]
   BlockStore.loadFromWorld(originWorld, originPos, blockSet)
   val BlockSet = BlockStore.getBlockMap.keys.map(pos => new UnifiedPos(pos, Ship, true)).toSet
   val BiomeID = OriginWorld.getBiomeGenForCoords(Ship.ShipBlockPos).biomeID
+  private var ChangedBlocks: mSet[UnifiedPos] = mSet()
+  private var doRenderUpdate = false
 
   def genTileEntities: Map[UnifiedPos, TileEntity] = {
     if (this.Ship.isDead) {
@@ -45,6 +50,7 @@ class ShipWorld(originWorld: World, originPos: BlockPos, blockSet: Set[BlockPos]
 
           copyTileEntity.setWorldObj(this)
           copyTileEntity.setPos(tileEntityUPos.RelativePos)
+          println(tileEntityUPos.RelativePos)
           copyTileEntity.validate()
           setTileEntity(copyTileEntity.getPos, copyTileEntity)
         }
@@ -111,22 +117,67 @@ class ShipWorld(originWorld: World, originPos: BlockPos, blockSet: Set[BlockPos]
 
   }
 
-  override def getTileEntity(pos: BlockPos) = TileEntities(new UnifiedPos(pos, Ship, true))
+  override def getTileEntity(pos: BlockPos) = TileEntities.get(new UnifiedPos(pos, Ship, true)).orNull
+
 
   override def updateEntities() = {
     TileEntities
       .foreach(pair => {
         def te = pair._2
         def uPos = pair._1
-        te.setPos(uPos.WorldPos)
         te.asInstanceOf[ITickable].update()
-        te.setPos(uPos.RelativePos)
       })
+
+    if (!isRemote) {
+      pushBlockChangesToClient()
+    }
   }
 
+  def pushBlockChangesToClient(): Unit = {
+    if (Ship == null) return
+    if (ChangedBlocks.isEmpty) return
+
+    val message = new BlocksChangedMessage(Ship, ChangedBlocks.map(pos => pos.RelativePos).toArray)
+    val targetPoint = new TargetPoint(OriginWorld.provider.getDimensionId, Ship.ShipBlockPos.getX, Ship.ShipBlockPos.getY, Ship.ShipBlockPos.getZ, 64)
+    FlyingShips.flyingShipPacketHandler.INSTANCE.sendToAllAround(message, targetPoint)
+
+    ChangedBlocks.clear()
+
+  }
+
+  override def setBlockState(pos: BlockPos, newState: IBlockState): Boolean = {
+    setBlockState(pos, newState, 3)
+  }
+
+  override def setBlockState(pos: BlockPos, newState: IBlockState, flags: Int): Boolean = {
+    if (applyBlockChange(pos, newState, flags)) {
+      if (!isRemote)
+        ChangedBlocks.add(new UnifiedPos(pos, Ship, true))
+      true
+    }
+    false
+  }
+
+  def applyBlockChange(pos: BlockPos, newState: IBlockState, flags: Int): Boolean = {
+    val storage: Option[BlockStorage] = BlockStore.getBlock(pos)
+    if (storage.isEmpty) return false
+
+    storage.get.BlockState = newState
+    val TE = TileEntities.get(new UnifiedPos(pos, Ship, true))
+    if (TE.isDefined)
+      TE.get.updateContainingBlockInfo()
+
+    doRenderUpdate = true
+    true
+  }
 
   def isValid = BlockSet.nonEmpty
-  def needsRenderUpdate = false // TODO: Implement later
+
+  def needsRenderUpdate() = {
+    val a = doRenderUpdate
+    doRenderUpdate = false
+    a
+  }
 
 
 }

@@ -19,15 +19,7 @@ class ShipCreatorBlock extends Block(Material.wood) {
   setCreativeTab(CreativeTabs.tabBlock)
   setHardness(2.0f)
 
-
-  def time[R](block: => R): R = {
-    val t0 = System.currentTimeMillis()
-    val result = block    // call-by-name
-    val t1 = System.currentTimeMillis()
-    println("Elapsed time: " + (t1 - t0) + "ms")
-    result
-  }
-
+  // TODO: Up the limit from 100 and figure out why it crashes
   override def onBlockActivated(worldIn:World, pos: BlockPos, state: IBlockState, playerIn: EntityPlayer,side: EnumFacing,hitX: Float, hitY: Float, hitZ: Float) : Boolean = {
     val blocksConnected = BlockUtils.findAllBlocksConnected(worldIn, pos)
     if (blocksConnected.size <= 100) {

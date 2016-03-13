@@ -9,10 +9,14 @@ import net.minecraft.world.World
 /**
   * Created by EJ on 2/21/2016.
   */
-
+object ShipEntity {
+  var nextID: ThreadLocal[Int] = new ThreadLocal[Int]()
+  nextID.set(0)
+}
 class ShipEntity(pos: BlockPos, world: World, blockSet: Set[BlockPos], shipBlockPos: BlockPos) extends Entity(world) {
 
   def this(world: World) = this(new BlockPos(0, 0, 0), world, Set[BlockPos](), new BlockPos(0, 0, 0))
+
 
   posX = pos.getX
   posY = pos.getY
@@ -20,6 +24,10 @@ class ShipEntity(pos: BlockPos, world: World, blockSet: Set[BlockPos], shipBlock
 
   var ShipBlockPos: BlockPos = shipBlockPos
   val ShipWorld: ShipWorld = new ShipWorld(world, shipBlockPos, blockSet, this)
+  val ShipID = if (blockSet.nonEmpty) ShipEntity.nextID.get else -1
+
+  if (blockSet.nonEmpty) ShipEntity.nextID.set(ShipEntity.nextID.get + 1)
+
 
   val InteractionHandler: ShipInteractionHandler = new ShipInteractionHandler
   private var boundingBox = ShipWorld.genBoundingBox()

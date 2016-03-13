@@ -4,6 +4,7 @@ import java.io.File
 
 import net.minecraft.nbt.NBTTagCompound
 import net.minecraft.profiler.Profiler
+import net.minecraft.tileentity.TileEntity
 import net.minecraft.util.BlockPos
 import net.minecraft.world.chunk.IChunkProvider
 import net.minecraft.world.chunk.storage.IChunkLoader
@@ -21,7 +22,7 @@ object SaveHandler extends ISaveHandler {
 
   override def getWorldDirectoryName: String = null
 
-  override def checkSessionLock(): Unit = ???
+  override def checkSessionLock(): Unit = {}
 
   override def saveWorldInfoWithPlayer(worldInformation: WorldInfo, tagCompound: NBTTagCompound): Unit = {}
 
@@ -76,6 +77,8 @@ class DetachedWorld(realWorld:World, worldName:String)
     else
       4
   }
+
+  override def markChunkDirty(blockPos: BlockPos, unused: TileEntity) = {}
 
 
 

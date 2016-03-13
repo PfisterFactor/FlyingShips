@@ -1,7 +1,7 @@
 package com.MrPf1ster.FlyingShips.util
 
 import com.MrPf1ster.FlyingShips.entities.ShipEntity
-import net.minecraft.util.{BlockPos, Vec3}
+import net.minecraft.util.{BlockPos, MathHelper, Vec3}
 
 /**
   * Created by EJ on 3/11/2016.
@@ -17,24 +17,22 @@ class UnifiedPos(x: Double, y: Double, z: Double, ship: ShipEntity, relative: Bo
   def ShipBlockPos = ship.ShipBlockPos
 
   private var isRelative = relative
-  private var storedPos = new BlockPos(x, y, z)
   private var storedVec = new Vec3(x, y, z)
+
+  def storedPos = new BlockPos(MathHelper.floor_double(storedVec.xCoord), MathHelper.floor_double(storedVec.yCoord), MathHelper.floor_double(storedVec.zCoord))
 
   def IsRelative = isRelative
 
 
   def setPos(x: Double, y: Double, z: Double) = {
-    storedPos = new BlockPos(x, y, z)
     storedVec = new Vec3(x, y, z)
   }
 
   def setPos(pos: Vec3) = {
-    storedPos = new BlockPos(pos)
     storedVec = pos
   }
 
   def setPos(pos: BlockPos) = {
-    storedPos = pos
     storedVec = new Vec3(pos)
   }
 
@@ -47,7 +45,7 @@ class UnifiedPos(x: Double, y: Double, z: Double, ship: ShipEntity, relative: Bo
 
   def RelativePos = if (isRelative) storedPos else storedPos.subtract(ShipBlockPos)
 
-  def WorldVec = if (!isRelative) storedVec else storedVec.addVector(ShipBlockPos.getX, ShipBlockPos.getZ, ShipBlockPos.getY)
+  def WorldVec = if (!isRelative) storedVec else storedVec.addVector(ShipBlockPos.getX, ShipBlockPos.getY, ShipBlockPos.getZ)
 
   def RelativeVec = if (isRelative) storedVec else storedVec.subtract(ShipBlockPos.getX, ShipBlockPos.getY, ShipBlockPos.getZ)
 
@@ -78,4 +76,20 @@ class UnifiedPos(x: Double, y: Double, z: Double, ship: ShipEntity, relative: Bo
 
 
   override def toString: String = s"UnifiedPos[World = $WorldVec,Relative = $RelativeVec]"
+
+  override def hashCode = (RelPosY + RelPosZ * 31) * 31 + RelPosX
+
+
+  override def equals(that: Any): Boolean = {
+    if (!that.isInstanceOf[UnifiedPos]) return false
+    //Shit's broke yo
+    def other = that.asInstanceOf[UnifiedPos]
+
+    if (hashCode == other.hashCode)
+      true
+    else
+      false
+
+  }
+
 }

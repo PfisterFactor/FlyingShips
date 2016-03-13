@@ -3,6 +3,8 @@ package com.MrPf1ster.FlyingShips
 /**
   * Created by MrPf1ster
   */
+
+import com.MrPf1ster.FlyingShips.network.FlyingShipsPacketHandler
 import net.minecraft.util.BlockPos
 import net.minecraftforge.fml.common.Mod
 import net.minecraftforge.fml.common.Mod.EventHandler
@@ -20,6 +22,7 @@ object FlyingShips {
   final val MOD_ID = "flyingships"
   final val VERSION = "0.01"
   val flyingShipEventHandlers = new FlyingShipEventHandlers
+  val flyingShipPacketHandler = new FlyingShipsPacketHandler
 
 
 

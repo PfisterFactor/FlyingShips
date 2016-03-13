@@ -19,6 +19,8 @@ import scala.collection.mutable.{Map => mMap}
 /**
   * Created by EJ on 2/21/2016.
   */
+
+
 class ShipRender(rm:RenderManager) extends Render[ShipEntity](rm) {
   var displayListIDs:  mMap[ShipWorld,Int] = mMap()
 
@@ -26,7 +28,7 @@ class ShipRender(rm:RenderManager) extends Render[ShipEntity](rm) {
   override def doRenderShadowAndFire(entity:Entity, x:Double, y:Double, z:Double, yaw:Float,partialTickTime:Float) = {} // No shadow rendering
   override def doRender(entity:ShipEntity,x:Double,y:Double,z:Double,entityYaw:Float,partialTicks:Float) = {
     def shipWorld = entity.ShipWorld
-
+    // TODO: Render black outlines around blocks
     GL11.glPushMatrix()
 
     GL11.glTranslated( x, y, z )
@@ -56,16 +58,6 @@ class ShipRender(rm:RenderManager) extends Render[ShipEntity](rm) {
 
     GL11.glPopMatrix()
 
-
-
-
-
-
-
-
-
-
-
     RenderHelper.enableStandardItemLighting()
 
 
@@ -73,7 +65,7 @@ class ShipRender(rm:RenderManager) extends Render[ShipEntity](rm) {
 
   def getDisplayList(shipWorld: ShipWorld): Int = {
     var id = displayListIDs.get(shipWorld)
-    if (id.isDefined && shipWorld.needsRenderUpdate) {
+    if (id.isDefined && shipWorld.needsRenderUpdate()) {
       GL11.glDeleteLists(id.get,1)
       id = None
       println("Delete List")
