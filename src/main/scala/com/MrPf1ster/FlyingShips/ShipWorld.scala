@@ -50,7 +50,6 @@ class ShipWorld(originWorld: World, originPos: BlockPos, blockSet: Set[BlockPos]
 
           copyTileEntity.setWorldObj(this)
           copyTileEntity.setPos(tileEntityUPos.RelativePos)
-          println(tileEntityUPos.RelativePos)
           copyTileEntity.validate()
           setTileEntity(copyTileEntity.getPos, copyTileEntity)
         }

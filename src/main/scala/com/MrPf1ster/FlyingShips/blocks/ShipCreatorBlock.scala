@@ -29,7 +29,11 @@ class ShipCreatorBlock extends Block(Material.wood) {
       worldIn.spawnEntityInWorld(shipEntity)
 
       // Destroy all the blocks
-      blocksConnected.foreach(pos => worldIn.destroyBlock(pos, false))
+
+      blocksConnected.foreach(pos => {
+        worldIn.removeTileEntity(pos)
+        worldIn.setBlockToAir(pos)
+      })
     }
     true
   }

@@ -23,17 +23,27 @@ import scala.collection.mutable.{Map => mMap}
 
 class ShipRender(rm:RenderManager) extends Render[ShipEntity](rm) {
   var displayListIDs:  mMap[ShipWorld,Int] = mMap()
-
   override def getEntityTexture(entity: ShipEntity): ResourceLocation = null // Ships are dynamic, and thus don't have a texture
   override def doRenderShadowAndFire(entity:Entity, x:Double, y:Double, z:Double, yaw:Float,partialTickTime:Float) = {} // No shadow rendering
   override def doRender(entity:ShipEntity,x:Double,y:Double,z:Double,entityYaw:Float,partialTicks:Float) = {
     def shipWorld = entity.ShipWorld
     // TODO: Render black outlines around blocks
     GL11.glPushMatrix()
-
+    // Translate away from player
     GL11.glTranslated( x, y, z )
-    GL11.glRotatef(entityYaw, 0.0f, 1.0f, 0.0f)
+
+    // Rotate roll
+    GL11.glRotatef(entity.prevRotationRoll + (entity.rotationRoll - entity.prevRotationRoll), 0.0f, 0.0f, 1.0f)
+    // Rotate pitch
+    GL11.glRotatef((entity.prevRotationPitch + (entity.rotationPitch - entity.prevRotationPitch)), 1.0f, 0.0f, 0.0f)
+    // Rotate yaw
+    GL11.glRotatef(entity.prevRotationYaw + (entity.rotationYaw - entity.prevRotationYaw), 0.0f, 1.0f, 0.0f)
+
+
+
+    // Translate to Ship Position
     GL11.glTranslated(entity.ShipBlockPos.getX, entity.ShipBlockPos.getY, entity.ShipBlockPos.getZ)
+
 
     RenderHelper.disableStandardItemLighting()
     rm.worldObj = shipWorld
@@ -50,13 +60,13 @@ class ShipRender(rm:RenderManager) extends Render[ShipEntity](rm) {
         TileEntityRendererDispatcher.instance.renderTileEntityAt(te, -(uPos.WorldVecX - 2 * uPos.RelVecX), -(uPos.WorldVecY - 2 * uPos.RelVecY), -(uPos.WorldVecZ - 2 * uPos.RelVecZ), partialTicks, -1)
       })
 
-
-
-
     if (DebugRender.isDebugMenuShown)
-      doDebugRender(shipWorld)
+      doDebugRender(shipWorld, entityYaw)
 
     GL11.glPopMatrix()
+
+
+    DebugRender.drawRotatedBoundingBox(entity.getRelativeRotated, entity, x, y, z)
 
     RenderHelper.enableStandardItemLighting()
 
@@ -116,7 +126,8 @@ class ShipRender(rm:RenderManager) extends Render[ShipEntity](rm) {
     }
   }
 
-  def doDebugRender(shipWorld: ShipWorld) = {
+
+  def doDebugRender(shipWorld: ShipWorld, entityYaw: Float) = {
 
     GlStateManager.enableBlend()
     GlStateManager.tryBlendFuncSeparate(770, 771, 1, 0)
@@ -128,10 +139,10 @@ class ShipRender(rm:RenderManager) extends Render[ShipEntity](rm) {
 
     shipWorld.BlockSet.foreach(uPos => {
       val blockState = shipWorld.getBlockState(uPos.RelativePos)
-      DebugRender.debugRenderBlock(shipWorld, blockState, uPos.RelativePos)
+      //DebugRender.debugRenderBlock(shipWorld, blockState, uPos.RelativePos)
 
     })
-    DebugRender.debugRenderShip(shipWorld.Ship)
+    //DebugRender.debugRenderShip(shipWorld.Ship)
 
     GlStateManager.depthMask(true)
     GlStateManager.enableTexture2D()
