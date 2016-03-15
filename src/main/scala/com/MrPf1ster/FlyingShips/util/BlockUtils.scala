@@ -43,7 +43,7 @@ object BlockUtils {
     val blockQueue = mQueue[(BlockPos, Option[EnumFacing])]()
     // Set that stores blocks apart of the ship
     val blockSet = mSet[BlockPos]()
-    world.getBlockState(pos).getBlock
+
     // Enqueue the first block, aka the ship controller block, for processing
     blockQueue.enqueue((pos, None)) // Starting direction is null
     while (blockQueue.nonEmpty && blockSet.size < 10000) {
@@ -52,6 +52,8 @@ object BlockUtils {
       val currentBlock = blockQueue.dequeue()
       // Air can't be apart of the ship for obvious reasons, TODO: Make a block blacklist
       if (!world.isAirBlock(currentBlock._1)) {
+        // If we found a ship helm block, then set it to true
+
         if (blockSet.add(currentBlock._1)) {
           // Mark it as a block on the ship, because it is a Set it ignores duplicates
           EnumFacing.values.filter(side => {
@@ -63,7 +65,7 @@ object BlockUtils {
 
       }
     }
-    // Return our blocks as an array
+    // Return our blocks as a set and whether we found the helm
     blockSet.toSet
   }
 

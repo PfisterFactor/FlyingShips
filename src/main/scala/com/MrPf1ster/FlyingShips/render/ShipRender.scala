@@ -1,6 +1,7 @@
 package com.MrPf1ster.FlyingShips.render
 
 import com.MrPf1ster.FlyingShips.ShipWorld
+import com.MrPf1ster.FlyingShips.blocks.ShipCreatorBlock
 import com.MrPf1ster.FlyingShips.entities.ShipEntity
 import net.minecraft.block.state.IBlockState
 import net.minecraft.client.Minecraft
@@ -10,7 +11,7 @@ import net.minecraft.client.renderer.texture.TextureMap
 import net.minecraft.client.renderer.tileentity.TileEntityRendererDispatcher
 import net.minecraft.client.renderer.vertex.DefaultVertexFormats
 import net.minecraft.entity.Entity
-import net.minecraft.util.{BlockPos, ResourceLocation}
+import net.minecraft.util.{BlockPos, EnumFacing, ResourceLocation}
 import org.lwjgl.opengl.GL11
 
 import scala.collection.mutable.{Map => mMap}
@@ -29,20 +30,36 @@ class ShipRender(rm:RenderManager) extends Render[ShipEntity](rm) {
     def shipWorld = entity.ShipWorld
     // TODO: Render black outlines around blocks
     GL11.glPushMatrix()
+    def blockState = entity.ShipWorld.getBlockState(new BlockPos(0, 0, 0))
+    val axis = blockState.getValue(ShipCreatorBlock.FACING).getDirectionVec
+    EnumFacing.getHorizontal(blockState.getBlock.getMetaFromState(blockState))
+
+
     // Translate away from player
-    GL11.glTranslated( x, y, z )
+    GL11.glTranslated(x, y, z)
+    GL11.glTranslated(0.5, 0.5, 0.5)
 
-    // Rotate roll
-    GL11.glRotatef(entity.prevRotationRoll + (entity.rotationRoll - entity.prevRotationRoll), 0.0f, 0.0f, 1.0f)
+    // ALL THIS WORKS
+    // IM NOT SURE HOW
+    GL11.glRotatef(180f, 0f, 0f, 1f)
+    GL11.glRotatef(entity.rotationOffset(axis), 0f, 1f, 0f)
+    GL11.glRotatef(180f, 1f, 0f, 0f)
+
     // Rotate pitch
-    GL11.glRotatef((entity.prevRotationPitch + (entity.rotationPitch - entity.prevRotationPitch)), 1.0f, 0.0f, 0.0f)
+    GL11.glRotatef(entity.rotationPitch, 0.0f, 0.0f, 1.0f)
     // Rotate yaw
-    GL11.glRotatef(entity.prevRotationYaw + (entity.rotationYaw - entity.prevRotationYaw), 0.0f, 1.0f, 0.0f)
+    GL11.glRotatef(entity.rotationYaw, 0.0f, 1.0f, 0.0f)
+    // Rotate roll
+    GL11.glRotatef(entity.rotationRoll, 1.0f, 0.0f, 0.0f)
 
+    GL11.glRotatef(-180f, 0f, 0f, 1f)
+    GL11.glRotatef(-entity.rotationOffset(axis), 0f, 1f, 0f)
+    GL11.glRotatef(-180f, 1f, 0f, 0f)
 
-
+    GL11.glTranslated(-0.5, -0.5, -0.5)
     // Translate to Ship Position
     GL11.glTranslated(entity.ShipBlockPos.getX, entity.ShipBlockPos.getY, entity.ShipBlockPos.getZ)
+
 
 
     RenderHelper.disableStandardItemLighting()

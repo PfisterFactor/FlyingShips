@@ -26,6 +26,7 @@ class ShipWorld(originWorld: World, originPos: BlockPos, blockSet: Set[BlockPos]
 
   val OriginPos = originPos
   val Ship = ship
+  val ShipBlock = originWorld.getBlockState(originPos)
 
   var BlockStore = new BlocksStorage(this)
   BlockStore.loadFromWorld(originWorld, originPos, blockSet)

@@ -15,21 +15,19 @@ import net.minecraftforge.fml.common.event.{FMLInitializationEvent, FMLPostIniti
   */
 object ClientProxy {
   var shipCreatorBlock: ShipCreatorBlock = null
+
   def preInit(event:FMLPreInitializationEvent) = {
 
     FlyingShips.flyingShipPacketHandler.registerClientSide()
     shipCreatorBlock = new ShipCreatorBlock()
   }
   def init(event: FMLInitializationEvent) = {
-    val renderItem = Minecraft.getMinecraft.getRenderItem
+    def modelMesher = Minecraft.getMinecraft.getRenderItem.getItemModelMesher
 
 
 
     // Blocks
-    renderItem.getItemModelMesher.register(Item.getItemFromBlock(shipCreatorBlock), 0, new ModelResourceLocation(FlyingShips.MOD_ID + ":" + shipCreatorBlock.name, "inventory"))
-
-    // Items
-    //renderItem.getItemModelMesher().register(shipCreatorBlockItem, 0, new ModelResourceLocation(MOD_ID + ":" + shipCreatorBlockItem.getName(), "inventory"));
+    modelMesher.register(Item.getItemFromBlock(shipCreatorBlock), 0, new ModelResourceLocation(FlyingShips.MOD_ID + ":" + shipCreatorBlock.name, "inventory"))
 
     // Entities
     def rm = Minecraft.getMinecraft.getRenderManager

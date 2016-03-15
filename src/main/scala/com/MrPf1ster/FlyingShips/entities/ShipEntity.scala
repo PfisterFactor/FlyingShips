@@ -1,6 +1,7 @@
 package com.MrPf1ster.FlyingShips.entities
 
 import com.MrPf1ster.FlyingShips.ShipWorld
+import com.MrPf1ster.FlyingShips.blocks.ShipCreatorBlock
 import com.MrPf1ster.FlyingShips.util.RotatedBB
 import net.minecraft.entity.Entity
 import net.minecraft.entity.player.EntityPlayer
@@ -38,14 +39,26 @@ class ShipEntity(pos: BlockPos, world: World, blockSet: Set[BlockPos], shipBlock
   private var relativeBoundingBox = ShipWorld.genRelativeBoundingBox()
 
 
-  override def getEntityBoundingBox = if (ShipWorld.BlockSet.nonEmpty) boundingBox else new AxisAlignedBB(0, 0, 0, 0, 0, 0)
+  override def getEntityBoundingBox = if (ShipWorld.isValid) boundingBox else new AxisAlignedBB(0, 0, 0, 0, 0, 0)
 
   def getRelativeBoundingBox = relativeBoundingBox
 
-  var RotatedBB = new RotatedBB(getEntityBoundingBox, new Vec3(ShipBlockPos.getX, ShipBlockPos.getY, ShipBlockPos.getZ), rotationYaw, rotationPitch, rotationRoll)
+  def shipDirection = if (ShipWorld.isValid) ShipWorld.ShipBlock.getValue(ShipCreatorBlock.FACING).getDirectionVec else null
+
+  def rotationOffset(direction: Vec3i): Float = {
+    if (direction == null) 0f
+    else if (direction.getX == 1) 0f
+    else if (direction.getX == -1) 180f
+    else if (direction.getZ == 1) 90f
+    else if (direction.getZ == -1) 270f
+    else 0f
+
+  }
+
+  var RotatedBB = new RotatedBB(getEntityBoundingBox, new Vec3(ShipBlockPos.getX, ShipBlockPos.getY, ShipBlockPos.getZ), rotationOffset(shipDirection), rotationYaw, rotationPitch, rotationRoll)
 
   def getRelativeRotated = {
-    new RotatedBB(getRelativeBoundingBox, new Vec3(0, 0, 0), rotationYaw, rotationPitch, rotationRoll)
+    new RotatedBB(getRelativeBoundingBox, new Vec3(0.5, 0.5, 0.5), rotationOffset(shipDirection), rotationYaw, rotationPitch, rotationRoll)
   }
 
   override def writeEntityToNBT(tagCompound: NBTTagCompound): Unit = {
@@ -62,7 +75,7 @@ class ShipEntity(pos: BlockPos, world: World, blockSet: Set[BlockPos], shipBlock
     if (!ShipWorld.isValid) {
       this.setDead()
     }
-    setPositionAndRotation(posX, posY, posZ, rotationYaw, rotationPitch)
+    setPositionAndRotation(posX, posY, posZ, rotationYaw + 1f, rotationPitch + 1f)
     prevRotationRoll = rotationRoll
     rotationRoll = rotationRoll + 1f
   }
@@ -91,6 +104,7 @@ class ShipEntity(pos: BlockPos, world: World, blockSet: Set[BlockPos], shipBlock
     setPosition(x, y, z)
     prevRotationYaw = rotationYaw
     prevRotationPitch = rotationPitch
+
     rotationYaw = yaw % 360
     rotationPitch = pitch % 360
     RotatedBB.setRotation(rotationYaw, rotationPitch, rotationRoll)
