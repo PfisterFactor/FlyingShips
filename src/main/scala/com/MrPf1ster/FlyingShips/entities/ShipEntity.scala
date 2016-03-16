@@ -17,29 +17,30 @@ object ShipEntity {
 }
 class ShipEntity(pos: BlockPos, world: World, blockSet: Set[BlockPos], shipBlockPos: BlockPos) extends Entity(world) {
 
-  def this(world: World) = this(new BlockPos(0, 0, 0), world, Set[BlockPos](), new BlockPos(0, 0, 0))
+  val ShipWorld: ShipWorld = new ShipWorld(world, shipBlockPos, blockSet, this)
 
 
   posX = shipBlockPos.getX
   posY = shipBlockPos.getY
   posZ = shipBlockPos.getZ
-
-  var ShipBlockPos: BlockPos = shipBlockPos
-  val ShipWorld: ShipWorld = new ShipWorld(world, shipBlockPos, blockSet, this)
   val ShipID = if (blockSet.nonEmpty) ShipEntity.nextID.get else -1
-
+  val InteractionHandler: ShipInteractionHandler = new ShipInteractionHandler
+  var ShipBlockPos: BlockPos = shipBlockPos
   var prevRotationRoll = 0.0f
   var rotationRoll = 0.0f
 
   if (blockSet.nonEmpty) ShipEntity.nextID.set(ShipEntity.nextID.get + 1)
-
-
-  val InteractionHandler: ShipInteractionHandler = new ShipInteractionHandler
+  var RotatedBB = new RotatedBB(getEntityBoundingBox, new Vec3(ShipBlockPos.getX, ShipBlockPos.getY, ShipBlockPos.getZ), rotationOffset(shipDirection), rotationYaw, rotationPitch, rotationRoll)
   private var boundingBox = ShipWorld.genBoundingBox()
   private var relativeBoundingBox = ShipWorld.genRelativeBoundingBox()
 
+  def this(world: World) = this(new BlockPos(0, 0, 0), world, Set[BlockPos](), new BlockPos(0, 0, 0))
 
   override def getEntityBoundingBox = if (ShipWorld.isValid) boundingBox else new AxisAlignedBB(0, 0, 0, 0, 0, 0)
+
+  def getRelativeRotated = {
+    new RotatedBB(getRelativeBoundingBox, new Vec3(0.5, 0.5, 0.5), rotationOffset(shipDirection), rotationYaw, rotationPitch, rotationRoll)
+  }
 
   def getRelativeBoundingBox = relativeBoundingBox
 
@@ -53,12 +54,6 @@ class ShipEntity(pos: BlockPos, world: World, blockSet: Set[BlockPos], shipBlock
     else if (direction.getZ == -1) 270f
     else 0f
 
-  }
-
-  var RotatedBB = new RotatedBB(getEntityBoundingBox, new Vec3(ShipBlockPos.getX, ShipBlockPos.getY, ShipBlockPos.getZ), rotationOffset(shipDirection), rotationYaw, rotationPitch, rotationRoll)
-
-  def getRelativeRotated = {
-    new RotatedBB(getRelativeBoundingBox, new Vec3(0.5, 0.5, 0.5), rotationOffset(shipDirection), rotationYaw, rotationPitch, rotationRoll)
   }
 
   override def writeEntityToNBT(tagCompound: NBTTagCompound): Unit = {
@@ -77,7 +72,17 @@ class ShipEntity(pos: BlockPos, world: World, blockSet: Set[BlockPos], shipBlock
     }
     setPositionAndRotation(posX, posY, posZ, rotationYaw + 1f, rotationPitch + 1f)
     prevRotationRoll = rotationRoll
-    rotationRoll = rotationRoll + 1f
+    rotationRoll = 0
+  }
+
+  override def setPositionAndRotation(x: Double, y: Double, z: Double, yaw: Float, pitch: Float) = {
+    setPosition(x, y, z)
+    prevRotationYaw = rotationYaw
+    prevRotationPitch = rotationPitch
+
+    rotationYaw = yaw % 360
+    rotationPitch = pitch % 360
+    RotatedBB.setRotation(rotationYaw, rotationPitch, rotationRoll)
   }
 
   override def setPosition(x: Double, y: Double, z: Double) = {
@@ -98,18 +103,6 @@ class ShipEntity(pos: BlockPos, world: World, blockSet: Set[BlockPos], shipBlock
     posZ = z
 
   }
-
-
-  override def setPositionAndRotation(x: Double, y: Double, z: Double, yaw: Float, pitch: Float) = {
-    setPosition(x, y, z)
-    prevRotationYaw = rotationYaw
-    prevRotationPitch = rotationPitch
-
-    rotationYaw = yaw % 360
-    rotationPitch = pitch % 360
-    RotatedBB.setRotation(rotationYaw, rotationPitch, rotationRoll)
-  }
-
 
   override def canBeCollidedWith = true
 

@@ -37,30 +37,43 @@ class ShipRender(rm:RenderManager) extends Render[ShipEntity](rm) {
 
     // Translate away from player
     GL11.glTranslated(x, y, z)
+
+    // Translate into the center of the ship block for rotation
     GL11.glTranslated(0.5, 0.5, 0.5)
 
     // ALL THIS WORKS
     // IM NOT SURE HOW
+    // THIS CODE I THINK ROTATES THE AXIS RELATIVE TO THE FORWARD DIRECTION OF THE SHIP BLOCK
+
+    // Pitch
     GL11.glRotatef(180f, 0f, 0f, 1f)
+    // Yaw
     GL11.glRotatef(entity.rotationOffset(axis), 0f, 1f, 0f)
+    // Roll
     GL11.glRotatef(180f, 1f, 0f, 0f)
 
     // Rotate pitch
     GL11.glRotatef(entity.rotationPitch, 0.0f, 0.0f, 1.0f)
-    // Rotate yaw
+    // Rotates yaw
     GL11.glRotatef(entity.rotationYaw, 0.0f, 1.0f, 0.0f)
     // Rotate roll
     GL11.glRotatef(entity.rotationRoll, 1.0f, 0.0f, 0.0f)
 
+    // THIS UN-ROTATES THE AXIS BACK TO NORMAL...
+    // CAUSE YEAH
+
+    // Pitch
     GL11.glRotatef(-180f, 0f, 0f, 1f)
+    // Yaw
     GL11.glRotatef(-entity.rotationOffset(axis), 0f, 1f, 0f)
+    // Roll
     GL11.glRotatef(-180f, 1f, 0f, 0f)
 
+    // Translate out of the center for drawing the ship
     GL11.glTranslated(-0.5, -0.5, -0.5)
+
     // Translate to Ship Position
     GL11.glTranslated(entity.ShipBlockPos.getX, entity.ShipBlockPos.getY, entity.ShipBlockPos.getZ)
-
-
 
     RenderHelper.disableStandardItemLighting()
     rm.worldObj = shipWorld
