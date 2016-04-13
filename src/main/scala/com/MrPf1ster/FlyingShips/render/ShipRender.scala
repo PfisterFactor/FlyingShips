@@ -1,7 +1,9 @@
 package com.MrPf1ster.FlyingShips.render
 
+import java.nio.FloatBuffer
+import javax.vecmath.Matrix4f
+
 import com.MrPf1ster.FlyingShips.ShipWorld
-import com.MrPf1ster.FlyingShips.blocks.ShipCreatorBlock
 import com.MrPf1ster.FlyingShips.entities.ShipEntity
 import net.minecraft.block.state.IBlockState
 import net.minecraft.client.Minecraft
@@ -11,7 +13,8 @@ import net.minecraft.client.renderer.texture.TextureMap
 import net.minecraft.client.renderer.tileentity.TileEntityRendererDispatcher
 import net.minecraft.client.renderer.vertex.DefaultVertexFormats
 import net.minecraft.entity.Entity
-import net.minecraft.util.{BlockPos, EnumFacing, ResourceLocation}
+import net.minecraft.util.{BlockPos, ResourceLocation}
+import org.lwjgl.BufferUtils
 import org.lwjgl.opengl.GL11
 
 import scala.collection.mutable.{Map => mMap}
@@ -28,49 +31,31 @@ class ShipRender(rm:RenderManager) extends Render[ShipEntity](rm) {
   override def doRenderShadowAndFire(entity:Entity, x:Double, y:Double, z:Double, yaw:Float,partialTickTime:Float) = {} // No shadow rendering
   override def doRender(entity:ShipEntity,x:Double,y:Double,z:Double,entityYaw:Float,partialTicks:Float) = {
     def shipWorld = entity.ShipWorld
-    // TODO: Render black outlines around blocks
-    GL11.glPushMatrix()
-    def blockState = entity.ShipWorld.getBlockState(new BlockPos(0, 0, 0))
-    val axis = blockState.getValue(ShipCreatorBlock.FACING).getDirectionVec
-    EnumFacing.getHorizontal(blockState.getBlock.getMetaFromState(blockState))
 
+    // TODO: Render black outlines around blocks
+
+    GL11.glPushMatrix()
 
     // Translate away from player
     GL11.glTranslated(x, y, z)
-
     // Translate into the center of the ship block for rotation
     GL11.glTranslated(0.5, 0.5, 0.5)
 
-    // ALL THIS WORKS
-    // IM NOT SURE HOW
-    // THIS CODE I THINK ROTATES THE AXIS RELATIVE TO THE FORWARD DIRECTION OF THE SHIP BLOCK
+    // Convert our correction matrix into a buffer to pass to LWJGL (and then to OpenGL)
+    val rotationCorrectionBuffer = matrixToFloatBuffer(entity.correctionMatrix)
 
-    // Pitch
-    GL11.glRotatef(180f, 0f, 0f, 1f)
-    // Yaw
-    GL11.glRotatef(entity.rotationOffset(axis), 0f, 1f, 0f)
-    // Roll
-    GL11.glRotatef(180f, 1f, 0f, 0f)
 
-    // Rotate pitch
-    GL11.glRotatef(entity.rotationPitch, 0.0f, 0.0f, 1.0f)
-    // Rotates yaw
-    GL11.glRotatef(entity.rotationYaw, 0.0f, 1.0f, 0.0f)
-    // Rotate roll
-    GL11.glRotatef(entity.rotationRoll, 1.0f, 0.0f, 0.0f)
+    // Convert our rotation matrix to a FloatBuffer to pass to LWJGL (and then to OpenGL)
+    val rotationBuffer = matrixToFloatBuffer(entity.renderMatrix)
 
-    // THIS UN-ROTATES THE AXIS BACK TO NORMAL...
-    // CAUSE YEAH
-
-    // Pitch
-    GL11.glRotatef(-180f, 0f, 0f, 1f)
-    // Yaw
-    GL11.glRotatef(-entity.rotationOffset(axis), 0f, 1f, 0f)
-    // Roll
-    GL11.glRotatef(-180f, 1f, 0f, 0f)
+    // Multiply our transformation matrix by the rotation correction
+    GL11.glMultMatrix(rotationCorrectionBuffer)
+    // Then multiply by the actual rotation
+    GL11.glMultMatrix(rotationBuffer)
 
     // Translate out of the center for drawing the ship
     GL11.glTranslated(-0.5, -0.5, -0.5)
+
 
     // Translate to Ship Position
     GL11.glTranslated(entity.ShipBlockPos.getX, entity.ShipBlockPos.getY, entity.ShipBlockPos.getZ)
@@ -87,7 +72,8 @@ class ShipRender(rm:RenderManager) extends Render[ShipEntity](rm) {
       .foreach(pair => {
         def uPos = pair._1
         def te = pair._2
-        TileEntityRendererDispatcher.instance.renderTileEntityAt(te, -(uPos.WorldVecX - 2 * uPos.RelVecX), -(uPos.WorldVecY - 2 * uPos.RelVecY), -(uPos.WorldVecZ - 2 * uPos.RelVecZ), partialTicks, -1)
+        // If anyone ever wants to explain why the below works i'll be happy to hear
+        TileEntityRendererDispatcher.instance.renderTileEntityAt(te, -(uPos.WorldPosX - 2 * uPos.RelPosX), -(uPos.WorldPosY - 2 * uPos.RelPosY), -(uPos.WorldPosZ - 2 * uPos.RelPosZ), partialTicks, -1)
       })
 
     if (DebugRender.isDebugMenuShown)
@@ -178,6 +164,28 @@ class ShipRender(rm:RenderManager) extends Render[ShipEntity](rm) {
     GlStateManager.enableTexture2D()
     GlStateManager.disableBlend()
 
+  }
+
+  def matrixToFloatBuffer(m: Matrix4f): FloatBuffer = {
+    val fb = BufferUtils.createFloatBuffer(16)
+    fb.put(m.m00)
+    fb.put(m.m01)
+    fb.put(m.m02)
+    fb.put(m.m03)
+    fb.put(m.m10)
+    fb.put(m.m11)
+    fb.put(m.m12)
+    fb.put(m.m13)
+    fb.put(m.m20)
+    fb.put(m.m21)
+    fb.put(m.m22)
+    fb.put(m.m23)
+    fb.put(m.m30)
+    fb.put(m.m31)
+    fb.put(m.m32)
+    fb.put(m.m33)
+    fb.flip()
+    return fb;
   }
 
 

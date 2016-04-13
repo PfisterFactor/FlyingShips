@@ -1,95 +1,34 @@
 package com.MrPf1ster.FlyingShips.util
 
-import com.MrPf1ster.FlyingShips.entities.ShipEntity
-import net.minecraft.util.{BlockPos, MathHelper, Vec3}
+import net.minecraft.util.BlockPos
 
 /**
   * Created by EJ on 3/11/2016.
   */
 
-class UnifiedPos(x: Double, y: Double, z: Double, ship: ShipEntity, relative: Boolean) {
+case class UnifiedPos(Position: BlockPos, Origin: BlockPos, IsRelative: Boolean = false) {
 
-  def this(pos: BlockPos, ship: ShipEntity, relative: Boolean) = this(pos.getX, pos.getY, pos.getZ, ship, relative)
+  def this(x: Double, y: Double, z: Double, Origin: BlockPos, relative: Boolean) = this(new BlockPos(x, y, z), Origin, relative)
 
-  def this(pos: Vec3, ship: ShipEntity, relative: Boolean) = this(pos.xCoord, pos.yCoord, pos.zCoord, ship, relative)
+  def WorldPos = if (!IsRelative) Position else Position.add(Origin)
 
+  def WorldPosX: Int = WorldPos.getX
 
-  def ShipBlockPos = ship.ShipBlockPos
+  def WorldPosY: Int = WorldPos.getY
 
-  private var isRelative = relative
-  private var storedVec = new Vec3(x, y, z)
+  def WorldPosZ: Int = WorldPos.getZ
 
-  def storedPos = new BlockPos(MathHelper.floor_double(storedVec.xCoord), MathHelper.floor_double(storedVec.yCoord), MathHelper.floor_double(storedVec.zCoord))
+  def RelativePos = if (IsRelative) Position else Position.subtract(Origin)
 
-  def IsRelative = isRelative
+  def RelPosX: Int = RelativePos.getX
 
+  def RelPosY: Int = RelativePos.getY
 
-  def setPos(x: Double, y: Double, z: Double) = {
-    storedVec = new Vec3(x, y, z)
-  }
+  def RelPosZ: Int = RelativePos.getZ
 
-  def setPos(pos: Vec3) = {
-    storedVec = pos
-  }
+  override def toString: String = s"UnifiedPos[World = $WorldPos,Relative = $RelativePos]"
 
-  def setPos(pos: BlockPos) = {
-    storedVec = new Vec3(pos)
-  }
+  //override def hashCode = (RelPosY + RelPosZ * 31) * 31 + RelPosX
 
-  def setRelative(rel: Boolean) = {
-    isRelative = rel
-  }
-
-
-  def WorldPos = if (!isRelative) storedPos else storedPos.add(ShipBlockPos)
-
-  def RelativePos = if (isRelative) storedPos else storedPos.subtract(ShipBlockPos)
-
-  def WorldVec = if (!isRelative) storedVec else storedVec.addVector(ShipBlockPos.getX, ShipBlockPos.getY, ShipBlockPos.getZ)
-
-  def RelativeVec = if (isRelative) storedVec else storedVec.subtract(ShipBlockPos.getX, ShipBlockPos.getY, ShipBlockPos.getZ)
-
-  // AHHH
-  def WorldPosX: Int = if (isRelative) storedPos.getX + ShipBlockPos.getX else storedPos.getX
-
-  def WorldPosY: Int = if (isRelative) storedPos.getY + ShipBlockPos.getY else storedPos.getY
-
-  def WorldPosZ: Int = if (isRelative) storedPos.getZ + ShipBlockPos.getZ else storedPos.getZ
-
-  def RelPosX: Int = if (!isRelative) storedPos.getX - ShipBlockPos.getX else storedPos.getX
-
-  def RelPosY: Int = if (!isRelative) storedPos.getY - ShipBlockPos.getY else storedPos.getY
-
-  def RelPosZ: Int = if (!isRelative) storedPos.getZ - ShipBlockPos.getZ else storedPos.getZ
-
-  def WorldVecX: Double = if (isRelative) storedVec.xCoord + ShipBlockPos.getX else storedVec.xCoord
-
-  def WorldVecY: Double = if (isRelative) storedVec.yCoord + ShipBlockPos.getY else storedVec.yCoord
-
-  def WorldVecZ: Double = if (isRelative) storedVec.zCoord + ShipBlockPos.getZ else storedVec.zCoord
-
-  def RelVecX: Double = if (!isRelative) storedVec.xCoord - ShipBlockPos.getX else storedVec.xCoord
-
-  def RelVecY: Double = if (!isRelative) storedVec.yCoord - ShipBlockPos.getY else storedVec.yCoord
-
-  def RelVecZ: Double = if (!isRelative) storedVec.zCoord - ShipBlockPos.getZ else storedVec.zCoord
-
-
-  override def toString: String = s"UnifiedPos[World = $WorldVec,Relative = $RelativeVec]"
-
-  override def hashCode = (RelPosY + RelPosZ * 31) * 31 + RelPosX
-
-
-  override def equals(that: Any): Boolean = {
-    if (!that.isInstanceOf[UnifiedPos]) return false
-    //Shit's broke yo
-    def other = that.asInstanceOf[UnifiedPos]
-
-    if (hashCode == other.hashCode)
-      true
-    else
-      false
-
-  }
 
 }

@@ -21,7 +21,6 @@ import scala.collection.mutable.{Set => mSet}
   * Created by EJ on 3/2/2016.
   */
 class ShipWorld(originWorld: World, originPos: BlockPos, blockSet: Set[BlockPos], ship: ShipEntity) extends DetachedWorld(originWorld, "Ship") {
-  // Write blocks to world
 
 
   val OriginPos = originPos
@@ -30,13 +29,13 @@ class ShipWorld(originWorld: World, originPos: BlockPos, blockSet: Set[BlockPos]
 
   var BlockStore = new BlocksStorage(this)
   BlockStore.loadFromWorld(originWorld, originPos, blockSet)
-  val BlockSet = BlockStore.getBlockMap.keys.map(pos => new UnifiedPos(pos, Ship, true)).toSet
-  val BiomeID = OriginWorld.getBiomeGenForCoords(Ship.ShipBlockPos).biomeID
-  private var ChangedBlocks: mSet[UnifiedPos] = mSet()
+  val BlockSet = BlockStore.getBlockMap.keys.map(pos => UnifiedPos(pos, Ship.ShipBlockPos, true)).toSet
+  val BiomeID = OriginWorld.getBiomeGenForCoords(OriginPos).biomeID
+  private val ChangedBlocks: mSet[UnifiedPos] = mSet()
   private var doRenderUpdate = false
 
   def genTileEntities: Map[UnifiedPos, TileEntity] = {
-    if (this.Ship.isDead) {
+    if (!this.isValid) {
       return Map()
     }
     BlockSet
@@ -72,8 +71,8 @@ class ShipWorld(originWorld: World, originPos: BlockPos, blockSet: Set[BlockPos]
 
   def genBoundingBox() = {
     val relative = genRelativeBoundingBox()
-    val uMinPos = new UnifiedPos(relative.minX, relative.minY, relative.minZ, Ship, true)
-    val uMaxPos = new UnifiedPos(relative.maxX, relative.maxY, relative.maxZ, Ship, true)
+    val uMinPos = new UnifiedPos(relative.minX, relative.minY, relative.minZ, Ship.ShipBlockPos, true)
+    val uMaxPos = new UnifiedPos(relative.maxX, relative.maxY, relative.maxZ, Ship.ShipBlockPos, true)
     new AxisAlignedBB(uMinPos.WorldPos, uMaxPos.WorldPos)
   }
 
@@ -117,7 +116,7 @@ class ShipWorld(originWorld: World, originPos: BlockPos, blockSet: Set[BlockPos]
 
   }
 
-  override def getTileEntity(pos: BlockPos) = TileEntities.get(new UnifiedPos(pos, Ship, true)).orNull
+  override def getTileEntity(pos: BlockPos) = TileEntities.get(new UnifiedPos(pos, Ship.ShipBlockPos, true)).orNull
 
 
   override def updateEntities() = {
@@ -152,7 +151,7 @@ class ShipWorld(originWorld: World, originPos: BlockPos, blockSet: Set[BlockPos]
   override def setBlockState(pos: BlockPos, newState: IBlockState, flags: Int): Boolean = {
     if (applyBlockChange(pos, newState, flags)) {
       if (!isRemote)
-        ChangedBlocks.add(new UnifiedPos(pos, Ship, true))
+        ChangedBlocks.add(new UnifiedPos(pos, Ship.ShipBlockPos, true))
       true
     }
     false
@@ -163,7 +162,7 @@ class ShipWorld(originWorld: World, originPos: BlockPos, blockSet: Set[BlockPos]
     if (storage.isEmpty) return false
 
     storage.get.BlockState = newState
-    val TE = TileEntities.get(new UnifiedPos(pos, Ship, true))
+    val TE = TileEntities.get(new UnifiedPos(pos, Ship.ShipBlockPos, true))
     if (TE.isDefined)
       TE.get.updateContainingBlockInfo()
 
