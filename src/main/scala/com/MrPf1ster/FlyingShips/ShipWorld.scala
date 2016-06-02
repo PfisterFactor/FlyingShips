@@ -22,20 +22,19 @@ import scala.collection.mutable.{Set => mSet}
   */
 class ShipWorld(originWorld: World, originPos: BlockPos, blockSet: Set[BlockPos], ship: ShipEntity) extends DetachedWorld(originWorld, "Ship") {
 
-
   val OriginPos = originPos
   val Ship = ship
   val ShipBlock = originWorld.getBlockState(originPos)
 
   var BlockStore = new BlocksStorage(this)
   BlockStore.loadFromWorld(originWorld, originPos, blockSet)
-  val BlockSet = BlockStore.getBlockMap.keys.map(pos => UnifiedPos(pos, Ship.ShipBlockPos, true)).toSet
+  val BlockSet = blockSet.map(pos => UnifiedPos(pos, Ship.ShipBlockPos, false))
   val BiomeID = OriginWorld.getBiomeGenForCoords(OriginPos).biomeID
-  private val ChangedBlocks: mSet[UnifiedPos] = mSet()
+  private var ChangedBlocks: mSet[UnifiedPos] = mSet() // TODO: Figure out what this is
   private var doRenderUpdate = false
 
   def genTileEntities: Map[UnifiedPos, TileEntity] = {
-    if (!this.isValid) {
+    if (!isValid) {
       return Map()
     }
     BlockSet
@@ -77,7 +76,7 @@ class ShipWorld(originWorld: World, originPos: BlockPos, blockSet: Set[BlockPos]
   }
 
   def genRelativeBoundingBox() = {
-    if (this.Ship.isDead) {
+    if (this.Ship.isDead || !isValid) {
       new AxisAlignedBB(0, 0, 0, 0, 0, 0)
     }
     else {
@@ -119,7 +118,9 @@ class ShipWorld(originWorld: World, originPos: BlockPos, blockSet: Set[BlockPos]
   override def getTileEntity(pos: BlockPos) = TileEntities.get(new UnifiedPos(pos, Ship.ShipBlockPos, true)).orNull
 
 
-  override def updateEntities() = {
+  override def updateEntities(): Unit = {
+    if (!isValid)
+      return
     TileEntities
       .foreach(pair => {
         def te = pair._2
@@ -133,6 +134,7 @@ class ShipWorld(originWorld: World, originPos: BlockPos, blockSet: Set[BlockPos]
   }
 
   def pushBlockChangesToClient(): Unit = {
+    if (!isValid) return
     if (Ship == null) return
     if (ChangedBlocks.isEmpty) return
 
@@ -149,7 +151,7 @@ class ShipWorld(originWorld: World, originPos: BlockPos, blockSet: Set[BlockPos]
   }
 
   override def setBlockState(pos: BlockPos, newState: IBlockState, flags: Int): Boolean = {
-    if (applyBlockChange(pos, newState, flags)) {
+    if (applyBlockChange(pos, newState, flags) && this.isValid) {
       if (!isRemote)
         ChangedBlocks.add(new UnifiedPos(pos, Ship.ShipBlockPos, true))
       true

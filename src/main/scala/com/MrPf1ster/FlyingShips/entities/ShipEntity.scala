@@ -1,6 +1,6 @@
 package com.MrPf1ster.FlyingShips.entities
 
-import javax.vecmath.{Matrix3f, Matrix4f}
+import javax.vecmath.{Matrix3f, Matrix4f, Quat4f}
 
 import com.MrPf1ster.FlyingShips.ShipWorld
 import com.MrPf1ster.FlyingShips.blocks.ShipCreatorBlock
@@ -27,6 +27,13 @@ class ShipEntity(pos: BlockPos, world: World, blockSet: Set[BlockPos], shipBlock
   val ShipWorld: ShipWorld = new ShipWorld(world, shipBlockPos, blockSet, this)
 
 
+  // Returns ship direction based on which way the creator block is facing
+  val ShipDirection: EnumFacing = if (ShipWorld.isValid) ShipWorld.ShipBlock.getValue(ShipCreatorBlock.FACING) else null
+
+  private def directionVec = ShipDirection.getDirectionVec
+  var Rotation: Quat4f = new Quat4f(0,0,1f,1)
+
+
   posX = shipBlockPos.getX
   posY = shipBlockPos.getY
   posZ = shipBlockPos.getZ
@@ -41,68 +48,58 @@ class ShipEntity(pos: BlockPos, world: World, blockSet: Set[BlockPos], shipBlock
 
 
   def this(world: World) = this(new BlockPos(0, 0, 0), world, Set[BlockPos](), new BlockPos(0, 0, 0))
-
+  // Returns the axis aligned bounding box relative to the world
   override def getEntityBoundingBox = if (ShipWorld.isValid) boundingBox else new AxisAlignedBB(0, 0, 0, 0, 0, 0)
 
   def getRelativeRotated = {
     new RotatedBB(getRelativeBoundingBox, new Vec3(0.5, 0.5, 0.5), rotationMatrix)
   }
-
+  // Returns an axis aligned bounding box relative to the ship's creator block
   def getRelativeBoundingBox = relativeBoundingBox
 
-  def shipDirection = if (ShipWorld.isValid) ShipWorld.ShipBlock.getValue(ShipCreatorBlock.FACING).getDirectionVec else null
 
 
-  lazy val correctionMatrix: Matrix4f = {
-    // Get the ship block (0,0,0)
-    def blockState = ShipWorld.getBlockState(new BlockPos(0, 0, 0))
 
-    // Figure out which way it's facing
-    val axis = blockState.getValue(ShipCreatorBlock.FACING).getDirectionVec
-
-    def rotationOffset(direction: Vec3i): Float = {
-      if (direction.getX == 1) 0f
-      else if (direction.getX == -1) 180f
-      else if (direction.getZ == 1) 90f
-      else if (direction.getZ == -1) 270f
-      else 0f
+  def correctionMatrix: Matrix4f = {
+    def rotationOffset(direction: EnumFacing): Float = direction match {
+      case EnumFacing.EAST => 0f
+      case EnumFacing.WEST => 180f
+      case EnumFacing.SOUTH => 90f
+      case EnumFacing.NORTH => 270f
+      case _ => 0f
     }
 
     // # Correction Matrix #
     // Basically rotates the matrix so that our rotation is relative to the Ship Block's front face.
     // We also never have to rotate our axis upwards or downwards so we only need to rotate the yaw (pitch) value.
     val rotCorrectionMatrix = new Matrix4f()
-    rotCorrectionMatrix.rotY(Math.toRadians(rotationOffset(axis)).toFloat)
+    rotCorrectionMatrix.rotY(Math.toRadians(rotationOffset(ShipDirection)).toFloat)
+
+    rotCorrectionMatrix
+  }
+
+  // THIS IS UNRELATED TO THE BACKWARDS YAW PROBLEM
+  private def rotationCorrectionMatrix: Matrix3f = {
+    def rotationOffset(direction: EnumFacing): Float = direction match {
+      case EnumFacing.EAST => 180f
+      case EnumFacing.WEST => 0f
+      case EnumFacing.SOUTH => 90f
+      case EnumFacing.NORTH => 270f
+      case _ => 0f
+    }
+    val rotCorrectionMatrix = new Matrix3f()
+    rotCorrectionMatrix.rotY(Math.toRadians(rotationOffset(ShipDirection)).toFloat)
 
     rotCorrectionMatrix
   }
 
   private def rotationMatrix: Matrix3f = {
-    val m = new Matrix3f()
-    val c = correctionMatrix.clone().asInstanceOf[Matrix4f]
-    c.mul(nonSwitchedMatrix)
-    c.getRotationScale(m)
-    m
-  }
+    val cMatrix = rotationCorrectionMatrix
+    val rMatrix = new Matrix3f()
+    renderMatrix.getRotationScale(rMatrix)
 
-  private def nonSwitchedMatrix: Matrix4f = {
-    val xMat: Matrix4f = new Matrix4f()
-    xMat.rotX(Math.toRadians(rotationRoll).toFloat)
-
-    // Switch Y and Z cause in Minecraft the Y axis is "up"
-    val yMat: Matrix4f = new Matrix4f()
-    yMat.rotZ(Math.toRadians(rotationPitch).toFloat)
-
-    // See above ^
-    val zMat: Matrix4f = new Matrix4f()
-    zMat.rotY(Math.toRadians(rotationYaw).toFloat)
-
-    // Multiply our rotation matrices into one unified rotation matrix
-    xMat.mul(zMat)
-    yMat.mul(xMat)
-
-    // Odd multiplying syntax, but yMat has all the rotations in it
-    yMat
+    cMatrix.mul(rMatrix)
+    cMatrix
   }
 
   def renderMatrix: Matrix4f = {
@@ -112,7 +109,6 @@ class ShipEntity(pos: BlockPos, world: World, blockSet: Set[BlockPos], shipBlock
     // Switch Y and Z cause in Minecraft the Y axis is "up"
     val yMat: Matrix4f = new Matrix4f()
     yMat.rotZ(Math.toRadians(rotationPitch).toFloat)
-
     // See above ^
     val zMat: Matrix4f = new Matrix4f()
     zMat.rotY(Math.toRadians(rotationYaw).toFloat)
@@ -128,7 +124,7 @@ class ShipEntity(pos: BlockPos, world: World, blockSet: Set[BlockPos], shipBlock
 
   }
 
-  override def readEntityFromNBT(tagCompund: NBTTagCompound): Unit = {
+  override def readEntityFromNBT(tagCompound: NBTTagCompound): Unit = {
 
   }
 
@@ -138,9 +134,10 @@ class ShipEntity(pos: BlockPos, world: World, blockSet: Set[BlockPos], shipBlock
     if (!ShipWorld.isValid) {
       this.setDead()
     }
-    setPositionAndRotation(posX, posY, posZ, 0, rotationPitch + 1f)
+    setPositionAndRotation(posX, posY, posZ, rotationYaw+1f, 0)
     prevRotationRoll = rotationRoll
     rotationRoll = 0
+    RotatedBB = RotatedBB.moveTo(posX,posY,posZ)
   }
 
   override def setPositionAndRotation(x: Double, y: Double, z: Double, yaw: Float, pitch: Float) = {
@@ -163,7 +160,7 @@ class ShipEntity(pos: BlockPos, world: World, blockSet: Set[BlockPos], shipBlock
       // ..and offset the bounding box
       boundingBox = boundingBox.offset(deltaX, deltaY, deltaZ)
       ShipBlockPos = ShipBlockPos.add(deltaX, deltaY, deltaZ)
-      RotatedBB.moveTo(x, y, z)
+      RotatedBB = RotatedBB.moveTo(x, y, z)
     }
     // Update positions
     posX = x

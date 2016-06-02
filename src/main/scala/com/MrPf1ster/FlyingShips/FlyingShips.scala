@@ -5,6 +5,7 @@ package com.MrPf1ster.FlyingShips
   */
 
 import com.MrPf1ster.FlyingShips.network.FlyingShipsPacketHandler
+import net.minecraft.client.Minecraft
 import net.minecraft.util.BlockPos
 import net.minecraftforge.fml.common.Mod
 import net.minecraftforge.fml.common.Mod.EventHandler
@@ -33,6 +34,7 @@ object FlyingShips {
     if (event.getSide.isClient) {
       ClientProxy.preInit(event)
     }
+
   }
 
   @EventHandler

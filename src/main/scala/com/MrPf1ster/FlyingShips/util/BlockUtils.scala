@@ -40,6 +40,7 @@ object BlockUtils {
   def findAllBlocksConnected(world: World, pos: BlockPos): Set[BlockPos] = {
     // Not very functional-like implementation of flood fill
     // Our block queue: if done recursively the method would take too much stack memory
+    // TODO: Implement this tail-end recursively
     val blockQueue = mQueue[(BlockPos, Option[EnumFacing])]()
     // Set that stores blocks apart of the ship
     val blockSet = mSet[BlockPos]()

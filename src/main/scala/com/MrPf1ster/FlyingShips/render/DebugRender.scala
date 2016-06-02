@@ -7,7 +7,7 @@ import net.minecraft.block.state.IBlockState
 import net.minecraft.client.Minecraft
 import net.minecraft.client.renderer.vertex.DefaultVertexFormats
 import net.minecraft.client.renderer.{GlStateManager, Tessellator, WorldRenderer}
-import net.minecraft.util.{AxisAlignedBB, BlockPos}
+import net.minecraft.util.{AxisAlignedBB, BlockPos, Vec3}
 import org.lwjgl.opengl.GL11
 
 /**

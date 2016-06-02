@@ -22,6 +22,7 @@ class FlyingShipEventHandlers {
       // !event.world.isRemote
       // This updates the shipworlds player list to match it's OriginWorld's
       if (event.entity.isInstanceOf[EntityPlayer]) {
+
         val ships = event.world.getEntities(classOf[ShipEntity], Predicates.alwaysTrue[ShipEntity]()).iterator()
         while (ships.hasNext) {
           ships.next().ShipWorld.playerEntities.add(event.entity.asInstanceOf[EntityPlayer])
@@ -44,6 +45,7 @@ class FlyingShipEventHandlers {
 
   @SubscribeEvent
   def onServerTick(event: TickEvent.WorldTickEvent): Unit = {
+    //Minecraft.getMinecraft.thePlayer.setInvisible(true)
     if (event.phase != Phase.START) return
     updateEntities(event.world)
 
@@ -51,6 +53,7 @@ class FlyingShipEventHandlers {
 
   @SubscribeEvent
   def onClientTick(event: TickEvent.ClientTickEvent): Unit = {
+
     if (event.phase != Phase.START) return
 
     try {

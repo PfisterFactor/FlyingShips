@@ -8,7 +8,6 @@ import net.minecraft.util.{AxisAlignedBB, Vec3}
   * Created by EJ on 3/13/2016.
   */
 case class RotatedBB(MinPos: Vec3, MaxPos: Vec3, RotationPoint: Vec3, RotationMatrix: Matrix3f) {
-
   val Corners: Array[Vec3] = {
     val a = Array(
       MinPos, // Back Bottom Left

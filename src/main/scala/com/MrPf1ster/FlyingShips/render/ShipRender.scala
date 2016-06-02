@@ -1,7 +1,7 @@
 package com.MrPf1ster.FlyingShips.render
 
 import java.nio.FloatBuffer
-import javax.vecmath.Matrix4f
+import javax.vecmath.{Matrix4f, Quat4f}
 
 import com.MrPf1ster.FlyingShips.ShipWorld
 import com.MrPf1ster.FlyingShips.entities.ShipEntity
@@ -13,7 +13,7 @@ import net.minecraft.client.renderer.texture.TextureMap
 import net.minecraft.client.renderer.tileentity.TileEntityRendererDispatcher
 import net.minecraft.client.renderer.vertex.DefaultVertexFormats
 import net.minecraft.entity.Entity
-import net.minecraft.util.{BlockPos, ResourceLocation}
+import net.minecraft.util.{BlockPos, ResourceLocation, Vec3, Vec3i}
 import org.lwjgl.BufferUtils
 import org.lwjgl.opengl.GL11
 
@@ -30,6 +30,7 @@ class ShipRender(rm:RenderManager) extends Render[ShipEntity](rm) {
   override def getEntityTexture(entity: ShipEntity): ResourceLocation = null // Ships are dynamic, and thus don't have a texture
   override def doRenderShadowAndFire(entity:Entity, x:Double, y:Double, z:Double, yaw:Float,partialTickTime:Float) = {} // No shadow rendering
   override def doRender(entity:ShipEntity,x:Double,y:Double,z:Double,entityYaw:Float,partialTicks:Float) = {
+
     def shipWorld = entity.ShipWorld
 
     // TODO: Render black outlines around blocks
@@ -38,31 +39,41 @@ class ShipRender(rm:RenderManager) extends Render[ShipEntity](rm) {
 
     // Translate away from player
     GL11.glTranslated(x, y, z)
+
     // Translate into the center of the ship block for rotation
     GL11.glTranslated(0.5, 0.5, 0.5)
 
-    // Convert our correction matrix into a buffer to pass to LWJGL (and then to OpenGL)
-    val rotationCorrectionBuffer = matrixToFloatBuffer(entity.correctionMatrix)
 
+
+
+    // Convert our correction matrix into a buffer to pass to LWJGL (and then to OpenGL)
+    // The reason we have a correction matrix is because of how Minecraft axis is oriented
+    // XZY -> XYZ
+    //val rotationCorrectionBuffer = matrixToFloatBuffer(entity.correctionMatrix)
 
     // Convert our rotation matrix to a FloatBuffer to pass to LWJGL (and then to OpenGL)
-    val rotationBuffer = matrixToFloatBuffer(entity.renderMatrix)
+    val rotationBuffer = matrixToFloatBuffer(quaternionToMatrix(entity.Rotation))//entity.renderMatrix)
+
+
 
     // Multiply our transformation matrix by the rotation correction
-    GL11.glMultMatrix(rotationCorrectionBuffer)
+    //GL11.glMultMatrix(rotationCorrectionBuffer)
+
     // Then multiply by the actual rotation
     GL11.glMultMatrix(rotationBuffer)
+
 
     // Translate out of the center for drawing the ship
     GL11.glTranslated(-0.5, -0.5, -0.5)
 
 
     // Translate to Ship Position
-    GL11.glTranslated(entity.ShipBlockPos.getX, entity.ShipBlockPos.getY, entity.ShipBlockPos.getZ)
+    GL11.glTranslated(entity.posX, entity.posY, entity.posZ)
 
     RenderHelper.disableStandardItemLighting()
     rm.worldObj = shipWorld
     rm.renderEngine.bindTexture(TextureMap.locationBlocksTexture)
+
 
     // Render normal blocks and non-special tile entities
     GL11.glCallList(getDisplayList(shipWorld))
@@ -81,7 +92,6 @@ class ShipRender(rm:RenderManager) extends Render[ShipEntity](rm) {
 
     GL11.glPopMatrix()
 
-
     DebugRender.drawRotatedBoundingBox(entity.getRelativeRotated, entity, x, y, z)
 
     RenderHelper.enableStandardItemLighting()
@@ -94,10 +104,8 @@ class ShipRender(rm:RenderManager) extends Render[ShipEntity](rm) {
     if (id.isDefined && shipWorld.needsRenderUpdate()) {
       GL11.glDeleteLists(id.get,1)
       id = None
-      println("Delete List")
     }
     if (id.isEmpty) {
-      println("New List")
       // create a new list
       id = Option[Int](GLAllocation.generateDisplayLists( 1 ))
       displayListIDs.put(shipWorld, id.get)
@@ -186,6 +194,14 @@ class ShipRender(rm:RenderManager) extends Render[ShipEntity](rm) {
     fb.put(m.m33)
     fb.flip()
     return fb;
+  }
+
+  def quaternionToMatrix(q: Quat4f):Matrix4f = {
+    q.normalize()
+    new Matrix4f(1.0f - 2.0f*q.getY()*q.getY() - 2.0f*q.getZ()*q.getZ(), 2.0f*q.getX()*q.getY() - 2.0f*q.getZ()*q.getW(), 2.0f*q.getX()*q.getZ() + 2.0f*q.getY()*q.getW(), 0.0f,
+      2.0f*q.getX()*q.getY() + 2.0f*q.getZ()*q.getW(), 1.0f - 2.0f*q.getX()*q.getX() - 2.0f*q.getZ()*q.getZ(), 2.0f*q.getY()*q.getZ() - 2.0f*q.getX()*q.getW(), 0.0f,
+      2.0f*q.getX()*q.getZ() - 2.0f*q.getY()*q.getW(), 2.0f*q.getY()*q.getZ() + 2.0f*q.getX()*q.getW(), 1.0f - 2.0f*q.getX()*q.getX() - 2.0f*q.getY()*q.getY(), 0.0f,
+      0.0f, 0.0f, 0.0f, 1.0f);
   }
 
 
