@@ -1,16 +1,17 @@
 package com.MrPf1ster.FlyingShips
 
 import java.lang.Math._
+import javax.vecmath.Quat4f
 
 import com.MrPf1ster.FlyingShips.entities.ShipEntity
 import com.MrPf1ster.FlyingShips.network.BlocksChangedMessage
-import com.MrPf1ster.FlyingShips.util.UnifiedPos
+import com.MrPf1ster.FlyingShips.util.{UnifiedBB, UnifiedPos, UnifiedVec}
 import net.minecraft.block.Block
 import net.minecraft.block.state.IBlockState
 import net.minecraft.entity.EntityHanging
 import net.minecraft.nbt.NBTTagCompound
 import net.minecraft.tileentity.TileEntity
-import net.minecraft.util.{AxisAlignedBB, BlockPos, ITickable}
+import net.minecraft.util.{BlockPos, ITickable, Vec3}
 import net.minecraft.world.World
 import net.minecraftforge.fml.common.network.NetworkRegistry.TargetPoint
 
@@ -28,7 +29,7 @@ class ShipWorld(originWorld: World, originPos: BlockPos, blockSet: Set[BlockPos]
 
   var BlockStore = new BlocksStorage(this)
   BlockStore.loadFromWorld(originWorld, originPos, blockSet)
-  val BlockSet = blockSet.map(pos => UnifiedPos(pos, Ship.ShipBlockPos, false))
+  val BlockSet = blockSet.map(pos => UnifiedPos(pos, Ship.getPosition, false))
   val BiomeID = OriginWorld.getBiomeGenForCoords(OriginPos).biomeID
   private var ChangedBlocks: mSet[UnifiedPos] = mSet() // TODO: Figure out what this is
   private var doRenderUpdate = false
@@ -68,16 +69,9 @@ class ShipWorld(originWorld: World, originPos: BlockPos, blockSet: Set[BlockPos]
   val HangingEntities: mSet[EntityHanging] = null
 
 
-  def genBoundingBox() = {
-    val relative = genRelativeBoundingBox()
-    val uMinPos = new UnifiedPos(relative.minX, relative.minY, relative.minZ, Ship.ShipBlockPos, true)
-    val uMaxPos = new UnifiedPos(relative.maxX, relative.maxY, relative.maxZ, Ship.ShipBlockPos, true)
-    new AxisAlignedBB(uMinPos.WorldPos, uMaxPos.WorldPos)
-  }
-
-  def genRelativeBoundingBox() = {
+  def genBoundingBox(): UnifiedBB = {
     if (this.Ship.isDead || !isValid) {
-      new AxisAlignedBB(0, 0, 0, 0, 0, 0)
+      UnifiedBB.Empty
     }
     else {
       var minX = Int.MaxValue
@@ -98,11 +92,11 @@ class ShipWorld(originWorld: World, originPos: BlockPos, blockSet: Set[BlockPos]
 
 
       })
+      val origin = new Vec3(Ship.posX, Ship.posY, Ship.posZ)
+      val minPos = new UnifiedVec(minX, minY, minZ, origin, true)
+      val maxPos = new UnifiedVec(maxX + 1, maxY + 1, maxZ + 1, origin, true)
 
-      val minPos = new BlockPos(minX, minY, minZ)
-      val maxPos = new BlockPos(maxX + 1, maxY + 1, maxZ + 1)
-
-      new AxisAlignedBB(minPos, maxPos)
+      new UnifiedBB(minPos, maxPos, new Vec3(0.5, 0.5, 0.5), new Quat4f(0, 0, 0, 1))
     }
   }
 
@@ -115,7 +109,7 @@ class ShipWorld(originWorld: World, originPos: BlockPos, blockSet: Set[BlockPos]
 
   }
 
-  override def getTileEntity(pos: BlockPos) = TileEntities.get(new UnifiedPos(pos, Ship.ShipBlockPos, true)).orNull
+  override def getTileEntity(pos: BlockPos) = TileEntities.get(new UnifiedPos(pos, Ship.getPosition, true)).orNull
 
 
   override def updateEntities(): Unit = {
@@ -139,7 +133,7 @@ class ShipWorld(originWorld: World, originPos: BlockPos, blockSet: Set[BlockPos]
     if (ChangedBlocks.isEmpty) return
 
     val message = new BlocksChangedMessage(Ship, ChangedBlocks.map(pos => pos.RelativePos).toArray)
-    val targetPoint = new TargetPoint(OriginWorld.provider.getDimensionId, Ship.ShipBlockPos.getX, Ship.ShipBlockPos.getY, Ship.ShipBlockPos.getZ, 64)
+    val targetPoint = new TargetPoint(OriginWorld.provider.getDimensionId, Ship.posX, Ship.posY, Ship.posZ, 64)
     FlyingShips.flyingShipPacketHandler.INSTANCE.sendToAllAround(message, targetPoint)
 
     ChangedBlocks.clear()
@@ -153,8 +147,8 @@ class ShipWorld(originWorld: World, originPos: BlockPos, blockSet: Set[BlockPos]
   override def setBlockState(pos: BlockPos, newState: IBlockState, flags: Int): Boolean = {
     if (applyBlockChange(pos, newState, flags) && this.isValid) {
       if (!isRemote)
-        ChangedBlocks.add(new UnifiedPos(pos, Ship.ShipBlockPos, true))
-      true
+        ChangedBlocks.add(new UnifiedPos(pos, Ship.getPosition, true))
+      return true
     }
     false
   }
@@ -164,7 +158,7 @@ class ShipWorld(originWorld: World, originPos: BlockPos, blockSet: Set[BlockPos]
     if (storage.isEmpty) return false
 
     storage.get.BlockState = newState
-    val TE = TileEntities.get(new UnifiedPos(pos, Ship.ShipBlockPos, true))
+    val TE = TileEntities.get(new UnifiedPos(pos, Ship.getPosition, true))
     if (TE.isDefined)
       TE.get.updateContainingBlockInfo()
 
@@ -174,6 +168,7 @@ class ShipWorld(originWorld: World, originPos: BlockPos, blockSet: Set[BlockPos]
 
   def isValid = BlockSet.nonEmpty
 
+  // Called by render to update the call list
   def needsRenderUpdate() = {
     val a = doRenderUpdate
     doRenderUpdate = false

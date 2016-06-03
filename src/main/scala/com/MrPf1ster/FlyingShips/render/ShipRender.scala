@@ -13,7 +13,7 @@ import net.minecraft.client.renderer.texture.TextureMap
 import net.minecraft.client.renderer.tileentity.TileEntityRendererDispatcher
 import net.minecraft.client.renderer.vertex.DefaultVertexFormats
 import net.minecraft.entity.Entity
-import net.minecraft.util.{BlockPos, ResourceLocation, Vec3, Vec3i}
+import net.minecraft.util.{BlockPos, ResourceLocation}
 import org.lwjgl.BufferUtils
 import org.lwjgl.opengl.GL11
 
@@ -52,7 +52,7 @@ class ShipRender(rm:RenderManager) extends Render[ShipEntity](rm) {
     //val rotationCorrectionBuffer = matrixToFloatBuffer(entity.correctionMatrix)
 
     // Convert our rotation matrix to a FloatBuffer to pass to LWJGL (and then to OpenGL)
-    val rotationBuffer = matrixToFloatBuffer(quaternionToMatrix(entity.Rotation))//entity.renderMatrix)
+    val rotationBuffer = matrixToFloatBuffer(quaternionToMatrix4f(entity.Rotation)) //entity.renderMatrix)
 
 
 
@@ -91,8 +91,7 @@ class ShipRender(rm:RenderManager) extends Render[ShipEntity](rm) {
       doDebugRender(shipWorld, entityYaw)
 
     GL11.glPopMatrix()
-
-    DebugRender.drawRotatedBoundingBox(entity.getRelativeRotated, entity, x, y, z)
+    DebugRender.drawRotatedBoundingBox(entity.BoundingBox, entity, x, y, z)
 
     RenderHelper.enableStandardItemLighting()
 
@@ -124,9 +123,9 @@ class ShipRender(rm:RenderManager) extends Render[ShipEntity](rm) {
     def worldRenderer = tessellator.getWorldRenderer
 
 
-    def i: Int = shipWorld.Ship.ShipBlockPos.getX
-    def j: Int = shipWorld.Ship.ShipBlockPos.getY
-    def k: Int = shipWorld.Ship.ShipBlockPos.getZ
+    def i: Double = shipWorld.Ship.posX
+    def j: Double = shipWorld.Ship.posY
+    def k: Double = shipWorld.Ship.posZ
     worldRenderer.setTranslation(-i,-j,-k)
     worldRenderer.begin(GL11.GL_QUADS, DefaultVertexFormats.BLOCK)
 
@@ -196,7 +195,7 @@ class ShipRender(rm:RenderManager) extends Render[ShipEntity](rm) {
     return fb;
   }
 
-  def quaternionToMatrix(q: Quat4f):Matrix4f = {
+  def quaternionToMatrix4f(q: Quat4f): Matrix4f = {
     q.normalize()
     new Matrix4f(1.0f - 2.0f*q.getY()*q.getY() - 2.0f*q.getZ()*q.getZ(), 2.0f*q.getX()*q.getY() - 2.0f*q.getZ()*q.getW(), 2.0f*q.getX()*q.getZ() + 2.0f*q.getY()*q.getW(), 0.0f,
       2.0f*q.getX()*q.getY() + 2.0f*q.getZ()*q.getW(), 1.0f - 2.0f*q.getX()*q.getX() - 2.0f*q.getZ()*q.getZ(), 2.0f*q.getY()*q.getZ() - 2.0f*q.getX()*q.getW(), 0.0f,
