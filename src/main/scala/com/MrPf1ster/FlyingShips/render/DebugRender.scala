@@ -34,7 +34,7 @@ object DebugRender {
   }
 
   def debugRenderShip(shipEntity: ShipEntity) = {
-    def bb = shipEntity.getRelativeBoundingBox
+    def bb = shipEntity.getBoundingBox.RelativeAABB
     Tessellator.getInstance().getWorldRenderer.setTranslation(-shipEntity.posX, -shipEntity.posY, -shipEntity.posZ)
     drawBoundingBox(bb)
     Tessellator.getInstance().getWorldRenderer.setTranslation(0, 0, 0)

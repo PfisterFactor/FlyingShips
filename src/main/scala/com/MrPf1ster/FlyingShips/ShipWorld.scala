@@ -1,7 +1,5 @@
 package com.MrPf1ster.FlyingShips
 
-import java.lang.Math._
-
 import com.MrPf1ster.FlyingShips.entities.ShipEntity
 import com.MrPf1ster.FlyingShips.network.BlocksChangedMessage
 import com.MrPf1ster.FlyingShips.util.UnifiedPos
@@ -10,7 +8,7 @@ import net.minecraft.block.state.IBlockState
 import net.minecraft.entity.EntityHanging
 import net.minecraft.nbt.NBTTagCompound
 import net.minecraft.tileentity.TileEntity
-import net.minecraft.util.{AxisAlignedBB, BlockPos, ITickable}
+import net.minecraft.util.{BlockPos, ITickable}
 import net.minecraft.world.World
 import net.minecraftforge.fml.common.network.NetworkRegistry.TargetPoint
 
@@ -33,7 +31,7 @@ class ShipWorld(originWorld: World, originPos: BlockPos, blockSet: Set[BlockPos]
   private var ChangedBlocks: mSet[UnifiedPos] = mSet() // TODO: Figure out what this is
   private var doRenderUpdate = false
 
-  def genTileEntities: Map[UnifiedPos, TileEntity] = {
+  private def genTileEntities: Map[UnifiedPos, TileEntity] = {
     if (!isValid) {
       return Map()
     }
@@ -67,44 +65,6 @@ class ShipWorld(originWorld: World, originPos: BlockPos, blockSet: Set[BlockPos]
   // Go away ;-;
   val HangingEntities: mSet[EntityHanging] = null
 
-
-  def genBoundingBox() = {
-    val relative = genRelativeBoundingBox()
-    val uMinPos = new UnifiedPos(relative.minX, relative.minY, relative.minZ, Ship.getPosition, true)
-    val uMaxPos = new UnifiedPos(relative.maxX, relative.maxY, relative.maxZ, Ship.getPosition, true)
-    new AxisAlignedBB(uMinPos.WorldPos, uMaxPos.WorldPos)
-  }
-
-  def genRelativeBoundingBox() = {
-    if (this.Ship.isDead || !isValid) {
-      new AxisAlignedBB(0, 0, 0, 0, 0, 0)
-    }
-    else {
-      var minX = Int.MaxValue
-      var minY = Int.MaxValue
-      var minZ = Int.MaxValue
-      var maxX = Int.MinValue
-      var maxY = Int.MinValue
-      var maxZ = Int.MinValue
-
-      BlockSet.foreach(uPos => {
-        minX = min(minX, uPos.RelPosX)
-        minY = min(minY, uPos.RelPosY)
-        minZ = min(minZ, uPos.RelPosZ)
-
-        maxX = max(maxX, uPos.RelPosX)
-        maxY = max(maxY, uPos.RelPosY)
-        maxZ = max(maxZ, uPos.RelPosZ)
-
-
-      })
-
-      val minPos = new BlockPos(minX, minY, minZ)
-      val maxPos = new BlockPos(maxX + 1, maxY + 1, maxZ + 1)
-
-      new AxisAlignedBB(minPos, maxPos)
-    }
-  }
 
   override def getBlockState(pos:BlockPos) = {
     val got = BlockStore.getBlock(pos)
