@@ -4,7 +4,7 @@ import javax.vecmath.Quat4f
 
 import com.MrPf1ster.FlyingShips.ShipWorld
 import com.MrPf1ster.FlyingShips.blocks.ShipCreatorBlock
-import com.MrPf1ster.FlyingShips.util.UnifiedBB
+import com.MrPf1ster.FlyingShips.util.RotatedBB
 import net.minecraft.entity.Entity
 import net.minecraft.entity.player.EntityPlayer
 import net.minecraft.nbt.NBTTagCompound
@@ -37,7 +37,7 @@ class ShipEntity(pos: BlockPos, world: World, blockSet: Set[BlockPos], shipBlock
   val ShipWorld: ShipWorld = new ShipWorld(world, shipBlockPos, blockSet, this)
 
   // Rotation of the ship in Quaternions
-  var Rotation: Quat4f = new Quat4f(0, 0, 0, 1)
+  var Rotation: Quat4f = new Quat4f(0, 0, 1f, 1)
 
   // Returns ship direction based on which way the creator block is facing
   val ShipDirection: EnumFacing = if (ShipWorld.isValid) ShipWorld.ShipBlock.getValue(ShipCreatorBlock.FACING) else null
@@ -45,11 +45,26 @@ class ShipEntity(pos: BlockPos, world: World, blockSet: Set[BlockPos], shipBlock
   // Returns ship creator block for the ship
   def ShipBlock = ShipWorld.ShipBlock
 
-  var BoundingBox: UnifiedBB = ShipWorld.genBoundingBox()
+  // The ship's Axis Aligned bounding box
+  private var boundingBox: AxisAlignedBB = ShipWorld.genBoundingBox()
+
+  // The ship's Axis Aligned bounding box relative to the ship's creator block
+  private var relativeBoundingBox: AxisAlignedBB = ShipWorld.genRelativeBoundingBox()
+
+  // The ship's Rotated bounding box
+  var RotatedBB = new RotatedBB(getEntityBoundingBox, new Vec3(posX, posY, posZ), Rotation)
 
   // Returns the axis aligned bounding box relative to the world
-  override def getEntityBoundingBox = if (ShipWorld.isValid) BoundingBox.WorldAABB else new AxisAlignedBB(0, 0, 0, 0, 0, 0)
+  override def getEntityBoundingBox = if (ShipWorld.isValid) boundingBox else new AxisAlignedBB(0, 0, 0, 0, 0, 0)
 
+
+  // Returns an axis aligned bounding box relative to the ship's creator block
+  def getRelativeBoundingBox = relativeBoundingBox
+
+  // Returns a rotated bounding box relative to the ship's creator block
+  def getRelativeRotatedBoundingBox = {
+    new RotatedBB(getRelativeBoundingBox, new Vec3(0.5, 0.5, 0.5), Rotation)
+  }
 
   override def writeEntityToNBT(tagCompound: NBTTagCompound): Unit = {
 
@@ -66,16 +81,33 @@ class ShipEntity(pos: BlockPos, world: World, blockSet: Set[BlockPos], shipBlock
       this.setDead()
     }
     setPosition(posX, posY, posZ)
-    //val b = new Quat4f(0.94f,0,0,0.94f)
-    //b.mul(Rotation,b)
-    //Rotation.interpolate(b,0.2f)
-    BoundingBox = BoundingBox.rotateTo(Rotation)
+    RotatedBB = RotatedBB.moveTo(posX, posY, posZ)
+    val b = new Quat4f(0.94f, 0, 0, 0.94f)
+    b.mul(Rotation, b)
+    Rotation.interpolate(b, 0.2f)
 
   }
 
+  override def setPositionAndRotation(x: Double, y: Double, z: Double, yaw: Float, pitch: Float) = {
+    setPosition(x, y, z)
+    prevRotationYaw = rotationYaw
+    prevRotationPitch = rotationPitch
+
+    rotationYaw = yaw % 360
+    rotationPitch = pitch % 360
+    RotatedBB = RotatedBB.rotateTo(Rotation)
+  }
+
   override def setPosition(x: Double, y: Double, z: Double) = {
-    if (BoundingBox != null) {
-      BoundingBox = BoundingBox.moveTo(x, y, z)
+    if (boundingBox != null) {
+      // Get delta...
+      val deltaX = x - posX
+      val deltaY = y - posY
+      val deltaZ = z - posZ
+
+      // ..and offset the bounding box
+      boundingBox = boundingBox.offset(deltaX, deltaY, deltaZ)
+      RotatedBB = RotatedBB.moveTo(x, y, z)
     }
     // Update positions
     posX = x

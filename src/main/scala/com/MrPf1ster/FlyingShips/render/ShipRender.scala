@@ -91,7 +91,8 @@ class ShipRender(rm:RenderManager) extends Render[ShipEntity](rm) {
       doDebugRender(shipWorld, entityYaw)
 
     GL11.glPopMatrix()
-    DebugRender.drawRotatedBoundingBox(entity.BoundingBox, entity, x, y, z)
+
+    DebugRender.drawRotatedBoundingBox(entity.getRelativeRotatedBoundingBox, entity, x, y, z)
 
     RenderHelper.enableStandardItemLighting()
 

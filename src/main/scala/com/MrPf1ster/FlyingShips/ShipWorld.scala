@@ -1,17 +1,16 @@
 package com.MrPf1ster.FlyingShips
 
 import java.lang.Math._
-import javax.vecmath.Quat4f
 
 import com.MrPf1ster.FlyingShips.entities.ShipEntity
 import com.MrPf1ster.FlyingShips.network.BlocksChangedMessage
-import com.MrPf1ster.FlyingShips.util.{UnifiedBB, UnifiedPos, UnifiedVec}
+import com.MrPf1ster.FlyingShips.util.UnifiedPos
 import net.minecraft.block.Block
 import net.minecraft.block.state.IBlockState
 import net.minecraft.entity.EntityHanging
 import net.minecraft.nbt.NBTTagCompound
 import net.minecraft.tileentity.TileEntity
-import net.minecraft.util.{BlockPos, ITickable, Vec3}
+import net.minecraft.util.{AxisAlignedBB, BlockPos, ITickable}
 import net.minecraft.world.World
 import net.minecraftforge.fml.common.network.NetworkRegistry.TargetPoint
 
@@ -69,9 +68,16 @@ class ShipWorld(originWorld: World, originPos: BlockPos, blockSet: Set[BlockPos]
   val HangingEntities: mSet[EntityHanging] = null
 
 
-  def genBoundingBox(): UnifiedBB = {
+  def genBoundingBox() = {
+    val relative = genRelativeBoundingBox()
+    val uMinPos = new UnifiedPos(relative.minX, relative.minY, relative.minZ, Ship.getPosition, true)
+    val uMaxPos = new UnifiedPos(relative.maxX, relative.maxY, relative.maxZ, Ship.getPosition, true)
+    new AxisAlignedBB(uMinPos.WorldPos, uMaxPos.WorldPos)
+  }
+
+  def genRelativeBoundingBox() = {
     if (this.Ship.isDead || !isValid) {
-      UnifiedBB.Empty
+      new AxisAlignedBB(0, 0, 0, 0, 0, 0)
     }
     else {
       var minX = Int.MaxValue
@@ -92,11 +98,11 @@ class ShipWorld(originWorld: World, originPos: BlockPos, blockSet: Set[BlockPos]
 
 
       })
-      val origin = new Vec3(Ship.posX, Ship.posY, Ship.posZ)
-      val minPos = new UnifiedVec(minX, minY, minZ, origin, true)
-      val maxPos = new UnifiedVec(maxX + 1, maxY + 1, maxZ + 1, origin, true)
 
-      new UnifiedBB(minPos, maxPos, new Vec3(0.5, 0.5, 0.5), new Quat4f(0, 0, 0, 1))
+      val minPos = new BlockPos(minX, minY, minZ)
+      val maxPos = new BlockPos(maxX + 1, maxY + 1, maxZ + 1)
+
+      new AxisAlignedBB(minPos, maxPos)
     }
   }
 
@@ -133,7 +139,7 @@ class ShipWorld(originWorld: World, originPos: BlockPos, blockSet: Set[BlockPos]
     if (ChangedBlocks.isEmpty) return
 
     val message = new BlocksChangedMessage(Ship, ChangedBlocks.map(pos => pos.RelativePos).toArray)
-    val targetPoint = new TargetPoint(OriginWorld.provider.getDimensionId, Ship.posX, Ship.posY, Ship.posZ, 64)
+    val targetPoint = new TargetPoint(OriginWorld.provider.getDimensionId, Ship.getPosition.getX, Ship.getPosition.getY, Ship.getPosition.getZ, 64)
     FlyingShips.flyingShipPacketHandler.INSTANCE.sendToAllAround(message, targetPoint)
 
     ChangedBlocks.clear()
@@ -148,7 +154,7 @@ class ShipWorld(originWorld: World, originPos: BlockPos, blockSet: Set[BlockPos]
     if (applyBlockChange(pos, newState, flags) && this.isValid) {
       if (!isRemote)
         ChangedBlocks.add(new UnifiedPos(pos, Ship.getPosition, true))
-      return true
+      true
     }
     false
   }
@@ -168,7 +174,6 @@ class ShipWorld(originWorld: World, originPos: BlockPos, blockSet: Set[BlockPos]
 
   def isValid = BlockSet.nonEmpty
 
-  // Called by render to update the call list
   def needsRenderUpdate() = {
     val a = doRenderUpdate
     doRenderUpdate = false
