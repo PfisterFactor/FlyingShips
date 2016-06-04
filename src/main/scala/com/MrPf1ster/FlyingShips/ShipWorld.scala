@@ -140,5 +140,9 @@ class ShipWorld(originWorld: World, originPos: BlockPos, blockSet: Set[BlockPos]
     a
   }
 
+  override def getBiomeGenForCoords(pos: BlockPos) = OriginWorld.getBiomeGenForCoords(Ship.getPosition.add(pos))
+
+  override def getBiomeGenForCoordsBody(pos: BlockPos) = OriginWorld.getBiomeGenForCoords(Ship.getPosition.add(pos))
+
 
 }

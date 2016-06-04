@@ -21,18 +21,8 @@ object BlockUtils {
 
     loader.loadClass(className(mQueue))
     loader.loadClass(className(mSet))
-    // TODO: Fix class loading so findAllBlocks comes under 100 ms on first run
   }
-  
- /*
-  def time[R](block: => R): R = {
-    val t0 = System.currentTimeMillis()
-    val result = block // call-by-name
-    val t1 = System.currentTimeMillis()
-    println("Elapsed time: " + (t1 - t0) + "ms")
-    result
-  }
-  */
+
 
   // findAllBlocksConnected(world,pos)
   // Uses a flood fill algorithm to go through all the blocks connected to one another and adds them into an array
@@ -40,14 +30,13 @@ object BlockUtils {
   def findAllBlocksConnected(world: World, pos: BlockPos): Set[BlockPos] = {
     // Not very functional-like implementation of flood fill
     // Our block queue: if done recursively the method would take too much stack memory
-    // TODO: Implement this tail-end recursively
     val blockQueue = mQueue[(BlockPos, Option[EnumFacing])]()
     // Set that stores blocks apart of the ship
     val blockSet = mSet[BlockPos]()
 
     // Enqueue the first block, aka the ship controller block, for processing
     blockQueue.enqueue((pos, None)) // Starting direction is null
-    while (blockQueue.nonEmpty && blockSet.size < 10000) {
+    while (blockQueue.nonEmpty && blockSet.size < 1000) {
       // Max amount of blocks hardcoded for now, TODO: Move to config file
       // Get the next blockSet in queue
       val currentBlock = blockQueue.dequeue()
@@ -66,7 +55,7 @@ object BlockUtils {
 
       }
     }
-    // Return our blocks as a set and whether we found the helm
+    // Return our blocks as a set
     blockSet.toSet
   }
 

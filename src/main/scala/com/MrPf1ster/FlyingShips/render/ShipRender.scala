@@ -5,6 +5,7 @@ import javax.vecmath.{Matrix4f, Quat4f}
 
 import com.MrPf1ster.FlyingShips.ShipWorld
 import com.MrPf1ster.FlyingShips.entities.ShipEntity
+import com.MrPf1ster.FlyingShips.util.RotatedBB
 import net.minecraft.block.state.IBlockState
 import net.minecraft.client.Minecraft
 import net.minecraft.client.renderer._
@@ -13,7 +14,7 @@ import net.minecraft.client.renderer.texture.TextureMap
 import net.minecraft.client.renderer.tileentity.TileEntityRendererDispatcher
 import net.minecraft.client.renderer.vertex.DefaultVertexFormats
 import net.minecraft.entity.Entity
-import net.minecraft.util.{BlockPos, ResourceLocation}
+import net.minecraft.util.{BlockPos, ResourceLocation, Vec3}
 import org.lwjgl.BufferUtils
 import org.lwjgl.opengl.GL11
 
@@ -25,11 +26,16 @@ import scala.collection.mutable.{Map => mMap}
   */
 
 
-class ShipRender(rm:RenderManager) extends Render[ShipEntity](rm) {
-  var displayListIDs:  mMap[ShipWorld,Int] = mMap()
-  override def getEntityTexture(entity: ShipEntity): ResourceLocation = null // Ships are dynamic, and thus don't have a texture
-  override def doRenderShadowAndFire(entity:Entity, x:Double, y:Double, z:Double, yaw:Float,partialTickTime:Float) = {} // No shadow rendering
-  override def doRender(entity:ShipEntity,x:Double,y:Double,z:Double,entityYaw:Float,partialTicks:Float) = {
+class ShipRender(rm: RenderManager) extends Render[ShipEntity](rm) {
+  var displayListIDs: mMap[ShipWorld, Int] = mMap()
+
+  override def getEntityTexture(entity: ShipEntity): ResourceLocation = null
+
+  // Ships are dynamic, and thus don't have a texture
+  override def doRenderShadowAndFire(entity: Entity, x: Double, y: Double, z: Double, yaw: Float, partialTickTime: Float) = {}
+
+  // No shadow rendering
+  override def doRender(entity: ShipEntity, x: Double, y: Double, z: Double, entityYaw: Float, partialTicks: Float) = {
 
     def shipWorld = entity.ShipWorld
 
@@ -44,22 +50,11 @@ class ShipRender(rm:RenderManager) extends Render[ShipEntity](rm) {
     GL11.glTranslated(0.5, 0.5, 0.5)
 
 
-
-
-    // Convert our correction matrix into a buffer to pass to LWJGL (and then to OpenGL)
-    // The reason we have a correction matrix is because of how Minecraft axis is oriented
-    // XZY -> XYZ
-    //val rotationCorrectionBuffer = matrixToFloatBuffer(entity.correctionMatrix)
-
-    // Convert our rotation matrix to a FloatBuffer to pass to LWJGL (and then to OpenGL)
+    // Turn a quaternion into a matrix, then into a FloatBuffer
     val rotationBuffer = matrixToFloatBuffer(quaternionToMatrix4f(entity.Rotation)) //entity.renderMatrix)
 
 
-
-    // Multiply our transformation matrix by the rotation correction
-    //GL11.glMultMatrix(rotationCorrectionBuffer)
-
-    // Then multiply by the actual rotation
+    // Multiply current matrix by FloatBuffer
     GL11.glMultMatrix(rotationBuffer)
 
 
@@ -71,6 +66,7 @@ class ShipRender(rm:RenderManager) extends Render[ShipEntity](rm) {
     GL11.glTranslated(entity.posX, entity.posY, entity.posZ)
 
     RenderHelper.disableStandardItemLighting()
+
     rm.worldObj = shipWorld
     rm.renderEngine.bindTexture(TextureMap.locationBlocksTexture)
 
@@ -88,37 +84,39 @@ class ShipRender(rm:RenderManager) extends Render[ShipEntity](rm) {
       })
 
     if (DebugRender.isDebugMenuShown)
-      doDebugRender(shipWorld, entityYaw)
+      doDebugRender(shipWorld)
 
     GL11.glPopMatrix()
 
-    DebugRender.drawRotatedBoundingBox(entity.getBoundingBox.RelativeRBB, entity, x, y, z)
 
+
+    //DebugRender.drawRotatedBoundingBox(entity.getBoundingBox.RelativeRBB, entity, x, y, z)
+    renderBlackOutline(entity, new BlockPos(0, 0, 0), x, y, z)
     RenderHelper.enableStandardItemLighting()
 
 
   }
 
-  def getDisplayList(shipWorld: ShipWorld): Int = {
+  private def getDisplayList(shipWorld: ShipWorld): Int = {
     var id = displayListIDs.get(shipWorld)
     if (id.isDefined && shipWorld.needsRenderUpdate()) {
-      GL11.glDeleteLists(id.get,1)
+      GL11.glDeleteLists(id.get, 1)
       id = None
     }
     if (id.isEmpty) {
       // create a new list
-      id = Option[Int](GLAllocation.generateDisplayLists( 1 ))
+      id = Option[Int](GLAllocation.generateDisplayLists(1))
       displayListIDs.put(shipWorld, id.get)
 
       // build the list
-      GL11.glNewList( id.get, GL11.GL_COMPILE )
+      GL11.glNewList(id.get, GL11.GL_COMPILE)
       renderShip(shipWorld)
       GL11.glEndList()
     }
     id.get
   }
 
-  def renderShip(shipWorld: ShipWorld) = {
+  private def renderShip(shipWorld: ShipWorld) = {
     // Setup tessellator and worldRenderer
     def tessellator = Tessellator.getInstance()
     def worldRenderer = tessellator.getWorldRenderer
@@ -127,7 +125,7 @@ class ShipRender(rm:RenderManager) extends Render[ShipEntity](rm) {
     def i: Double = shipWorld.Ship.posX
     def j: Double = shipWorld.Ship.posY
     def k: Double = shipWorld.Ship.posZ
-    worldRenderer.setTranslation(-i,-j,-k)
+    worldRenderer.setTranslation(-i, -j, -k)
     worldRenderer.begin(GL11.GL_QUADS, DefaultVertexFormats.BLOCK)
 
 
@@ -135,7 +133,7 @@ class ShipRender(rm:RenderManager) extends Render[ShipEntity](rm) {
       val blockState = shipWorld.getBlockState(uPos.RelativePos)
       renderBlock(shipWorld, blockState, uPos.RelativePos, worldRenderer)
     })
-    worldRenderer.setTranslation(0,0,0)
+    worldRenderer.setTranslation(0, 0, 0)
     tessellator.draw()
 
 
@@ -150,12 +148,62 @@ class ShipRender(rm:RenderManager) extends Render[ShipEntity](rm) {
     }
   }
 
+  private def renderBlackOutline(ship: ShipEntity, pos: BlockPos, x: Double, y: Double, z: Double) = {
+    val rotatedBB = new RotatedBB(new Vec3(pos.getX, pos.getY, pos.getZ), new Vec3(pos.getX + 1, pos.getY + 1, pos.getZ + 1), new Vec3(0.5, 0.5, 0.5), ship.Rotation)
 
-  def doDebugRender(shipWorld: ShipWorld, entityYaw: Float) = {
+    GL11.glPushMatrix()
+    GL11.glTranslated(x, y, z)
+    GL11.glTranslated(ship.posX, ship.posY, ship.posZ)
+    GL11.glTranslated(pos.getX, pos.getY, pos.getZ)
+    GlStateManager.enableBlend()
+    GlStateManager.tryBlendFuncSeparate(770, 771, 1, 0)
+    GlStateManager.color(0.0F, 0.0F, 0.0F, 0.4F)
+    GL11.glLineWidth(2.0F)
+    GlStateManager.disableTexture2D()
+    GlStateManager.depthMask(false)
+
+
+    val tessellator: Tessellator = Tessellator.getInstance
+    val worldrenderer: WorldRenderer = tessellator.getWorldRenderer
+    worldrenderer.setTranslation(-ship.posX - pos.getX, -ship.posY - pos.getY, -ship.posZ - pos.getZ)
+    worldrenderer.begin(3, DefaultVertexFormats.POSITION)
+    worldrenderer.pos(rotatedBB.BackBottomLeft.xCoord, rotatedBB.BackBottomLeft.yCoord, rotatedBB.BackBottomLeft.zCoord).endVertex
+    worldrenderer.pos(rotatedBB.BackBottomRight.xCoord, rotatedBB.BackBottomRight.yCoord, rotatedBB.BackBottomRight.zCoord).endVertex
+    worldrenderer.pos(rotatedBB.ForwardBottomRight.xCoord, rotatedBB.ForwardBottomRight.yCoord, rotatedBB.ForwardBottomRight.zCoord).endVertex
+    worldrenderer.pos(rotatedBB.ForwardBottomLeft.xCoord, rotatedBB.ForwardBottomLeft.yCoord, rotatedBB.ForwardBottomLeft.zCoord).endVertex
+    worldrenderer.pos(rotatedBB.BackBottomLeft.xCoord, rotatedBB.BackBottomLeft.yCoord, rotatedBB.BackBottomLeft.zCoord).endVertex
+    tessellator.draw
+    worldrenderer.begin(3, DefaultVertexFormats.POSITION)
+    worldrenderer.pos(rotatedBB.BackTopLeft.xCoord, rotatedBB.BackTopLeft.yCoord, rotatedBB.BackTopLeft.zCoord).endVertex
+    worldrenderer.pos(rotatedBB.BackTopRight.xCoord, rotatedBB.BackTopRight.yCoord, rotatedBB.BackTopRight.zCoord).endVertex
+    worldrenderer.pos(rotatedBB.ForwardTopRight.xCoord, rotatedBB.ForwardTopRight.yCoord, rotatedBB.ForwardTopRight.zCoord).endVertex
+    worldrenderer.pos(rotatedBB.ForwardTopLeft.xCoord, rotatedBB.ForwardTopLeft.yCoord, rotatedBB.ForwardTopLeft.zCoord).endVertex
+    worldrenderer.pos(rotatedBB.BackTopLeft.xCoord, rotatedBB.BackTopLeft.yCoord, rotatedBB.BackTopLeft.zCoord).endVertex
+    tessellator.draw
+    worldrenderer.begin(1, DefaultVertexFormats.POSITION)
+    worldrenderer.pos(rotatedBB.BackBottomLeft.xCoord, rotatedBB.BackBottomLeft.yCoord, rotatedBB.BackBottomLeft.zCoord).endVertex
+    worldrenderer.pos(rotatedBB.BackTopLeft.xCoord, rotatedBB.BackTopLeft.yCoord, rotatedBB.BackTopLeft.zCoord).endVertex
+    worldrenderer.pos(rotatedBB.BackBottomRight.xCoord, rotatedBB.BackBottomRight.yCoord, rotatedBB.BackBottomRight.zCoord).endVertex
+    worldrenderer.pos(rotatedBB.BackTopRight.xCoord, rotatedBB.BackTopRight.yCoord, rotatedBB.BackTopRight.zCoord).endVertex
+    worldrenderer.pos(rotatedBB.ForwardBottomRight.xCoord, rotatedBB.ForwardBottomRight.yCoord, rotatedBB.ForwardBottomRight.zCoord).endVertex
+    worldrenderer.pos(rotatedBB.ForwardTopRight.xCoord, rotatedBB.ForwardTopRight.yCoord, rotatedBB.ForwardTopRight.zCoord).endVertex
+    worldrenderer.pos(rotatedBB.ForwardBottomLeft.xCoord, rotatedBB.ForwardBottomLeft.yCoord, rotatedBB.ForwardBottomLeft.zCoord).endVertex
+    worldrenderer.pos(rotatedBB.ForwardTopLeft.xCoord, rotatedBB.ForwardTopLeft.yCoord, rotatedBB.ForwardTopLeft.zCoord).endVertex
+    tessellator.draw
+    Tessellator.getInstance().getWorldRenderer.setTranslation(0, 0, 0)
+
+    GlStateManager.depthMask(true)
+    GlStateManager.enableTexture2D()
+    GlStateManager.disableBlend()
+
+    GL11.glPopMatrix()
+  }
+
+  private def doDebugRender(shipWorld: ShipWorld) = {
 
     GlStateManager.enableBlend()
     GlStateManager.tryBlendFuncSeparate(770, 771, 1, 0)
-    GlStateManager.color(1.0F, 0.0F, 0.0F, 0.4F)
+    GlStateManager.color(0.0F, 0.0F, 1.0F, 0.4F)
     GL11.glLineWidth(4.0F)
     GlStateManager.disableTexture2D()
     GlStateManager.depthMask(false)
@@ -163,10 +211,10 @@ class ShipRender(rm:RenderManager) extends Render[ShipEntity](rm) {
 
     shipWorld.BlockSet.foreach(uPos => {
       val blockState = shipWorld.getBlockState(uPos.RelativePos)
-      //DebugRender.debugRenderBlock(shipWorld, blockState, uPos.RelativePos)
+      DebugRender.debugRenderBlock(shipWorld, blockState, uPos.RelativePos)
 
     })
-    //DebugRender.debugRenderShip(shipWorld.Ship)
+    DebugRender.debugRenderShip(shipWorld.Ship)
 
     GlStateManager.depthMask(true)
     GlStateManager.enableTexture2D()
@@ -174,7 +222,7 @@ class ShipRender(rm:RenderManager) extends Render[ShipEntity](rm) {
 
   }
 
-  def matrixToFloatBuffer(m: Matrix4f): FloatBuffer = {
+  private def matrixToFloatBuffer(m: Matrix4f): FloatBuffer = {
     val fb = BufferUtils.createFloatBuffer(16)
     fb.put(m.m00)
     fb.put(m.m01)
@@ -196,11 +244,11 @@ class ShipRender(rm:RenderManager) extends Render[ShipEntity](rm) {
     return fb;
   }
 
-  def quaternionToMatrix4f(q: Quat4f): Matrix4f = {
+  private def quaternionToMatrix4f(q: Quat4f): Matrix4f = {
     q.normalize()
-    new Matrix4f(1.0f - 2.0f*q.getY()*q.getY() - 2.0f*q.getZ()*q.getZ(), 2.0f*q.getX()*q.getY() - 2.0f*q.getZ()*q.getW(), 2.0f*q.getX()*q.getZ() + 2.0f*q.getY()*q.getW(), 0.0f,
-      2.0f*q.getX()*q.getY() + 2.0f*q.getZ()*q.getW(), 1.0f - 2.0f*q.getX()*q.getX() - 2.0f*q.getZ()*q.getZ(), 2.0f*q.getY()*q.getZ() - 2.0f*q.getX()*q.getW(), 0.0f,
-      2.0f*q.getX()*q.getZ() - 2.0f*q.getY()*q.getW(), 2.0f*q.getY()*q.getZ() + 2.0f*q.getX()*q.getW(), 1.0f - 2.0f*q.getX()*q.getX() - 2.0f*q.getY()*q.getY(), 0.0f,
+    new Matrix4f(1.0f - 2.0f * q.getY() * q.getY() - 2.0f * q.getZ() * q.getZ(), 2.0f * q.getX() * q.getY() - 2.0f * q.getZ() * q.getW(), 2.0f * q.getX() * q.getZ() + 2.0f * q.getY() * q.getW(), 0.0f,
+      2.0f * q.getX() * q.getY() + 2.0f * q.getZ() * q.getW(), 1.0f - 2.0f * q.getX() * q.getX() - 2.0f * q.getZ() * q.getZ(), 2.0f * q.getY() * q.getZ() - 2.0f * q.getX() * q.getW(), 0.0f,
+      2.0f * q.getX() * q.getZ() - 2.0f * q.getY() * q.getW(), 2.0f * q.getY() * q.getZ() + 2.0f * q.getX() * q.getW(), 1.0f - 2.0f * q.getX() * q.getX() - 2.0f * q.getY() * q.getY(), 0.0f,
       0.0f, 0.0f, 0.0f, 1.0f);
   }
 

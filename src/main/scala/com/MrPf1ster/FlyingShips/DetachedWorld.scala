@@ -6,6 +6,7 @@ import net.minecraft.nbt.NBTTagCompound
 import net.minecraft.profiler.Profiler
 import net.minecraft.tileentity.TileEntity
 import net.minecraft.util.BlockPos
+import net.minecraft.world.biome.BiomeGenBase
 import net.minecraft.world.chunk.IChunkProvider
 import net.minecraft.world.chunk.storage.IChunkLoader
 import net.minecraft.world.storage.{IPlayerFileData, ISaveHandler, WorldInfo}
@@ -59,8 +60,9 @@ class DetachedWorld(realWorld:World, worldName:String)
   @SideOnly(Side.CLIENT)
   override def getLightBrightness(pos: BlockPos) = 15
 
-  override def getBiomeGenForCoords(pos:BlockPos) = null
-  override def getBiomeGenForCoordsBody(pos:BlockPos) = null
+  override def getBiomeGenForCoords(pos: BlockPos): BiomeGenBase = null
+
+  override def getBiomeGenForCoordsBody(pos: BlockPos): BiomeGenBase = null
   override def isChunkLoaded(x:Int, z:Int, something:Boolean) = true
   override def getChunkFromChunkCoords(x:Int,z:Int) = null
   override def getProviderName = "Detached World"

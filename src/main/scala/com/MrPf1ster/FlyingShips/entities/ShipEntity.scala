@@ -73,7 +73,8 @@ class ShipEntity(pos: BlockPos, world: World, blockSet: Set[BlockPos], shipBlock
 
     val deg15 = new Quat4f(0.94f, 0, 0, 0.94f)
     deg15.mul(Rotation, deg15)
-    Rotation.interpolate(deg15, 0.2f)
+    //Rotation.interpolate(deg15, 0.2f)
+    Rotation = new Quat4f(0, 0, 0, 1)
     _boundingBox = _boundingBox.rotateTo(Rotation)
 
   }
@@ -83,7 +84,8 @@ class ShipEntity(pos: BlockPos, world: World, blockSet: Set[BlockPos], shipBlock
     posX = x
     posY = y
     posZ = z
-    _boundingBox.moveTo(x, y, z)
+    if (_boundingBox != null)
+      _boundingBox.moveTo(x, y, z)
 
   }
 
