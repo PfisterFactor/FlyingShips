@@ -5,7 +5,7 @@ import javax.vecmath.{Matrix4f, Quat4f}
 
 import com.MrPf1ster.FlyingShips.ShipWorld
 import com.MrPf1ster.FlyingShips.entities.ShipEntity
-import com.MrPf1ster.FlyingShips.util.RotatedBB
+import com.MrPf1ster.FlyingShips.util.{RenderUtils, RotatedBB}
 import net.minecraft.block.state.IBlockState
 import net.minecraft.client.Minecraft
 import net.minecraft.client.renderer._
@@ -90,7 +90,7 @@ class ShipRender(rm: RenderManager) extends Render[ShipEntity](rm) {
 
 
 
-    //DebugRender.drawRotatedBoundingBox(entity.getBoundingBox.RelativeRBB, entity, x, y, z)
+    DebugRender.drawRotatedBoundingBox(entity.getBoundingBox.RelativeRBB, entity, x, y, z)
     renderBlackOutline(entity, new BlockPos(0, 0, 0), x, y, z)
     RenderHelper.enableStandardItemLighting()
 
@@ -121,7 +121,6 @@ class ShipRender(rm: RenderManager) extends Render[ShipEntity](rm) {
     def tessellator = Tessellator.getInstance()
     def worldRenderer = tessellator.getWorldRenderer
 
-
     def i: Double = shipWorld.Ship.posX
     def j: Double = shipWorld.Ship.posY
     def k: Double = shipWorld.Ship.posZ
@@ -150,7 +149,6 @@ class ShipRender(rm: RenderManager) extends Render[ShipEntity](rm) {
 
   private def renderBlackOutline(ship: ShipEntity, pos: BlockPos, x: Double, y: Double, z: Double) = {
     val rotatedBB = new RotatedBB(new Vec3(pos.getX, pos.getY, pos.getZ), new Vec3(pos.getX + 1, pos.getY + 1, pos.getZ + 1), new Vec3(0.5, 0.5, 0.5), ship.Rotation)
-
     GL11.glPushMatrix()
     GL11.glTranslated(x, y, z)
     GL11.glTranslated(ship.posX, ship.posY, ship.posZ)
@@ -161,42 +159,20 @@ class ShipRender(rm: RenderManager) extends Render[ShipEntity](rm) {
     GL11.glLineWidth(2.0F)
     GlStateManager.disableTexture2D()
     GlStateManager.depthMask(false)
-
-
     val tessellator: Tessellator = Tessellator.getInstance
     val worldrenderer: WorldRenderer = tessellator.getWorldRenderer
     worldrenderer.setTranslation(-ship.posX - pos.getX, -ship.posY - pos.getY, -ship.posZ - pos.getZ)
-    worldrenderer.begin(3, DefaultVertexFormats.POSITION)
-    worldrenderer.pos(rotatedBB.BackBottomLeft.xCoord, rotatedBB.BackBottomLeft.yCoord, rotatedBB.BackBottomLeft.zCoord).endVertex
-    worldrenderer.pos(rotatedBB.BackBottomRight.xCoord, rotatedBB.BackBottomRight.yCoord, rotatedBB.BackBottomRight.zCoord).endVertex
-    worldrenderer.pos(rotatedBB.ForwardBottomRight.xCoord, rotatedBB.ForwardBottomRight.yCoord, rotatedBB.ForwardBottomRight.zCoord).endVertex
-    worldrenderer.pos(rotatedBB.ForwardBottomLeft.xCoord, rotatedBB.ForwardBottomLeft.yCoord, rotatedBB.ForwardBottomLeft.zCoord).endVertex
-    worldrenderer.pos(rotatedBB.BackBottomLeft.xCoord, rotatedBB.BackBottomLeft.yCoord, rotatedBB.BackBottomLeft.zCoord).endVertex
-    tessellator.draw
-    worldrenderer.begin(3, DefaultVertexFormats.POSITION)
-    worldrenderer.pos(rotatedBB.BackTopLeft.xCoord, rotatedBB.BackTopLeft.yCoord, rotatedBB.BackTopLeft.zCoord).endVertex
-    worldrenderer.pos(rotatedBB.BackTopRight.xCoord, rotatedBB.BackTopRight.yCoord, rotatedBB.BackTopRight.zCoord).endVertex
-    worldrenderer.pos(rotatedBB.ForwardTopRight.xCoord, rotatedBB.ForwardTopRight.yCoord, rotatedBB.ForwardTopRight.zCoord).endVertex
-    worldrenderer.pos(rotatedBB.ForwardTopLeft.xCoord, rotatedBB.ForwardTopLeft.yCoord, rotatedBB.ForwardTopLeft.zCoord).endVertex
-    worldrenderer.pos(rotatedBB.BackTopLeft.xCoord, rotatedBB.BackTopLeft.yCoord, rotatedBB.BackTopLeft.zCoord).endVertex
-    tessellator.draw
-    worldrenderer.begin(1, DefaultVertexFormats.POSITION)
-    worldrenderer.pos(rotatedBB.BackBottomLeft.xCoord, rotatedBB.BackBottomLeft.yCoord, rotatedBB.BackBottomLeft.zCoord).endVertex
-    worldrenderer.pos(rotatedBB.BackTopLeft.xCoord, rotatedBB.BackTopLeft.yCoord, rotatedBB.BackTopLeft.zCoord).endVertex
-    worldrenderer.pos(rotatedBB.BackBottomRight.xCoord, rotatedBB.BackBottomRight.yCoord, rotatedBB.BackBottomRight.zCoord).endVertex
-    worldrenderer.pos(rotatedBB.BackTopRight.xCoord, rotatedBB.BackTopRight.yCoord, rotatedBB.BackTopRight.zCoord).endVertex
-    worldrenderer.pos(rotatedBB.ForwardBottomRight.xCoord, rotatedBB.ForwardBottomRight.yCoord, rotatedBB.ForwardBottomRight.zCoord).endVertex
-    worldrenderer.pos(rotatedBB.ForwardTopRight.xCoord, rotatedBB.ForwardTopRight.yCoord, rotatedBB.ForwardTopRight.zCoord).endVertex
-    worldrenderer.pos(rotatedBB.ForwardBottomLeft.xCoord, rotatedBB.ForwardBottomLeft.yCoord, rotatedBB.ForwardBottomLeft.zCoord).endVertex
-    worldrenderer.pos(rotatedBB.ForwardTopLeft.xCoord, rotatedBB.ForwardTopLeft.yCoord, rotatedBB.ForwardTopLeft.zCoord).endVertex
-    tessellator.draw
-    Tessellator.getInstance().getWorldRenderer.setTranslation(0, 0, 0)
+
+    RenderUtils.drawRotatedBB(rotatedBB, worldrenderer)
+
+    worldrenderer.setTranslation(0, 0, 0)
 
     GlStateManager.depthMask(true)
     GlStateManager.enableTexture2D()
     GlStateManager.disableBlend()
 
     GL11.glPopMatrix()
+
   }
 
   private def doDebugRender(shipWorld: ShipWorld) = {
