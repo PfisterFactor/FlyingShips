@@ -16,8 +16,8 @@ object DebugRender {
 
   def isDebugMenuShown = Minecraft.getMinecraft().gameSettings.showDebugInfo
 
-  def debugRenderBlock(shipWorld: ShipWorld, blockState: IBlockState, pos: BlockPos) = {
-
+  // Does not work
+  def debugRenderBlock(shipWorld: ShipWorld, blockState: IBlockState, pos: BlockPos, x: Double, y: Double, z: Double) = {
     // Small delta so we can see the block outline
     val delta = 0.01
 
@@ -28,21 +28,10 @@ object DebugRender {
     Tessellator.getInstance().getWorldRenderer.setTranslation(-shipWorld.Ship.posX, -shipWorld.Ship.posY, -shipWorld.Ship.posZ)
     val min = new Vec3(blockBB.minX, blockBB.minY, blockBB.minZ)
     val max = new Vec3(blockBB.maxX, blockBB.maxY, blockBB.maxZ)
-
-    RenderUtils.drawRotatedBB(new RotatedBB(min, max, new Vec3(0.5, 0.5, 0.5), shipWorld.Ship.Rotation), Tessellator.getInstance().getWorldRenderer)
+    drawRotatedBoundingBox(new RotatedBB(min, max, new Vec3(0.5, 0.5, 0.5), shipWorld.Ship.Rotation), shipWorld.Ship, x, y, z)
     Tessellator.getInstance().getWorldRenderer.setTranslation(0, 0, 0)
 
   }
-
-  def debugRenderShip(shipEntity: ShipEntity) = {
-    def bb = shipEntity.getBoundingBox.RelativeAABB
-    Tessellator.getInstance().getWorldRenderer.setTranslation(-shipEntity.posX, -shipEntity.posY, -shipEntity.posZ)
-    RenderUtils.drawAABB(bb)
-    Tessellator.getInstance().getWorldRenderer.setTranslation(0, 0, 0)
-  }
-
-
-
 
   def drawRotatedBoundingBox(rotatedBB: RotatedBB, shipEntity: ShipEntity, x: Double, y: Double, z: Double) = {
 

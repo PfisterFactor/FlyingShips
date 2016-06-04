@@ -44,7 +44,7 @@ class ShipEntity(pos: BlockPos, world: World, blockSet: Set[BlockPos], shipBlock
   // Returns ship direction based on which way the creator block is facing
   val ShipDirection: EnumFacing = if (ShipWorld.isValid) ShipWorld.ShipBlock.getValue(ShipCreatorBlock.FACING) else null
 
-  private var _boundingBox = new BoundingBox(BoundingBox.generateRotated(ShipWorld.BlockSet, Rotation), BoundingBox.generateRotatedRelative(ShipWorld.BlockSet, Rotation), Rotation)
+  private var _boundingBox = new BoundingBox(BoundingBox.generateRotated(ShipWorld.BlockSet, Rotation), BoundingBox.generateRotatedRelative(ShipWorld.BlockSet, Rotation), Rotation, getPositionVector)
 
   def getBoundingBox: BoundingBox = _boundingBox
 
@@ -73,8 +73,8 @@ class ShipEntity(pos: BlockPos, world: World, blockSet: Set[BlockPos], shipBlock
 
     val deg15 = new Quat4f(0.94f, 0, 0, 0.94f)
     deg15.mul(Rotation, deg15)
-    //Rotation.interpolate(deg15, 0.2f)
-    Rotation = new Quat4f(0, 0, 0, 1)
+    Rotation.interpolate(deg15, 0.01f)
+    //Rotation = new Quat4f(1, 0, 0, 1)
     _boundingBox = _boundingBox.rotateTo(Rotation)
 
   }

@@ -48,19 +48,22 @@ object BoundingBox {
   }
 }
 
-case class BoundingBox(RBB: RotatedBB, RelativeRBB: RotatedBB, Rotation: Quat4f) {
-  def MinPos = RBB.MinPos
+case class BoundingBox(RBB: RotatedBB, RelativeRBB: RotatedBB, Rotation: Quat4f, ShipPos: Vec3) {
 
-  def MaxPos = RBB.MaxPos
 
-  def RelativeMinPos = RelativeRBB.MinPos
+  val RelativeMinPos = new Vec3(RelativeRBB.Corners.minBy(v => v.xCoord).xCoord, RelativeRBB.Corners.minBy(v => v.yCoord).yCoord, RelativeRBB.Corners.minBy(v => v.zCoord).zCoord)
 
-  def RelativeMaxPos = RelativeRBB.MaxPos
+  val RelativeMaxPos = new Vec3(RelativeRBB.Corners.maxBy(v => v.xCoord).xCoord, RelativeRBB.Corners.maxBy(v => v.yCoord).yCoord, RelativeRBB.Corners.maxBy(v => v.zCoord).zCoord)
 
-  val AABB: AxisAlignedBB = new AxisAlignedBB(MinPos.xCoord, MinPos.yCoord, MinPos.zCoord, MaxPos.xCoord, MaxPos.yCoord, MaxPos.zCoord)
-  val RelativeAABB: AxisAlignedBB = new AxisAlignedBB(RelativeMinPos.xCoord, RelativeMinPos.yCoord, RelativeMinPos.zCoord, RelativeMaxPos.xCoord, RelativeMaxPos.yCoord, RelativeMaxPos.zCoord)
+  val MinPos = RelativeMinPos.add(ShipPos)
 
-  def moveTo(X: Double, Y: Double, Z: Double) = this.copy(RBB.moveTo(X, Y, Z), RelativeRBB)
+  val MaxPos = RelativeMaxPos.add(ShipPos)
+
+  def AABB: AxisAlignedBB = new AxisAlignedBB(MinPos.xCoord, MinPos.yCoord, MinPos.zCoord, MaxPos.xCoord, MaxPos.yCoord, MaxPos.zCoord)
+
+  def RelativeAABB: AxisAlignedBB = new AxisAlignedBB(RelativeMinPos.xCoord, RelativeMinPos.yCoord, RelativeMinPos.zCoord, RelativeMaxPos.xCoord, RelativeMaxPos.yCoord, RelativeMaxPos.zCoord)
+
+  def moveTo(X: Double, Y: Double, Z: Double) = this.copy(RBB.moveTo(X, Y, Z), RelativeRBB, Rotation, ShipPos.addVector(X - ShipPos.xCoord, Y - ShipPos.yCoord, Z - ShipPos.zCoord))
 
   def moveTo(pos: Vec3): BoundingBox = this.moveTo(pos.xCoord, pos.yCoord, pos.zCoord)
 

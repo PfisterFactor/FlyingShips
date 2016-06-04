@@ -5,7 +5,7 @@ import javax.vecmath.{Matrix4f, Quat4f}
 
 import com.MrPf1ster.FlyingShips.ShipWorld
 import com.MrPf1ster.FlyingShips.entities.ShipEntity
-import com.MrPf1ster.FlyingShips.util.{RenderUtils, RotatedBB}
+import com.MrPf1ster.FlyingShips.util.{RenderUtils, RotatedBB, VectorUtils}
 import net.minecraft.block.state.IBlockState
 import net.minecraft.client.Minecraft
 import net.minecraft.client.renderer._
@@ -14,11 +14,13 @@ import net.minecraft.client.renderer.texture.TextureMap
 import net.minecraft.client.renderer.tileentity.TileEntityRendererDispatcher
 import net.minecraft.client.renderer.vertex.DefaultVertexFormats
 import net.minecraft.entity.Entity
+import net.minecraft.util.MovingObjectPosition.MovingObjectType
 import net.minecraft.util.{BlockPos, ResourceLocation, Vec3}
 import org.lwjgl.BufferUtils
 import org.lwjgl.opengl.GL11
 
 import scala.collection.mutable.{Map => mMap}
+import scala.util.Try
 
 
 /**
@@ -83,16 +85,21 @@ class ShipRender(rm: RenderManager) extends Render[ShipEntity](rm) {
         TileEntityRendererDispatcher.instance.renderTileEntityAt(te, -(uPos.WorldPosX - 2 * uPos.RelPosX), -(uPos.WorldPosY - 2 * uPos.RelPosY), -(uPos.WorldPosZ - 2 * uPos.RelPosZ), partialTicks, -1)
       })
 
-    if (DebugRender.isDebugMenuShown)
-      doDebugRender(shipWorld)
+
 
     GL11.glPopMatrix()
 
+    if (DebugRender.isDebugMenuShown)
+      doDebugRender(shipWorld, x, y, z)
 
 
-    DebugRender.drawRotatedBoundingBox(entity.getBoundingBox.RelativeRBB, entity, x, y, z)
-    renderBlackOutline(entity, new BlockPos(0, 0, 0), x, y, z)
+
+    //DebugRender.drawRotatedBoundingBox(entity.getBoundingBox.RelativeRBB, entity, x, y, z)
+    val hoveredBlockOnShip: Option[BlockPos] = getBlockMouseIsOver(entity, partialTicks)
+    if (hoveredBlockOnShip.isDefined)
+      renderBlackOutline(entity, hoveredBlockOnShip.get, x, y, z)
     RenderHelper.enableStandardItemLighting()
+
 
 
   }
@@ -175,26 +182,38 @@ class ShipRender(rm: RenderManager) extends Render[ShipEntity](rm) {
 
   }
 
-  private def doDebugRender(shipWorld: ShipWorld) = {
+  private def getBlockMouseIsOver(entity: ShipEntity, partialTicks: Float): Option[BlockPos] = {
+    def objectMouseOver = Minecraft.getMinecraft.objectMouseOver
+    if (objectMouseOver.typeOfHit != MovingObjectType.ENTITY || !objectMouseOver.entityHit.isEntityEqual(entity)) return None
+    def player = Minecraft.getMinecraft.thePlayer
 
-    GlStateManager.enableBlend()
-    GlStateManager.tryBlendFuncSeparate(770, 771, 1, 0)
-    GlStateManager.color(0.0F, 0.0F, 1.0F, 0.4F)
-    GL11.glLineWidth(4.0F)
-    GlStateManager.disableTexture2D()
-    GlStateManager.depthMask(false)
+    val blockReachDistance = entity.InteractionHandler.getPlayerReachDistance(player)
+    val eyePos: Vec3 = player.getPositionEyes(partialTicks).subtract(entity.getPositionVector)
+    val lookVector: Vec3 = player.getLook(partialTicks)
+    val ray: Vec3 = eyePos.addVector(lookVector.xCoord * blockReachDistance, lookVector.yCoord * blockReachDistance, lookVector.zCoord * blockReachDistance)
 
+    val inversedRot: Quat4f = entity.Rotation.clone().asInstanceOf[Quat4f]
+    inversedRot.inverse()
 
+    val rotatedEyePos: Vec3 = VectorUtils.rotatePointByQuaternion(eyePos, inversedRot)
+    println(rotatedEyePos)
+    val rotatedRay: Vec3 = VectorUtils.rotatePointByQuaternion(ray, inversedRot)
+
+    val blockPos = Try(entity.ShipWorld.rayTraceBlocks(rotatedEyePos, rotatedRay).getBlockPos)
+    if (blockPos.isSuccess)
+      Some(blockPos.get)
+    else
+      None
+
+  }
+
+  private def doDebugRender(shipWorld: ShipWorld, x: Double, y: Double, z: Double) = {
+    DebugRender.drawRotatedBoundingBox(new RotatedBB(shipWorld.Ship.getBoundingBox.RelativeAABB, new Vec3(0, 0, 0), new Quat4f(0, 0, 0, 1)), shipWorld.Ship, x, y, z)
     shipWorld.BlockSet.foreach(uPos => {
       val blockState = shipWorld.getBlockState(uPos.RelativePos)
-      DebugRender.debugRenderBlock(shipWorld, blockState, uPos.RelativePos)
+      DebugRender.debugRenderBlock(shipWorld, blockState, uPos.RelativePos, x, y, z)
 
     })
-    DebugRender.debugRenderShip(shipWorld.Ship)
-
-    GlStateManager.depthMask(true)
-    GlStateManager.enableTexture2D()
-    GlStateManager.disableBlend()
 
   }
 

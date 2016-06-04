@@ -27,27 +27,10 @@ case class RotatedBB(MinPos: Vec3, MaxPos: Vec3, RotationPoint: Vec3, Rotation: 
       MaxPos) // Forward Top Right
 
     a map (corner => {
-      rotatePointByQuaternion(corner.subtract(RotationPoint), Rotation).add(RotationPoint)
+      VectorUtils.rotatePointByQuaternion(corner.subtract(RotationPoint), Rotation).add(RotationPoint)
     })
   }
 
-  private def rotatePointByQuaternion(P: Vec3, Q: Quat4f): Vec3 = {
-    // Straight from Stack Overflow, -- https://stackoverflow.com/questions/9892400/java-3d-rotation-with-quaternions
-    val x_old = P.xCoord
-    val y_old = P.yCoord
-    val z_old = P.zCoord
-
-    val w = Q.getW
-    val x = Q.getX
-    val y = Q.getY
-    val z = Q.getZ
-
-    val x_new = ((1 - 2 * y * y - 2 * z * z) * x_old + (2 * x * y + 2 * w * z) * y_old + (2 * x * z - 2 * w * y) * z_old).toFloat
-    val y_new = ((2 * x * y - 2 * w * z) * x_old + (1 - 2 * x * x - 2 * z * z) * y_old + (2 * y * z + 2 * w * x) * z_old).toFloat
-    val z_new = ((2 * x * z + 2 * w * y) * x_old + (2 * y * z - 2 * w * x) * y_old + (1 - 2 * x * x - 2 * y * y) * z_old).toFloat
-
-    new Vec3(x_new, y_new, z_new)
-  }
 
   def this(BB: AxisAlignedBB, RotationPoint: Vec3, Rotation: Quat4f) = this(new Vec3(BB.minX, BB.minY, BB.minZ), new Vec3(BB.maxX, BB.maxY, BB.maxZ), RotationPoint, Rotation)
 
@@ -70,7 +53,7 @@ case class RotatedBB(MinPos: Vec3, MaxPos: Vec3, RotationPoint: Vec3, Rotation: 
   // Returns RotatedBB with new rotation
   def rotateTo(Rotation: Quat4f): RotatedBB = this.copy(MinPos, MaxPos, RotationPoint, Rotation)
 
-  // Returns RotatedBB with rotation multiplied by the delta rotation
+
   def rotateBy(DeltaRotation: Quat4f): RotatedBB = {
     Rotation.mul(DeltaRotation)
     this.copy(MinPos, MaxPos, RotationPoint, Rotation)
