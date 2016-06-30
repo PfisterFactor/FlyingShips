@@ -1,5 +1,6 @@
 package com.MrPf1ster.FlyingShips.blocks
 
+import com.MrPf1ster.FlyingShips.ShipWorld
 import com.MrPf1ster.FlyingShips.entities.ShipEntity
 import com.MrPf1ster.FlyingShips.util.BlockUtils
 import net.minecraft.block.Block
@@ -27,8 +28,11 @@ class ShipCreatorBlock extends Block(Material.wood) {
 
   // TODO: Up the limit from 100 and figure out why it crashes
   override def onBlockActivated(worldIn:World, pos: BlockPos, state: IBlockState, playerIn: EntityPlayer,side: EnumFacing,hitX: Float, hitY: Float, hitZ: Float) : Boolean = {
+
+    if (worldIn.isInstanceOf[ShipWorld]) return true
+
     val blocksConnected = BlockUtils.findAllBlocksConnected(worldIn, pos)
-    if (blocksConnected.size <= 100) {
+    if (blocksConnected.size <= 100 && blocksConnected.size > 1) {
       val shipEntity = new ShipEntity(pos, worldIn, blocksConnected, pos)
       shipEntity.setPosition(pos.getX, pos.getY, pos.getZ)
 

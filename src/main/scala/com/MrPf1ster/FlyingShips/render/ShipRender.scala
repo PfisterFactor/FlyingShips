@@ -14,7 +14,7 @@ import net.minecraft.client.renderer.texture.TextureMap
 import net.minecraft.client.renderer.tileentity.TileEntityRendererDispatcher
 import net.minecraft.client.renderer.vertex.DefaultVertexFormats
 import net.minecraft.entity.Entity
-import net.minecraft.util.{BlockPos, ResourceLocation, Vec3}
+import net.minecraft.util.{BlockPos, MovingObjectPosition, ResourceLocation, Vec3}
 import org.lwjgl.BufferUtils
 import org.lwjgl.opengl.GL11
 
@@ -91,11 +91,13 @@ class ShipRender(rm: RenderManager) extends Render[ShipEntity](rm) {
     if (DebugRender.isDebugMenuShown)
       doDebugRender(shipWorld, x, y, z)
 
-    val hoveredBlockOnShip: Option[BlockPos] = entity.InteractionHandler.getBlockPlayerIsLookingAt(partialTicks)
+    // Ray-trace across the ship and return it wrapped in an option
+    val rayTrace: Option[MovingObjectPosition] = entity.InteractionHandler.getBlockPlayerIsLookingAt(partialTicks)
 
-    if (hoveredBlockOnShip.isDefined) {
+    if (rayTrace.isDefined) {
       //println(hoveredBlockOnShip.get)
-      renderBlackOutline(entity, hoveredBlockOnShip.get, x, y, z)
+      def block = rayTrace.get.getBlockPos
+      renderBlackOutline(entity, block , x, y, z)
     }
 
     RenderHelper.enableStandardItemLighting()

@@ -11,6 +11,8 @@ class FlyingShipsPacketHandler {
   val INSTANCE: SimpleNetworkWrapper = NetworkRegistry.INSTANCE.newSimpleChannel("flyingships")
 
   INSTANCE.registerMessage(classOf[ClientBlocksChangedMessageHandler], classOf[BlocksChangedMessage], 0, Side.CLIENT)
+  INSTANCE.registerMessage(classOf[ClientBlockActivatedMessageHandler], classOf[BlockActivatedMessage],0,Side.SERVER)
+
 
   def registerClientSide() = {
 

@@ -1,10 +1,13 @@
 package com.MrPf1ster.FlyingShips.entities
 
+import java.util.UUID
 import javax.vecmath.Quat4f
 
 import com.MrPf1ster.FlyingShips.ShipWorld
 import com.MrPf1ster.FlyingShips.blocks.ShipCreatorBlock
 import com.MrPf1ster.FlyingShips.util.BoundingBox
+import com.google.common.base.Predicates
+import net.minecraft.client.Minecraft
 import net.minecraft.entity.Entity
 import net.minecraft.entity.player.EntityPlayer
 import net.minecraft.nbt.NBTTagCompound
@@ -14,9 +17,25 @@ import net.minecraft.world.World
   * Created by EJ on 2/21/2016.
   */
 object ShipEntity {
-  // TODO: This is not right, needs to be sent via packets
-  var nextID: ThreadLocal[Int] = new ThreadLocal[Int]()
-  nextID.set(0)
+
+  def LocateShip(ShipUUID: UUID): Option[ShipEntity] = {
+    val thePlayer = Minecraft.getMinecraft.thePlayer
+
+    def world = thePlayer.getEntityWorld
+
+    val entities = world.getEntities(classOf[ShipEntity], Predicates.alwaysTrue[ShipEntity])
+    val iter = entities.iterator()
+
+    while (iter.hasNext) {
+      val next = iter.next()
+      val uuid = next.getPersistentID
+      if (uuid.compareTo(ShipUUID) == 0)
+        return Some(next)
+    }
+    None
+
+
+  }
 }
 class ShipEntity(pos: BlockPos, world: World, blockSet: Set[BlockPos], shipBlockPos: BlockPos) extends Entity(world) {
 
@@ -28,18 +47,15 @@ class ShipEntity(pos: BlockPos, world: World, blockSet: Set[BlockPos], shipBlock
   posY = pos.getY
   posZ = pos.getZ
 
-  // This needs to be synced with the server
-  val ShipID = if (blockSet.nonEmpty) ShipEntity.nextID.get else -1
-  if (blockSet.nonEmpty) ShipEntity.nextID.set(ShipEntity.nextID.get + 1)
-
-  // Handles interacting with the ship, (left and right clicking on blocks on the ship)
-  val InteractionHandler: ShipInteractionHandler = new ShipInteractionHandler(this)
 
   // Fake world that holds all the blocks on the ship
   val ShipWorld: ShipWorld = new ShipWorld(world, shipBlockPos, blockSet, this)
 
+  // Handles interacting with the ship, (left and right clicking on blocks on the ship)
+  val InteractionHandler: ShipInteractionHandler = new ShipInteractionHandler(ShipWorld)
+
   // Rotation of the ship in Quaternions
-  var Rotation: Quat4f = new Quat4f(1, 0, 0f, 1)
+  var Rotation: Quat4f = new Quat4f(0f, 0f, 0f, 1f)
 
   // Returns ship direction based on which way the creator block is facing
   val ShipDirection: EnumFacing = if (ShipWorld.isValid) ShipWorld.ShipBlock.getValue(ShipCreatorBlock.FACING) else null
@@ -71,8 +87,8 @@ class ShipEntity(pos: BlockPos, world: World, blockSet: Set[BlockPos], shipBlock
       this.setDead()
     }
 
-    val deg15 = new Quat4f(0.94f, 0, 0, 0.94f)
-    deg15.mul(Rotation, deg15)
+    //val deg15 = new Quat4f(0.94f, 0, 0, 0.94f)
+    //deg15.mul(Rotation, deg15)
     //Rotation.interpolate(deg15, 0.01f)//
     //Rotation = new Quat4f(0, 0, 0, 1)
     _boundingBox = _boundingBox.rotateTo(Rotation)
@@ -91,7 +107,7 @@ class ShipEntity(pos: BlockPos, world: World, blockSet: Set[BlockPos], shipBlock
 
   override def canBeCollidedWith = true
 
-  override def interactAt(player: EntityPlayer, target: Vec3) = InteractionHandler.interactionFired(player, target)
+  override def interactFirst(player:EntityPlayer) = InteractionHandler.interactionFired(player)
 
 
 

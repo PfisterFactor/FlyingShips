@@ -44,7 +44,7 @@ class DetachedWorld(realWorld:World, worldName:String)
   extends World(SaveHandler, realWorld.getWorldInfo, realWorld.provider, new Profiler(), realWorld.isRemote) {
 
 
-  protected val OriginWorld = realWorld
+  val OriginWorld = realWorld
 
   playerEntities.addAll(OriginWorld.playerEntities)
   playerEntities.retainAll(OriginWorld.playerEntities)

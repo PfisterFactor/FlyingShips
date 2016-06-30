@@ -1,14 +1,17 @@
 package com.MrPf1ster.FlyingShips
 
+import javax.vecmath.Quat4f
+
 import com.MrPf1ster.FlyingShips.entities.ShipEntity
 import com.MrPf1ster.FlyingShips.network.BlocksChangedMessage
-import com.MrPf1ster.FlyingShips.util.UnifiedPos
+import com.MrPf1ster.FlyingShips.util.{UnifiedPos, VectorUtils}
 import net.minecraft.block.Block
 import net.minecraft.block.state.IBlockState
 import net.minecraft.entity.EntityHanging
 import net.minecraft.nbt.NBTTagCompound
 import net.minecraft.tileentity.TileEntity
-import net.minecraft.util.{BlockPos, ITickable}
+import net.minecraft.util.MovingObjectPosition.MovingObjectType
+import net.minecraft.util.{BlockPos, ITickable, MovingObjectPosition, Vec3}
 import net.minecraft.world.World
 import net.minecraftforge.fml.common.network.NetworkRegistry.TargetPoint
 
@@ -28,7 +31,7 @@ class ShipWorld(originWorld: World, originPos: BlockPos, blockSet: Set[BlockPos]
   BlockStore.loadFromWorld(originWorld, originPos, blockSet)
   val BlockSet = blockSet.map(pos => UnifiedPos(pos, Ship.getPosition, false))
   val BiomeID = OriginWorld.getBiomeGenForCoords(OriginPos).biomeID
-  private var ChangedBlocks: mSet[UnifiedPos] = mSet() // TODO: Figure out what this is
+  private val ChangedBlocks: mSet[UnifiedPos] = mSet() // TODO: Figure out what this is
   private var doRenderUpdate = false
 
   private def genTileEntities: Map[UnifiedPos, TileEntity] = {
@@ -132,6 +135,31 @@ class ShipWorld(originWorld: World, originPos: BlockPos, blockSet: Set[BlockPos]
     true
   }
 
+  // Ray traces blocks on ship, arguments are non-relative
+  // It rotates the look and ray vector against the ship's current rotation so we can use Minecraft's built in world block ray-trace
+  def rayTrace(start:Vec3, end:Vec3): Option[MovingObjectPosition] = {
+
+    // Gets the opposite rotation of our entity
+    val inversedRot: Quat4f = Ship.Rotation.clone().asInstanceOf[Quat4f] // clone because inverse mutates
+    inversedRot.inverse()
+
+    val relativeStart = start.subtract(Ship.getPositionVector.addVector(0.5,0.5,0.5))
+    val relativeEnd = end.subtract(Ship.getPositionVector.addVector(0.5,0.5,0.5))
+
+    // The eye position and ray, rotated by the ship block's center, to the opposite of the ships current rotation
+    val rotatedStart = VectorUtils.rotatePointByQuaternion(relativeStart,inversedRot).addVector(0.5,0.5,0.5)
+    val rotatedEnd = VectorUtils.rotatePointByQuaternion(relativeEnd,inversedRot).addVector(0.5,0.5,0.5)
+
+    // The result of the ray-trace on the ship world
+    val rayTrace = Ship.ShipWorld.rayTraceBlocks(rotatedStart, rotatedEnd)
+
+    if (rayTrace != null && rayTrace.typeOfHit == MovingObjectType.BLOCK)
+      Some(rayTrace)
+    else
+      None
+
+  }
+
   def isValid = BlockSet.nonEmpty
 
   def needsRenderUpdate() = {
@@ -139,6 +167,7 @@ class ShipWorld(originWorld: World, originPos: BlockPos, blockSet: Set[BlockPos]
     doRenderUpdate = false
     a
   }
+
 
   override def getBiomeGenForCoords(pos: BlockPos) = OriginWorld.getBiomeGenForCoords(Ship.getPosition.add(pos))
 
