@@ -53,6 +53,7 @@ case class RotatedBB(MinPos: Vec3, MaxPos: Vec3, RotationPoint: Vec3, Rotation: 
   // Returns RotatedBB with new rotation
   def rotateTo(Rotation: Quat4f): RotatedBB = this.copy(MinPos, MaxPos, RotationPoint, Rotation)
 
+  def expand(delta:Double): RotatedBB = this.copy(MinPos.addVector(delta,delta,delta), MaxPos.addVector(delta,delta,delta))
 
   def rotateBy(DeltaRotation: Quat4f): RotatedBB = {
     Rotation.mul(DeltaRotation)

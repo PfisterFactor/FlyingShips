@@ -33,7 +33,7 @@ class ShipEntity(pos: BlockPos, world: World, blockSet: Set[BlockPos], shipBlock
   if (blockSet.nonEmpty) ShipEntity.nextID.set(ShipEntity.nextID.get + 1)
 
   // Handles interacting with the ship, (left and right clicking on blocks on the ship)
-  val InteractionHandler: ShipInteractionHandler = new ShipInteractionHandler
+  val InteractionHandler: ShipInteractionHandler = new ShipInteractionHandler(this)
 
   // Fake world that holds all the blocks on the ship
   val ShipWorld: ShipWorld = new ShipWorld(world, shipBlockPos, blockSet, this)
@@ -73,8 +73,8 @@ class ShipEntity(pos: BlockPos, world: World, blockSet: Set[BlockPos], shipBlock
 
     val deg15 = new Quat4f(0.94f, 0, 0, 0.94f)
     deg15.mul(Rotation, deg15)
-    Rotation.interpolate(deg15, 0.01f)
-    //Rotation = new Quat4f(1, 0, 0, 1)
+    //Rotation.interpolate(deg15, 0.01f)//
+    //Rotation = new Quat4f(0, 0, 0, 1)
     _boundingBox = _boundingBox.rotateTo(Rotation)
 
   }

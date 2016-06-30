@@ -14,7 +14,7 @@ import org.lwjgl.opengl.GL11
   */
 object DebugRender {
 
-  def isDebugMenuShown = Minecraft.getMinecraft().gameSettings.showDebugInfo
+  def isDebugMenuShown = Minecraft.getMinecraft.gameSettings.showDebugInfo
 
   // Does not work
   def debugRenderBlock(shipWorld: ShipWorld, blockState: IBlockState, pos: BlockPos, x: Double, y: Double, z: Double) = {
@@ -60,4 +60,6 @@ object DebugRender {
 
     GL11.glPopMatrix()
   }
+
+
 }

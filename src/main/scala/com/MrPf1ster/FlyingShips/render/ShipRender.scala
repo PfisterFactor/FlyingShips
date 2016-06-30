@@ -5,7 +5,7 @@ import javax.vecmath.{Matrix4f, Quat4f}
 
 import com.MrPf1ster.FlyingShips.ShipWorld
 import com.MrPf1ster.FlyingShips.entities.ShipEntity
-import com.MrPf1ster.FlyingShips.util.{RenderUtils, RotatedBB, VectorUtils}
+import com.MrPf1ster.FlyingShips.util.{RenderUtils, RotatedBB}
 import net.minecraft.block.state.IBlockState
 import net.minecraft.client.Minecraft
 import net.minecraft.client.renderer._
@@ -14,13 +14,11 @@ import net.minecraft.client.renderer.texture.TextureMap
 import net.minecraft.client.renderer.tileentity.TileEntityRendererDispatcher
 import net.minecraft.client.renderer.vertex.DefaultVertexFormats
 import net.minecraft.entity.Entity
-import net.minecraft.util.MovingObjectPosition.MovingObjectType
 import net.minecraft.util.{BlockPos, ResourceLocation, Vec3}
 import org.lwjgl.BufferUtils
 import org.lwjgl.opengl.GL11
 
 import scala.collection.mutable.{Map => mMap}
-import scala.util.Try
 
 
 /**
@@ -87,23 +85,24 @@ class ShipRender(rm: RenderManager) extends Render[ShipEntity](rm) {
 
 
 
+
     GL11.glPopMatrix()
 
     if (DebugRender.isDebugMenuShown)
       doDebugRender(shipWorld, x, y, z)
 
+    val hoveredBlockOnShip: Option[BlockPos] = entity.InteractionHandler.getBlockPlayerIsLookingAt(partialTicks)
 
-
-    //DebugRender.drawRotatedBoundingBox(entity.getBoundingBox.RelativeRBB, entity, x, y, z)
-    val hoveredBlockOnShip: Option[BlockPos] = getBlockMouseIsOver(entity, partialTicks)
-    if (hoveredBlockOnShip.isDefined)
+    if (hoveredBlockOnShip.isDefined) {
+      //println(hoveredBlockOnShip.get)
       renderBlackOutline(entity, hoveredBlockOnShip.get, x, y, z)
+    }
+
     RenderHelper.enableStandardItemLighting()
 
 
 
   }
-
   private def getDisplayList(shipWorld: ShipWorld): Int = {
     var id = displayListIDs.get(shipWorld)
     if (id.isDefined && shipWorld.needsRenderUpdate()) {
@@ -170,7 +169,7 @@ class ShipRender(rm: RenderManager) extends Render[ShipEntity](rm) {
     val worldrenderer: WorldRenderer = tessellator.getWorldRenderer
     worldrenderer.setTranslation(-ship.posX - pos.getX, -ship.posY - pos.getY, -ship.posZ - pos.getZ)
 
-    RenderUtils.drawRotatedBB(rotatedBB, worldrenderer)
+    RenderUtils.drawRotatedBB(rotatedBB.expand(0.0020000000949949026D), worldrenderer)
 
     worldrenderer.setTranslation(0, 0, 0)
 
@@ -182,30 +181,6 @@ class ShipRender(rm: RenderManager) extends Render[ShipEntity](rm) {
 
   }
 
-  private def getBlockMouseIsOver(entity: ShipEntity, partialTicks: Float): Option[BlockPos] = {
-    def objectMouseOver = Minecraft.getMinecraft.objectMouseOver
-    if (objectMouseOver.typeOfHit != MovingObjectType.ENTITY || !objectMouseOver.entityHit.isEntityEqual(entity)) return None
-    def player = Minecraft.getMinecraft.thePlayer
-
-    val blockReachDistance = entity.InteractionHandler.getPlayerReachDistance(player)
-    val eyePos: Vec3 = player.getPositionEyes(partialTicks).subtract(entity.getPositionVector)
-    val lookVector: Vec3 = player.getLook(partialTicks)
-    val ray: Vec3 = eyePos.addVector(lookVector.xCoord * blockReachDistance, lookVector.yCoord * blockReachDistance, lookVector.zCoord * blockReachDistance)
-
-    val inversedRot: Quat4f = entity.Rotation.clone().asInstanceOf[Quat4f]
-    inversedRot.inverse()
-
-    val rotatedEyePos: Vec3 = VectorUtils.rotatePointByQuaternion(eyePos, inversedRot)
-    println(rotatedEyePos)
-    val rotatedRay: Vec3 = VectorUtils.rotatePointByQuaternion(ray, inversedRot)
-
-    val blockPos = Try(entity.ShipWorld.rayTraceBlocks(rotatedEyePos, rotatedRay).getBlockPos)
-    if (blockPos.isSuccess)
-      Some(blockPos.get)
-    else
-      None
-
-  }
 
   private def doDebugRender(shipWorld: ShipWorld, x: Double, y: Double, z: Double) = {
     DebugRender.drawRotatedBoundingBox(new RotatedBB(shipWorld.Ship.getBoundingBox.RelativeAABB, new Vec3(0, 0, 0), new Quat4f(0, 0, 0, 1)), shipWorld.Ship, x, y, z)
@@ -236,15 +211,15 @@ class ShipRender(rm: RenderManager) extends Render[ShipEntity](rm) {
     fb.put(m.m32)
     fb.put(m.m33)
     fb.flip()
-    return fb;
+    fb
   }
 
   private def quaternionToMatrix4f(q: Quat4f): Matrix4f = {
     q.normalize()
-    new Matrix4f(1.0f - 2.0f * q.getY() * q.getY() - 2.0f * q.getZ() * q.getZ(), 2.0f * q.getX() * q.getY() - 2.0f * q.getZ() * q.getW(), 2.0f * q.getX() * q.getZ() + 2.0f * q.getY() * q.getW(), 0.0f,
-      2.0f * q.getX() * q.getY() + 2.0f * q.getZ() * q.getW(), 1.0f - 2.0f * q.getX() * q.getX() - 2.0f * q.getZ() * q.getZ(), 2.0f * q.getY() * q.getZ() - 2.0f * q.getX() * q.getW(), 0.0f,
-      2.0f * q.getX() * q.getZ() - 2.0f * q.getY() * q.getW(), 2.0f * q.getY() * q.getZ() + 2.0f * q.getX() * q.getW(), 1.0f - 2.0f * q.getX() * q.getX() - 2.0f * q.getY() * q.getY(), 0.0f,
-      0.0f, 0.0f, 0.0f, 1.0f);
+    new Matrix4f(1.0f - 2.0f * q.getY * q.getY - 2.0f * q.getZ * q.getZ, 2.0f * q.getX * q.getY - 2.0f * q.getZ * q.getW, 2.0f * q.getX * q.getZ + 2.0f * q.getY * q.getW, 0.0f,
+      2.0f * q.getX * q.getY + 2.0f * q.getZ * q.getW, 1.0f - 2.0f * q.getX * q.getX - 2.0f * q.getZ * q.getZ, 2.0f * q.getY * q.getZ - 2.0f * q.getX * q.getW, 0.0f,
+      2.0f * q.getX * q.getZ - 2.0f * q.getY * q.getW, 2.0f * q.getY * q.getZ + 2.0f * q.getX * q.getW, 1.0f - 2.0f * q.getX * q.getX - 2.0f * q.getY * q.getY, 0.0f,
+      0.0f, 0.0f, 0.0f, 1.0f)
   }
 
 
