@@ -28,7 +28,10 @@ case class UnifiedPos(Position: BlockPos, Origin: BlockPos, IsRelative: Boolean 
 
   override def toString: String = s"UnifiedPos[World = $WorldPos,Relative = $RelativePos]"
 
-  //override def hashCode = (RelPosY + RelPosZ * 31) * 31 + RelPosX
+  override def equals(other: Any):Boolean = other match {
+    case x:UnifiedPos => x.RelativePos.equals(this.RelativePos)
+    case _ => false
+  }
 
 
 }

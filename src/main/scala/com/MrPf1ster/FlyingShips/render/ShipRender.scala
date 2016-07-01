@@ -29,17 +29,18 @@ import scala.collection.mutable.{Map => mMap}
 class ShipRender(rm: RenderManager) extends Render[ShipEntity](rm) {
   var displayListIDs: mMap[ShipWorld, Int] = mMap()
 
+  // Ships are dynamic, and thus don't have a texture
   override def getEntityTexture(entity: ShipEntity): ResourceLocation = null
 
-  // Ships are dynamic, and thus don't have a texture
+  // No shadow rendering
   override def doRenderShadowAndFire(entity: Entity, x: Double, y: Double, z: Double, yaw: Float, partialTickTime: Float) = {}
 
-  // No shadow rendering
+
   override def doRender(entity: ShipEntity, x: Double, y: Double, z: Double, entityYaw: Float, partialTicks: Float) = {
 
     def shipWorld = entity.ShipWorld
 
-    // TODO: Render black outlines around blocks
+
 
     GL11.glPushMatrix()
 
@@ -156,6 +157,8 @@ class ShipRender(rm: RenderManager) extends Render[ShipEntity](rm) {
   }
 
   private def renderBlackOutline(ship: ShipEntity, pos: BlockPos, x: Double, y: Double, z: Double) = {
+    // TODO: Add support for non-cube blocks
+
     val rotatedBB = new RotatedBB(new Vec3(pos.getX, pos.getY, pos.getZ), new Vec3(pos.getX + 1, pos.getY + 1, pos.getZ + 1), new Vec3(0.5, 0.5, 0.5), ship.Rotation)
     GL11.glPushMatrix()
     GL11.glTranslated(x, y, z)

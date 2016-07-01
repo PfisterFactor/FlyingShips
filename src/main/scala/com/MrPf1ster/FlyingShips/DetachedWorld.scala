@@ -17,7 +17,6 @@ import net.minecraftforge.fml.relauncher.{Side, SideOnly}
   * Created by EJ on 3/2/2016.
   */
 
-// Cuchaz's influence on my code is very obvious isn't it :)
 object SaveHandler extends ISaveHandler {
   override def getWorldDirectory: File = null
 
