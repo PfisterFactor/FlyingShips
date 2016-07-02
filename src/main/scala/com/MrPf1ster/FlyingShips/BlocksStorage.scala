@@ -30,7 +30,7 @@ class BlocksStorage(shipWorld: ShipWorld) {
   def isEmpty:Boolean = BlockMap.isEmpty
   def nonEmpty:Boolean = BlockMap.nonEmpty
 
-  def loadFromWorld(world:World,origin:BlockPos,blockSet: Set[UnifiedPos]) = {
+  def loadFromWorld(world:World,blockSet: Set[UnifiedPos]) = {
     blockSet.foreach(uPos => {
       val blockStorage = new BlockStorage()
       blockStorage.readFromWorld(world,uPos)
@@ -46,6 +46,7 @@ class BlocksStorage(shipWorld: ShipWorld) {
         storage.get.writeToWorld(world,uPos)
     })
   }
+
 
   def getByteData: Array[Byte] = {
     val bytes = new ByteArrayOutputStream()

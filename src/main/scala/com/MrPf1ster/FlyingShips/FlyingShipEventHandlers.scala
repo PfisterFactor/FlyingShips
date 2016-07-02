@@ -6,7 +6,6 @@ import com.google.common.base.Predicates
 import net.minecraft.client.Minecraft
 import net.minecraft.entity.player.EntityPlayer
 import net.minecraft.world.World
-import net.minecraftforge.event.entity.EntityJoinWorldEvent
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent
 import net.minecraftforge.fml.common.gameevent.TickEvent
 import net.minecraftforge.fml.common.gameevent.TickEvent.Phase
@@ -15,22 +14,6 @@ import net.minecraftforge.fml.common.gameevent.TickEvent.Phase
   * Created by EJ on 3/9/2016.
   */
 class FlyingShipEventHandlers {
-
-  @SubscribeEvent
-  def playerJoinedWorld(event: EntityJoinWorldEvent) = {
-    if (true) {
-      // !event.world.isRemote
-      // This updates the shipworlds player list to match it's OriginWorld's
-      if (event.entity.isInstanceOf[EntityPlayer]) {
-
-        val ships = event.world.getEntities(classOf[EntityShip], Predicates.alwaysTrue[EntityShip]()).iterator()
-        while (ships.hasNext) {
-          ships.next().ShipWorld.playerEntities.add(event.entity.asInstanceOf[EntityPlayer])
-        }
-
-      }
-    }
-  }
 
   def updateEntities(world: World): Unit = {
     val ships = world.getEntities(classOf[EntityShip], Predicates.alwaysTrue[EntityShip]())

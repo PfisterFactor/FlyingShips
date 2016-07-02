@@ -5,11 +5,11 @@ import net.minecraft.util.Vec3
 /**
   * Created by EJ on 4/13/2016.
   */
-case class UnifiedVec(Vector: Vec3, Origin: Vec3, IsRelative: Boolean) {
+case class UnifiedVec(Vector: Vec3, Origin: () => Vec3, IsRelative: Boolean) {
 
-  def this(X: Double, Y: Double, Z: Double, Origin: Vec3, IsRelative: Boolean) = this(new Vec3(X, Y, Z), Origin, IsRelative)
+  def this(X: Double, Y: Double, Z: Double, Origin: () => Vec3, IsRelative: Boolean) = this(new Vec3(X, Y, Z), Origin, IsRelative)
 
-  def WorldVec = if (!IsRelative) Vector else Vector.add(Origin)
+  def WorldVec = if (!IsRelative) Vector else Vector.add(Origin())
 
   def WorldVecX: Double = WorldVec.xCoord
 
@@ -17,13 +17,18 @@ case class UnifiedVec(Vector: Vec3, Origin: Vec3, IsRelative: Boolean) {
 
   def WorldVecZ: Double = WorldVec.zCoord
 
-  def RelativeVec = if (IsRelative) Vector else Vector.subtract(Origin)
+  def RelativeVec = if (IsRelative) Vector else Vector.subtract(Origin())
 
   def RelVecX: Double = RelativeVec.xCoord
 
   def RelVecY: Double = RelativeVec.yCoord
 
   def RelVecZ: Double = RelativeVec.zCoord
+
+  override def equals(other: Any):Boolean = other match {
+    case x:UnifiedVec => x.RelativeVec.equals(this.RelativeVec)
+    case _ => false
+  }
 
   override def toString: String = s"UnifiedPos[World = $WorldVec,Relative = $RelativeVec]"
 }

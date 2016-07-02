@@ -47,8 +47,10 @@ class ShipRender(rm: RenderManager) extends Render[EntityShip](rm) {
     // Translate away from player
     GL11.glTranslated(x, y, z)
 
+
     // Translate into the center of the ship block for rotation
     GL11.glTranslated(0.5, 0.5, 0.5)
+
 
 
     // Turn a quaternion into a matrix, then into a FloatBuffer
@@ -108,9 +110,10 @@ class ShipRender(rm: RenderManager) extends Render[EntityShip](rm) {
   }
   private def getDisplayList(shipWorld: ShipWorld): Int = {
     var id = displayListIDs.get(shipWorld)
-    if (id.isDefined && shipWorld.needsRenderUpdate()) {
+    if (id.isDefined && shipWorld.needsRenderUpdate) {
       GL11.glDeleteLists(id.get, 1)
       id = None
+      shipWorld.onRenderUpdate()
     }
     if (id.isEmpty) {
       // create a new list
@@ -157,14 +160,14 @@ class ShipRender(rm: RenderManager) extends Render[EntityShip](rm) {
   }
 
   private def renderBlackOutline(ship: EntityShip, pos: BlockPos, x: Double, y: Double, z: Double, partialTicks:Float) = {
-    // TODO: Add support for non-cube blocks
 
     val blockstate = ship.ShipWorld.getBlockState(pos)
-    val block = blockstate.getBlock
-    block.setBlockBoundsBasedOnState(ship.ShipWorld,pos)
-    val aabb = block.getSelectedBoundingBox(ship.ShipWorld,pos)
 
-    def correctlyOffset(pos:Double,offset:Double) = if (pos != 0) pos + (pos.signum * offset) else pos + offset
+    val block = blockstate.getBlock
+
+    block.setBlockBoundsBasedOnState(ship.ShipWorld,pos)
+
+    val aabb = block.getSelectedBoundingBox(ship.ShipWorld,pos)
 
     val rotatedBB = new RotatedBB(aabb, new Vec3(0.5, 0.5, 0.5), ship.Rotation)
 
@@ -181,12 +184,6 @@ class ShipRender(rm: RenderManager) extends Render[EntityShip](rm) {
     val tessellator: Tessellator = Tessellator.getInstance
     val worldrenderer: WorldRenderer = tessellator.getWorldRenderer
     worldrenderer.setTranslation(-ship.posX - pos.getX, -ship.posY - pos.getY, -ship.posZ - pos.getZ)
-
-    def player = Minecraft.getMinecraft.thePlayer
-
-    val d0: Double = (player.lastTickPosX + (player.posX - player.lastTickPosX) * partialTicks.toDouble) - ship.getPositionVector.xCoord
-    val d1: Double = (player.lastTickPosY + (player.posY - player.lastTickPosY) * partialTicks.toDouble) - ship.getPositionVector.yCoord
-    val d2: Double = (player.lastTickPosZ + (player.posZ - player.lastTickPosZ) * partialTicks.toDouble) - ship.getPositionVector.zCoord
 
     RenderUtils.drawRotatedBB(rotatedBB.expand(0.001), worldrenderer)
 

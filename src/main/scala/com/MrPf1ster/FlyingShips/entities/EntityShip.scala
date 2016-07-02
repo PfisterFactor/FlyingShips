@@ -50,7 +50,7 @@ class EntityShip(pos: BlockPos, world: World, blockSet: Set[BlockPos]) extends E
 
 
   // Fake world that holds all the blocks on the ship
-  val ShipWorld: ShipWorld = new ShipWorld(world, blockSet.map(UnifiedPos(_,pos,false)), this)
+  val ShipWorld: ShipWorld = new ShipWorld(world, blockSet.map(UnifiedPos(_,getPosition,false)), this)
 
   // Handles interacting with the ship, (left and right clicking on blocks on the ship)
   val InteractionHandler: ShipInteractionHandler = new ShipInteractionHandler(ShipWorld)
@@ -96,27 +96,32 @@ class EntityShip(pos: BlockPos, world: World, blockSet: Set[BlockPos]) extends E
 
     //val deg15 = new Quat4f(0.94f, 0, 0, 0.94f)
     //deg15.mul(Rotation, deg15)
-    //Rotation.interpolate(deg15, 0.01f)//
-    //Rotation = new Quat4f(0, 0, 0, 1)
+    //Rotation.interpolate(deg15, 0.01f)
+    //Rotation = new Quat4f(0.94f, 0, 0, 0.94f)
+
+    moveEntity(0,0,0)
     if (_boundingBox != null)
-      _boundingBox = _boundingBox.rotateTo(Rotation)
+      _boundingBox = _boundingBox.moveTo(getPositionVector).rotateTo(Rotation)
+
 
   }
 
-  override def setPosition(x: Double, y: Double, z: Double) = {
+  override def setPosition(x: Double, y: Double, z: Double):Unit = {
+    if (posX == x && posY == y && posZ == z) return
     // Update positions
+    prevPosX = posX
+    prevPosY = posY
+    prevPosZ = posZ
     posX = x
     posY = y
     posZ = z
-    if (_boundingBox != null)
-      _boundingBox.moveTo(x, y, z)
-
-  }
-  override def getPosition: BlockPos = {
-    new BlockPos(posX,posY,posZ)
+    ShipWorld.onShipMove()
   }
 
-  override def canBeCollidedWith = true
+  override def moveEntity(x: Double, y:Double, z:Double) = {
+    setPosition(posX + x,posY + y,posZ + z)
+  }
+  override def canBeCollidedWith: Boolean = true
 
   override def interactFirst(player:EntityPlayer) = InteractionHandler.interactionFired(player)
 

@@ -30,13 +30,13 @@ class ShipWorld(originWorld: World, blocks: Set[UnifiedPos], ship: EntityShip) e
   val Ship = ship
 
   // The coordinates of the ship block in the origin world. Conveniently the EntityShip's position
-  def OriginPos = Ship.getPosition
+  def OriginPos() = Ship.getPosition
 
   def BlockSet = BlockStore.getBlockMap.keys.toSet
 
   // Stores all the blocks on the ship (not tile entities!)
   val BlockStore = new BlocksStorage(this) {
-    loadFromWorld(OriginWorld, OriginPos, blocks)
+    loadFromWorld(OriginWorld, blocks)
   }
 
   // The Shipblock
@@ -116,6 +116,7 @@ class ShipWorld(originWorld: World, blocks: Set[UnifiedPos], ship: EntityShip) e
     }
   }
 
+
   def pushBlockChangesToClient(): Unit = {
     if (!isValid) return
     if (Ship == null) return
@@ -156,6 +157,8 @@ class ShipWorld(originWorld: World, blocks: Set[UnifiedPos], ship: EntityShip) e
     doRenderUpdate = true
     true
   }
+
+  def onShipMove() = {doRenderUpdate = true}
 
   // Ray traces blocks on ship, arguments are non-relative
   // It rotates the look and ray vector against the ship's current rotation so we can use Minecraft's built in world block ray-trace
@@ -225,11 +228,10 @@ class ShipWorld(originWorld: World, blocks: Set[UnifiedPos], ship: EntityShip) e
 
   def isValid = BlockStore.nonEmpty
 
-  def needsRenderUpdate() = {
-    val a = doRenderUpdate
-    doRenderUpdate = false
-    a
-  }
+  def needsRenderUpdate() = doRenderUpdate
+
+  def onRenderUpdate() = {doRenderUpdate = false}
+
 
 
   override def getBiomeGenForCoords(pos: BlockPos) = OriginWorld.getBiomeGenForCoords(Ship.getPosition.add(pos))

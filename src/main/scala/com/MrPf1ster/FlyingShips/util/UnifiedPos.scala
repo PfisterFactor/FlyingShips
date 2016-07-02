@@ -6,11 +6,11 @@ import net.minecraft.util.BlockPos
   * Created by EJ on 3/11/2016.
   */
 
-case class UnifiedPos(Position: BlockPos, Origin: BlockPos, IsRelative: Boolean = false) {
+case class UnifiedPos(Position: BlockPos, Origin: () => BlockPos, IsRelative: Boolean = false) {
 
-  def this(x: Double, y: Double, z: Double, Origin: BlockPos, relative: Boolean) = this(new BlockPos(x, y, z), Origin, relative)
+  def this(x: Double, y: Double, z: Double, Origin: () => BlockPos, relative: Boolean) = this(new BlockPos(x, y, z), Origin, relative)
 
-  def WorldPos = if (!IsRelative) Position else Position.add(Origin)
+  def WorldPos = if (!IsRelative) Position else Position.add(Origin())
 
   def WorldPosX: Int = WorldPos.getX
 
@@ -18,7 +18,7 @@ case class UnifiedPos(Position: BlockPos, Origin: BlockPos, IsRelative: Boolean 
 
   def WorldPosZ: Int = WorldPos.getZ
 
-  def RelativePos = if (IsRelative) Position else Position.subtract(Origin)
+  def RelativePos = if (IsRelative) Position else Position.subtract(Origin())
 
   def RelPosX: Int = RelativePos.getX
 

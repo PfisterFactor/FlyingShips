@@ -43,12 +43,6 @@ class DetachedWorld(OriginWorld:World, WorldName:String)
   extends World(SaveHandler, OriginWorld.getWorldInfo, OriginWorld.provider, new Profiler(), OriginWorld.isRemote) {
 
 
-
-  playerEntities.addAll(OriginWorld.playerEntities)
-  playerEntities.retainAll(OriginWorld.playerEntities)
-
-
-
   override def getRenderDistanceChunks: Int = 0
 
   override def createChunkProvider(): IChunkProvider = null
