@@ -50,21 +50,30 @@ case class RotatedBB(MinPos: Vec3, MaxPos: Vec3, RotationPoint: Vec3, Rotation: 
 
   def ForwardTopRight: Vec3 = Corners(7)
 
-  // Returns RotatedBB with new rotation
+  // Moves RotatedBB to position
+  def moveTo(x: Double, y: Double, z: Double): RotatedBB = {
+    val add = new Vec3(x - MinPos.xCoord, y - MinPos.yCoord, z - MinPos.zCoord)
+    this.copy(MinPos.add(add), MaxPos.add(add), RotationPoint, Rotation)
+  }
+
+  // Rotates RotatedBB to rotation
   def rotateTo(Rotation: Quat4f): RotatedBB = this.copy(MinPos, MaxPos, RotationPoint, Rotation)
 
-  def expand(delta:Double): RotatedBB = this.copy(MinPos.addVector(delta,delta,delta), MaxPos.addVector(delta,delta,delta))
-
+  // Rotates RotatedBB by rotation (multiplicative)
   def rotateBy(DeltaRotation: Quat4f): RotatedBB = {
     Rotation.mul(DeltaRotation)
     this.copy(MinPos, MaxPos, RotationPoint, Rotation)
   }
 
-  // Returns new RotatedBB with position changed
-  def moveTo(x: Double, y: Double, z: Double): RotatedBB = {
-    val add = new Vec3(x - MinPos.xCoord, y - MinPos.yCoord, z - MinPos.zCoord)
-    this.copy(MinPos.add(add), MaxPos.add(add), RotationPoint, Rotation)
-  }
+  // Expands RotatedBB by delta
+  def expand(delta:Double): RotatedBB = this.copy(MinPos.addVector(-delta,-delta,-delta), MaxPos.addVector(delta,delta,delta))
+
+  // Offsets RotatedBB by delta
+  def offset(xDelta:Double, yDelta:Double, zDelta:Double):RotatedBB = this.copy(new Vec3(this.MinPos.xCoord + xDelta, this.MinPos.yCoord + yDelta, this.MinPos.zCoord + zDelta), new Vec3(this.MaxPos.xCoord + xDelta, this.MaxPos.yCoord + yDelta, this.MaxPos.zCoord + zDelta))
+
+  def offset(delta:Vec3):RotatedBB = offset(delta.xCoord,delta.yCoord,delta.zCoord)
+
+
 
 
 }

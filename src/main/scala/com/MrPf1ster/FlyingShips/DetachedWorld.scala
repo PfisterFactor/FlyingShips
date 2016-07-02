@@ -39,11 +39,10 @@ object SaveHandler extends ISaveHandler {
   override def saveWorldInfo(worldInformation: WorldInfo): Unit = {}
 }
 
-class DetachedWorld(realWorld:World, worldName:String)
-  extends World(SaveHandler, realWorld.getWorldInfo, realWorld.provider, new Profiler(), realWorld.isRemote) {
+class DetachedWorld(OriginWorld:World, WorldName:String)
+  extends World(SaveHandler, OriginWorld.getWorldInfo, OriginWorld.provider, new Profiler(), OriginWorld.isRemote) {
 
 
-  val OriginWorld = realWorld
 
   playerEntities.addAll(OriginWorld.playerEntities)
   playerEntities.retainAll(OriginWorld.playerEntities)

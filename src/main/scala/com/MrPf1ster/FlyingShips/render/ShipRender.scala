@@ -4,7 +4,7 @@ import java.nio.FloatBuffer
 import javax.vecmath.{Matrix4f, Quat4f}
 
 import com.MrPf1ster.FlyingShips.ShipWorld
-import com.MrPf1ster.FlyingShips.entities.ShipEntity
+import com.MrPf1ster.FlyingShips.entities.EntityShip
 import com.MrPf1ster.FlyingShips.util.{RenderUtils, RotatedBB}
 import net.minecraft.block.state.IBlockState
 import net.minecraft.client.Minecraft
@@ -26,17 +26,17 @@ import scala.collection.mutable.{Map => mMap}
   */
 
 
-class ShipRender(rm: RenderManager) extends Render[ShipEntity](rm) {
+class ShipRender(rm: RenderManager) extends Render[EntityShip](rm) {
   var displayListIDs: mMap[ShipWorld, Int] = mMap()
 
   // Ships are dynamic, and thus don't have a texture
-  override def getEntityTexture(entity: ShipEntity): ResourceLocation = null
+  override def getEntityTexture(entity: EntityShip): ResourceLocation = null
 
   // No shadow rendering
   override def doRenderShadowAndFire(entity: Entity, x: Double, y: Double, z: Double, yaw: Float, partialTickTime: Float) = {}
 
 
-  override def doRender(entity: ShipEntity, x: Double, y: Double, z: Double, entityYaw: Float, partialTicks: Float) = {
+  override def doRender(entity: EntityShip, x: Double, y: Double, z: Double, entityYaw: Float, partialTicks: Float) = {
 
     def shipWorld = entity.ShipWorld
 
@@ -98,7 +98,7 @@ class ShipRender(rm: RenderManager) extends Render[ShipEntity](rm) {
     if (rayTrace.isDefined) {
       //println(hoveredBlockOnShip.get)
       def block = rayTrace.get.getBlockPos
-      renderBlackOutline(entity, block , x, y, z)
+      renderBlackOutline(entity, block , x, y, z, partialTicks)
     }
 
     RenderHelper.enableStandardItemLighting()
@@ -156,10 +156,18 @@ class ShipRender(rm: RenderManager) extends Render[ShipEntity](rm) {
     }
   }
 
-  private def renderBlackOutline(ship: ShipEntity, pos: BlockPos, x: Double, y: Double, z: Double) = {
+  private def renderBlackOutline(ship: EntityShip, pos: BlockPos, x: Double, y: Double, z: Double, partialTicks:Float) = {
     // TODO: Add support for non-cube blocks
 
-    val rotatedBB = new RotatedBB(new Vec3(pos.getX, pos.getY, pos.getZ), new Vec3(pos.getX + 1, pos.getY + 1, pos.getZ + 1), new Vec3(0.5, 0.5, 0.5), ship.Rotation)
+    val blockstate = ship.ShipWorld.getBlockState(pos)
+    val block = blockstate.getBlock
+    block.setBlockBoundsBasedOnState(ship.ShipWorld,pos)
+    val aabb = block.getSelectedBoundingBox(ship.ShipWorld,pos)
+
+    def correctlyOffset(pos:Double,offset:Double) = if (pos != 0) pos + (pos.signum * offset) else pos + offset
+
+    val rotatedBB = new RotatedBB(aabb, new Vec3(0.5, 0.5, 0.5), ship.Rotation)
+
     GL11.glPushMatrix()
     GL11.glTranslated(x, y, z)
     GL11.glTranslated(ship.posX, ship.posY, ship.posZ)
@@ -174,7 +182,13 @@ class ShipRender(rm: RenderManager) extends Render[ShipEntity](rm) {
     val worldrenderer: WorldRenderer = tessellator.getWorldRenderer
     worldrenderer.setTranslation(-ship.posX - pos.getX, -ship.posY - pos.getY, -ship.posZ - pos.getZ)
 
-    RenderUtils.drawRotatedBB(rotatedBB.expand(0.0020000000949949026D), worldrenderer)
+    def player = Minecraft.getMinecraft.thePlayer
+
+    val d0: Double = (player.lastTickPosX + (player.posX - player.lastTickPosX) * partialTicks.toDouble) - ship.getPositionVector.xCoord
+    val d1: Double = (player.lastTickPosY + (player.posY - player.lastTickPosY) * partialTicks.toDouble) - ship.getPositionVector.yCoord
+    val d2: Double = (player.lastTickPosZ + (player.posZ - player.lastTickPosZ) * partialTicks.toDouble) - ship.getPositionVector.zCoord
+
+    RenderUtils.drawRotatedBB(rotatedBB.expand(0.001), worldrenderer)
 
     worldrenderer.setTranslation(0, 0, 0)
 

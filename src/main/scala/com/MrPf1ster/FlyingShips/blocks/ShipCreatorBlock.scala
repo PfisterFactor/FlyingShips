@@ -1,8 +1,9 @@
 package com.MrPf1ster.FlyingShips.blocks
 
-import com.MrPf1ster.FlyingShips.ShipWorld
-import com.MrPf1ster.FlyingShips.entities.ShipEntity
+import com.MrPf1ster.FlyingShips.entities.EntityShip
+import com.MrPf1ster.FlyingShips.network.SpawnShipMessage
 import com.MrPf1ster.FlyingShips.util.BlockUtils
+import com.MrPf1ster.FlyingShips.{FlyingShips, ShipWorld}
 import net.minecraft.block.Block
 import net.minecraft.block.material.Material
 import net.minecraft.block.properties.{IProperty, PropertyDirection}
@@ -29,14 +30,24 @@ class ShipCreatorBlock extends Block(Material.wood) {
   // TODO: Up the limit from 100 and figure out why it crashes
   override def onBlockActivated(worldIn:World, pos: BlockPos, state: IBlockState, playerIn: EntityPlayer,side: EnumFacing,hitX: Float, hitY: Float, hitZ: Float) : Boolean = {
 
-    if (worldIn.isInstanceOf[ShipWorld]) return true
+
+
+    if (worldIn.isInstanceOf[ShipWorld]) {
+      return true
+    }
+
+    if (worldIn.isRemote) return true
 
     val blocksConnected = BlockUtils.findAllBlocksConnected(worldIn, pos)
     if (blocksConnected.size <= 100 && blocksConnected.size > 1) {
-      val shipEntity = new ShipEntity(pos, worldIn, blocksConnected, pos)
-      shipEntity.setPosition(pos.getX, pos.getY, pos.getZ)
+      val shipEntity = new EntityShip(pos, worldIn, blocksConnected)
+      shipEntity.setLocationAndAngles(pos.getX,pos.getY,pos.getZ,0,0)
 
       worldIn.spawnEntityInWorld(shipEntity)
+
+      val message = new SpawnShipMessage(shipEntity)
+      FlyingShips.flyingShipPacketHandler.INSTANCE.sendToAll(message)
+
 
       // Destroy all the blocks
 

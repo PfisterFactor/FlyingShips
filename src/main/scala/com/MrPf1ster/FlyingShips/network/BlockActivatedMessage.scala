@@ -2,7 +2,8 @@ package com.MrPf1ster.FlyingShips.network
 
 import java.util.UUID
 
-import com.MrPf1ster.FlyingShips.entities.ShipEntity
+import com.MrPf1ster.FlyingShips.entities.EntityShip
+import com.MrPf1ster.FlyingShips.util.ShipLocator
 import io.netty.buffer.ByteBuf
 import net.minecraft.client.Minecraft
 import net.minecraft.entity.player.EntityPlayer
@@ -12,7 +13,7 @@ import net.minecraftforge.fml.common.network.simpleimpl.{IMessage, IMessageHandl
 /**
   * Created by EJ on 6/30/2016.
   */
-class BlockActivatedMessage(ship: ShipEntity, player: EntityPlayer, movingObjectPosition: MovingObjectPosition) extends IMessage {
+class BlockActivatedMessage(ship: EntityShip, player: EntityPlayer, movingObjectPosition: MovingObjectPosition) extends IMessage {
 
   def this() = this(null, null, null)
 
@@ -63,7 +64,7 @@ class BlockActivatedMessage(ship: ShipEntity, player: EntityPlayer, movingObject
   }
 }
 
-class ClientBlockActivatedMessageHandler extends IMessageHandler[BlockActivatedMessage, IMessage] {
+class ServerBlockActivatedMessageHandler extends IMessageHandler[BlockActivatedMessage, IMessage] {
   override def onMessage(message: BlockActivatedMessage, ctx: MessageContext): IMessage = {
     if (message.ShipID == -1) return null
     Minecraft.getMinecraft.addScheduledTask(new BlockActivatedMessageTask(message, ctx))
@@ -74,23 +75,26 @@ class ClientBlockActivatedMessageHandler extends IMessageHandler[BlockActivatedM
     val Message = message
     val Context = ctx
 
+    // On Server
     override def run(): Unit = {
 
-      // it doesnt work ahh i hate this
-      /*
-      val playerList = MinecraftServer.getServer.getConfigurationManager.playerEntityList.iterator()
-      val ship = player.get.worldObj.getEntityByID(message.ShipID).asInstanceOf[ShipEntity]
+
+
+      val player = ctx.getServerHandler.playerEntity
+      val ship = ShipLocator.getShip(player.worldObj,message.ShipID)
+
+      if (ship.isEmpty)
+        return
 
       def block = message.BlockPosition
       def hitVec = message.HitVec
       def side = message.HitSide
 
-      val blockstate = ship.ShipWorld.getBlockState(block)
+      val blockstate = ship.get.ShipWorld.getBlockState(block)
 
-      blockstate.getBlock.onBlockActivated(ship.ShipWorld, block, blockstate, player.get, side, hitVec.xCoord.toFloat, hitVec.yCoord.toFloat, hitVec.zCoord.toFloat)
+      blockstate.getBlock.onBlockActivated(ship.get.ShipWorld, block, blockstate, player, side, hitVec.xCoord.toFloat, hitVec.yCoord.toFloat, hitVec.zCoord.toFloat)
 
 
-      */
     }
   }
 

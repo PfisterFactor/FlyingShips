@@ -1,7 +1,7 @@
 package com.MrPf1ster.FlyingShips
 
 
-import com.MrPf1ster.FlyingShips.entities.ShipEntity
+import com.MrPf1ster.FlyingShips.entities.EntityShip
 import com.google.common.base.Predicates
 import net.minecraft.client.Minecraft
 import net.minecraft.entity.player.EntityPlayer
@@ -23,7 +23,7 @@ class FlyingShipEventHandlers {
       // This updates the shipworlds player list to match it's OriginWorld's
       if (event.entity.isInstanceOf[EntityPlayer]) {
 
-        val ships = event.world.getEntities(classOf[ShipEntity], Predicates.alwaysTrue[ShipEntity]()).iterator()
+        val ships = event.world.getEntities(classOf[EntityShip], Predicates.alwaysTrue[EntityShip]()).iterator()
         while (ships.hasNext) {
           ships.next().ShipWorld.playerEntities.add(event.entity.asInstanceOf[EntityPlayer])
         }
@@ -33,7 +33,7 @@ class FlyingShipEventHandlers {
   }
 
   def updateEntities(world: World): Unit = {
-    val ships = world.getEntities(classOf[ShipEntity], Predicates.alwaysTrue[ShipEntity]())
+    val ships = world.getEntities(classOf[EntityShip], Predicates.alwaysTrue[EntityShip]())
     if (ships == null || ships.isEmpty) return
 
     val iterator = ships.iterator

@@ -1,43 +1,65 @@
 package com.MrPf1ster.FlyingShips
 
+import java.io.{ByteArrayInputStream, ByteArrayOutputStream, DataInputStream, DataOutputStream}
 import javax.vecmath.Quat4f
 
-import com.MrPf1ster.FlyingShips.entities.ShipEntity
+import com.MrPf1ster.FlyingShips.entities.EntityShip
 import com.MrPf1ster.FlyingShips.network.BlocksChangedMessage
 import com.MrPf1ster.FlyingShips.util.{UnifiedPos, VectorUtils}
 import net.minecraft.block.Block
 import net.minecraft.block.state.IBlockState
 import net.minecraft.entity.EntityHanging
-import net.minecraft.nbt.NBTTagCompound
+import net.minecraft.nbt.{CompressedStreamTools, NBTTagCompound}
 import net.minecraft.tileentity.TileEntity
 import net.minecraft.util.MovingObjectPosition.MovingObjectType
 import net.minecraft.util.{BlockPos, ITickable, MovingObjectPosition, Vec3}
 import net.minecraft.world.World
 import net.minecraftforge.fml.common.network.NetworkRegistry.TargetPoint
 
-import scala.collection.mutable.{Set => mSet}
+import scala.collection.mutable.{Map => mMap, Set => mSet}
 
 
 /**
   * Created by EJ on 3/2/2016.
   */
-class ShipWorld(originWorld: World, originPos: BlockPos, blockSet: Set[BlockPos], ship: ShipEntity) extends DetachedWorld(originWorld, "Ship") {
+class ShipWorld(originWorld: World, blocks: Set[UnifiedPos], ship: EntityShip) extends DetachedWorld(originWorld, "Ship") {
 
-  val OriginPos = originPos
+
+  val OriginWorld = originWorld
+
   val Ship = ship
-  val ShipBlock = originWorld.getBlockState(originPos)
 
-  var BlockStore = new BlocksStorage(this)
-  BlockStore.loadFromWorld(originWorld, originPos, blockSet)
-  val BlockSet = blockSet.map(pos => UnifiedPos(pos, Ship.getPosition, false))
+  // The coordinates of the ship block in the origin world. Conveniently the EntityShip's position
+  def OriginPos = Ship.getPosition
+
+  def BlockSet = BlockStore.getBlockMap.keys.toSet
+
+  // Stores all the blocks on the ship (not tile entities!)
+  val BlockStore = new BlocksStorage(this) {
+    loadFromWorld(OriginWorld, OriginPos, blocks)
+  }
+
+  // The Shipblock
+  def ShipBlock = getBlockState(new BlockPos(0,0,0))
+
+  // TODO: Change this to be the biome directly under the ship
   val BiomeID = OriginWorld.getBiomeGenForCoords(OriginPos).biomeID
-  private val ChangedBlocks: mSet[UnifiedPos] = mSet() // TODO: Figure out what this is
+
+  // All TileEntities on Ship, mapped with a Unified Pos
+  var TileEntities: Map[UnifiedPos, TileEntity] = moveTileEntitiesOntoShip
+
+  // All HangingEntities on ship, mapped with a Unified Pos
+  var HangingEntities: Map[UnifiedPos, EntityHanging] = null
+
+  private val ChangedBlocks: mSet[UnifiedPos] = mSet()
   private var doRenderUpdate = false
 
-  private def genTileEntities: Map[UnifiedPos, TileEntity] = {
-    if (!isValid) {
+
+
+  private def moveTileEntitiesOntoShip: Map[UnifiedPos, TileEntity] = {
+    if (!isValid)
       return Map()
-    }
+
     BlockSet
       .filter(uPos => OriginWorld.getTileEntity(uPos.WorldPos) != null)
       .map(tileEntityUPos => {
@@ -60,14 +82,6 @@ class ShipWorld(originWorld: World, originPos: BlockPos, blockSet: Set[BlockPos]
       }).toMap
   }
 
-  var TileEntities: Map[UnifiedPos, TileEntity] = genTileEntities
-
-
-
-
-  // Go away ;-;
-  val HangingEntities: mSet[EntityHanging] = null
-
 
   override def getBlockState(pos:BlockPos) = {
     val got = BlockStore.getBlock(pos)
@@ -78,7 +92,13 @@ class ShipWorld(originWorld: World, originPos: BlockPos, blockSet: Set[BlockPos]
 
   }
 
-  override def getTileEntity(pos: BlockPos) = TileEntities.get(new UnifiedPos(pos, Ship.getPosition, true)).orNull
+  override def getTileEntity(pos: BlockPos) = TileEntities.get(new UnifiedPos(pos, OriginPos, true)).orNull
+
+  override def addTileEntity(te: TileEntity): Boolean = {
+    if (te.isInvalid) return false
+    TileEntities = TileEntities + (UnifiedPos(te.getPos,OriginPos,true) -> te)
+    true
+  }
 
 
   override def updateEntities(): Unit = {
@@ -117,14 +137,16 @@ class ShipWorld(originWorld: World, originPos: BlockPos, blockSet: Set[BlockPos]
     if (applyBlockChange(pos, newState, flags) && this.isValid) {
       if (!isRemote)
         ChangedBlocks.add(new UnifiedPos(pos, Ship.getPosition, true))
-      true
+      return true
     }
     false
   }
 
   def applyBlockChange(pos: BlockPos, newState: IBlockState, flags: Int): Boolean = {
     val storage: Option[BlockStorage] = BlockStore.getBlock(pos)
-    if (storage.isEmpty) return false
+    if (storage.isEmpty) {
+      BlockStore.setBlock(pos,newState)
+    }
 
     storage.get.BlockState = newState
     val TE = TileEntities.get(new UnifiedPos(pos, Ship.getPosition, true))
@@ -160,7 +182,48 @@ class ShipWorld(originWorld: World, originPos: BlockPos, blockSet: Set[BlockPos]
 
   }
 
-  def isValid = BlockSet.nonEmpty
+  def getWorldData: (Array[Byte], Array[Byte]) = {
+    // Block Data
+    val blockData = BlockStore.getByteData
+
+
+    // Tile Entities
+    val bytes = new ByteArrayOutputStream()
+    val out = new DataOutputStream(bytes)
+
+    out.writeInt(TileEntities.size)
+    TileEntities.foreach(pair => {
+      def uPos = pair._1
+      def te = pair._2
+      val nbt = new NBTTagCompound()
+      te.writeToNBT( nbt )
+      CompressedStreamTools.writeCompressed(nbt,out)
+    })
+    out.close()
+
+    def tileEntData = bytes.toByteArray
+
+    (blockData,tileEntData)
+  }
+
+  def setWorldData(blockData:Array[Byte],tileEntData:Array[Byte]) = {
+    // Block Data
+    BlockStore.writeByteData(blockData)
+
+    val bytes = new ByteArrayInputStream(tileEntData)
+    val in = new DataInputStream(bytes)
+
+    val teSize = in.readInt()
+
+    val tileentities = new Array[TileEntity](teSize)
+    for (i <- 0 until teSize)
+      tileentities(i) = TileEntity.createAndLoadEntity(CompressedStreamTools.readCompressed(in))
+
+    // Map tile entity positions to UnifiedPositions and then zip it with the tile entities array
+    TileEntities = tileentities.map(te => UnifiedPos(te.getPos,OriginPos,true)).zip(tileentities).toMap
+  }
+
+  def isValid = BlockStore.nonEmpty
 
   def needsRenderUpdate() = {
     val a = doRenderUpdate

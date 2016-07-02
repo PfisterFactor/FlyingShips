@@ -1,23 +1,31 @@
 package com.MrPf1ster.FlyingShips.network
 
-import com.MrPf1ster.FlyingShips.entities.ShipEntity
+import com.MrPf1ster.FlyingShips.entities.EntityShip
+import com.MrPf1ster.FlyingShips.util.ShipLocator
 import io.netty.buffer.ByteBuf
 import net.minecraft.block.Block
 import net.minecraft.block.state.IBlockState
 import net.minecraft.client.Minecraft
+import net.minecraft.nbt.NBTTagCompound
+import net.minecraft.tileentity.TileEntity
 import net.minecraft.util.BlockPos
+import net.minecraftforge.fml.common.network.ByteBufUtils
 import net.minecraftforge.fml.common.network.simpleimpl.{IMessage, IMessageHandler, MessageContext}
 
 /**
   * Created by EJ on 3/12/2016.
   */
-class BlocksChangedMessage(ship: ShipEntity, changedBlocks: Array[BlockPos]) extends IMessage {
+class BlocksChangedMessage(ship: EntityShip, changedBlocks: Array[BlockPos]) extends IMessage {
   def this() = this(null, Array())
 
   var ShipID = if (ship != null) ship.getEntityId else -1
   var ChangedBlocks = changedBlocks
   var BlockStates: Array[IBlockState] = if (ship != null) ChangedBlocks.map(pos => ship.ShipWorld.getBlockState(pos)) else Array()
   var NumChangedBlocks = ChangedBlocks.length
+  var ChangedTileEntities: Array[TileEntity] = if (ship != null)
+    changedBlocks.map( pos => Option(ship.ShipWorld.getTileEntity(pos))).filter(opt => opt.isDefined).map(opt => opt.get)
+  else Array()
+  var NumChangedTileEntities = ChangedTileEntities.length
 
 
 
@@ -25,6 +33,7 @@ class BlocksChangedMessage(ship: ShipEntity, changedBlocks: Array[BlockPos]) ext
 
     // ShipID
     buf.writeInt(ShipID)
+
 
     // NumChangedBlocks
     buf.writeInt(NumChangedBlocks)
@@ -35,6 +44,15 @@ class BlocksChangedMessage(ship: ShipEntity, changedBlocks: Array[BlockPos]) ext
     // BlockStates
     BlockStates.foreach(state => buf.writeInt(Block.BLOCK_STATE_IDS.get(state)))
 
+    // TileEntities Length
+    buf.writeInt(NumChangedTileEntities)
+
+    // TileEntities
+    ChangedTileEntities.foreach(te => {
+      val nbt = new NBTTagCompound
+      te.writeToNBT(nbt)
+      ByteBufUtils.writeTag(buf,nbt)
+    })
   }
 
   override def fromBytes(buf: ByteBuf): Unit = {
@@ -52,6 +70,13 @@ class BlocksChangedMessage(ship: ShipEntity, changedBlocks: Array[BlockPos]) ext
     // BlockStates
     for (i <- 0 until NumChangedBlocks) {
       BlockStates = BlockStates :+ Block.BLOCK_STATE_IDS.getByValue(buf.readInt())
+    }
+
+    // Num Changed Tile Entities
+    NumChangedTileEntities = buf.readInt()
+
+    for (i <- 0 until NumChangedTileEntities) {
+      ChangedTileEntities = ChangedTileEntities.:+(TileEntity.createAndLoadEntity(ByteBufUtils.readTag(buf)))
     }
 
 
@@ -75,16 +100,22 @@ class ClientBlocksChangedMessageHandler extends IMessageHandler[BlocksChangedMes
     val Message = message
     val Context = ctx
 
+    // On Client
     override def run(): Unit = {
 
 
-      def player = if (ctx.side.isClient)  Minecraft.getMinecraft.thePlayer else ctx.getServerHandler.playerEntity
+      def player = Minecraft.getMinecraft.thePlayer
 
-      val Ship = player.worldObj.getEntityByID(message.ShipID).asInstanceOf[ShipEntity]
+      val Ship = ShipLocator.getShip(player.worldObj,message.ShipID)
 
-      for (i <- 0 until Message.NumChangedBlocks) {
-        Ship.ShipWorld.applyBlockChange(Message.ChangedBlocks(i), Message.BlockStates(i), 3)
-      }
+      if (Ship.isEmpty)
+        return
+
+
+      for (i <- 0 until Message.NumChangedBlocks)
+        Ship.get.ShipWorld.applyBlockChange(Message.ChangedBlocks(i), Message.BlockStates(i), 3)
+
+      message.ChangedTileEntities.foreach(te => Ship.get.ShipWorld.addTileEntity(te))
     }
   }
 

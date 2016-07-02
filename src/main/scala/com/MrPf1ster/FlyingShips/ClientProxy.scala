@@ -1,7 +1,7 @@
 package com.MrPf1ster.FlyingShips
 
 import com.MrPf1ster.FlyingShips.blocks.ShipCreatorBlock
-import com.MrPf1ster.FlyingShips.entities.ShipEntity
+import com.MrPf1ster.FlyingShips.entities.EntityShip
 import com.MrPf1ster.FlyingShips.render.ShipRender
 import net.minecraft.client.Minecraft
 import net.minecraft.client.resources.model.ModelResourceLocation
@@ -32,7 +32,7 @@ object ClientProxy {
     // Entities
     def rm = Minecraft.getMinecraft.getRenderManager
     val shipRender = new ShipRender(rm)
-    RenderingRegistry.registerEntityRenderingHandler(classOf[ShipEntity],shipRender)
+    RenderingRegistry.registerEntityRenderingHandler(classOf[EntityShip],shipRender)
   }
   def postInit(event: FMLPostInitializationEvent) = {
 

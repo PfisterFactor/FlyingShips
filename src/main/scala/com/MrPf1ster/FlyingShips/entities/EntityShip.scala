@@ -5,7 +5,7 @@ import javax.vecmath.Quat4f
 
 import com.MrPf1ster.FlyingShips.ShipWorld
 import com.MrPf1ster.FlyingShips.blocks.ShipCreatorBlock
-import com.MrPf1ster.FlyingShips.util.BoundingBox
+import com.MrPf1ster.FlyingShips.util.{BoundingBox, UnifiedPos}
 import com.google.common.base.Predicates
 import net.minecraft.client.Minecraft
 import net.minecraft.entity.Entity
@@ -16,14 +16,14 @@ import net.minecraft.world.World
 /**
   * Created by EJ on 2/21/2016.
   */
-object ShipEntity {
+object EntityShip {
 
-  def LocateShip(ShipUUID: UUID): Option[ShipEntity] = {
+  def LocateShip(ShipUUID: UUID): Option[EntityShip] = {
     val thePlayer = Minecraft.getMinecraft.thePlayer
 
     def world = thePlayer.getEntityWorld
 
-    val entities = world.getEntities(classOf[ShipEntity], Predicates.alwaysTrue[ShipEntity])
+    val entities = world.getEntities(classOf[EntityShip], Predicates.alwaysTrue[EntityShip])
     val iter = entities.iterator()
 
     while (iter.hasNext) {
@@ -37,19 +37,20 @@ object ShipEntity {
 
   }
 }
-class ShipEntity(pos: BlockPos, world: World, blockSet: Set[BlockPos], shipBlockPos: BlockPos) extends Entity(world) {
+class EntityShip(pos: BlockPos, world: World, blockSet: Set[BlockPos]) extends Entity(world) {
 
   // Temp constructor because I haven't implemented entity saving yet
-  def this(world: World) = this(new BlockPos(0, 0, 0), world, Set[BlockPos](), new BlockPos(0, 0, 0))
+  def this(world: World) = this(new BlockPos(0, 0, 0), world, Set[BlockPos]())
 
   // Set position
   posX = pos.getX
   posY = pos.getY
   posZ = pos.getZ
+  setPosition(posX,posY,posZ)
 
 
   // Fake world that holds all the blocks on the ship
-  val ShipWorld: ShipWorld = new ShipWorld(world, shipBlockPos, blockSet, this)
+  val ShipWorld: ShipWorld = new ShipWorld(world, blockSet.map(UnifiedPos(_,pos,false)), this)
 
   // Handles interacting with the ship, (left and right clicking on blocks on the ship)
   val InteractionHandler: ShipInteractionHandler = new ShipInteractionHandler(ShipWorld)
@@ -60,15 +61,21 @@ class ShipEntity(pos: BlockPos, world: World, blockSet: Set[BlockPos], shipBlock
   // Returns ship direction based on which way the creator block is facing
   val ShipDirection: EnumFacing = if (ShipWorld.isValid) ShipWorld.ShipBlock.getValue(ShipCreatorBlock.FACING) else null
 
-  private var _boundingBox = new BoundingBox(BoundingBox.generateRotated(ShipWorld.BlockSet, Rotation), BoundingBox.generateRotatedRelative(ShipWorld.BlockSet, Rotation), Rotation, getPositionVector)
+  private var _boundingBox:BoundingBox = null
+
+  generateBoundingBox
 
   def getBoundingBox: BoundingBox = _boundingBox
+
+  def generateBoundingBox = {
+    _boundingBox = new BoundingBox(BoundingBox.generateRotated(ShipWorld.BlockSet, Rotation), BoundingBox.generateRotatedRelative(ShipWorld.BlockSet, Rotation), Rotation, getPositionVector)
+  }
 
   // Returns ship creator block for the ship
   def ShipBlock = ShipWorld.ShipBlock
 
 
-  override def getEntityBoundingBox = if (ShipWorld.isValid) _boundingBox.AABB else new AxisAlignedBB(0, 0, 0, 0, 0, 0)
+  override def getEntityBoundingBox = if (ShipWorld.isValid && _boundingBox != null) _boundingBox.AABB else new AxisAlignedBB(0, 0, 0, 0, 0, 0)
 
 
   override def writeEntityToNBT(tagCompound: NBTTagCompound): Unit = {
@@ -91,7 +98,8 @@ class ShipEntity(pos: BlockPos, world: World, blockSet: Set[BlockPos], shipBlock
     //deg15.mul(Rotation, deg15)
     //Rotation.interpolate(deg15, 0.01f)//
     //Rotation = new Quat4f(0, 0, 0, 1)
-    _boundingBox = _boundingBox.rotateTo(Rotation)
+    if (_boundingBox != null)
+      _boundingBox = _boundingBox.rotateTo(Rotation)
 
   }
 
@@ -103,6 +111,9 @@ class ShipEntity(pos: BlockPos, world: World, blockSet: Set[BlockPos], shipBlock
     if (_boundingBox != null)
       _boundingBox.moveTo(x, y, z)
 
+  }
+  override def getPosition: BlockPos = {
+    new BlockPos(posX,posY,posZ)
   }
 
   override def canBeCollidedWith = true

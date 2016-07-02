@@ -51,7 +51,6 @@ case class ShipInteractionHandler(ShipWorld:ShipWorld) {
 
   // Unimplemented
   def interactionFired(player: EntityPlayer): Boolean = {
-    println(ShipWorld.isRemote)
     val hitInfo = getBlockPlayerIsLookingAt(1.0f)
 
     if (hitInfo.isDefined) {

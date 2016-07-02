@@ -1,6 +1,6 @@
 package com.MrPf1ster.FlyingShips
 
-import com.MrPf1ster.FlyingShips.entities.ShipEntity
+import com.MrPf1ster.FlyingShips.entities.EntityShip
 import com.MrPf1ster.FlyingShips.util.BlockUtils
 import net.minecraftforge.common.MinecraftForge
 import net.minecraftforge.fml.common.event.{FMLInitializationEvent, FMLPostInitializationEvent, FMLPreInitializationEvent}
@@ -20,7 +20,7 @@ object CommonProxy {
     BlockUtils.loadInClasses // So game doesn't hang when implementing the Scala predefined library
   }
   def init(event: FMLInitializationEvent) = {
-    EntityRegistry.registerModEntity(classOf[ShipEntity],"Ship Entity",0,FlyingShips,256,10,true)
+    EntityRegistry.registerModEntity(classOf[EntityShip],"Ship Entity",0,FlyingShips,256,10,true)
   }
   def postInit(event: FMLPostInitializationEvent) = {
 

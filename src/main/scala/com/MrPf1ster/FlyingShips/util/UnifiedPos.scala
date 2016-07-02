@@ -32,6 +32,7 @@ case class UnifiedPos(Position: BlockPos, Origin: BlockPos, IsRelative: Boolean 
     case x:UnifiedPos => x.RelativePos.equals(this.RelativePos)
     case _ => false
   }
+  override def hashCode():Int = (this.RelPosY + this.RelPosZ * 31) * 31 + this.RelPosX
 
 
 }
