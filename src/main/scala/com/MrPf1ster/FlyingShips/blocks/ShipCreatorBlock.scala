@@ -39,7 +39,7 @@ class ShipCreatorBlock extends Block(Material.wood) {
     if (worldIn.isRemote) return true
 
     val blocksConnected = BlockUtils.findAllBlocksConnected(worldIn, pos)
-    if (blocksConnected.size <= 100 && blocksConnected.size > 1) {
+    if (blocksConnected.size > 1) {
       val shipEntity = new EntityShip(pos, worldIn, blocksConnected)
       shipEntity.setLocationAndAngles(pos.getX,pos.getY,pos.getZ,0,0)
 
@@ -48,9 +48,7 @@ class ShipCreatorBlock extends Block(Material.wood) {
       val message = new SpawnShipMessage(shipEntity)
       FlyingShips.flyingShipPacketHandler.INSTANCE.sendToAll(message)
 
-
       // Destroy all the blocks
-
       blocksConnected.foreach(pos => {
         worldIn.removeTileEntity(pos)
         worldIn.setBlockToAir(pos)

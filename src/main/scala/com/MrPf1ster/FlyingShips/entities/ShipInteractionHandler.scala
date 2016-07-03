@@ -5,15 +5,16 @@ import com.MrPf1ster.FlyingShips.{FlyingShips, ShipWorld}
 import net.minecraft.client.Minecraft
 import net.minecraft.client.entity.AbstractClientPlayer
 import net.minecraft.entity.player.{EntityPlayer, EntityPlayerMP}
+import net.minecraft.item.ItemBlock
 import net.minecraft.util.MovingObjectPosition.MovingObjectType
-import net.minecraft.util.{MovingObjectPosition, Vec3}
+import net.minecraft.util.{BlockPos, EnumFacing, MovingObjectPosition, Vec3}
 
 /**
   * Created by EJ on 3/6/2016.
   */
 
 
-case class ShipInteractionHandler(ShipWorld:ShipWorld) {
+case class ShipInteractionHandler(ShipWorld: ShipWorld) {
 
   // Gets the block the mouse is over on the passed ship entity
   def getBlockPlayerIsLookingAt(partialTicks: Float): Option[MovingObjectPosition] = {
@@ -45,39 +46,97 @@ case class ShipInteractionHandler(ShipWorld:ShipWorld) {
     val ray: Vec3 = eyePos.addVector(lookVector.xCoord * blockReachDistance, lookVector.yCoord * blockReachDistance, lookVector.zCoord * blockReachDistance)
 
 
-    ShipWorld.rayTrace(eyePos,ray)
+    ShipWorld.rotatedRayTrace(eyePos, ray)
 
   }
+
 
   // Unimplemented
   def interactionFired(player: EntityPlayer): Boolean = {
     val hitInfo = getBlockPlayerIsLookingAt(1.0f)
 
-    if (hitInfo.isDefined) {
-      def block = hitInfo.get.getBlockPos
-      def hitVec = hitInfo.get.hitVec
-      def side = hitInfo.get.sideHit
+    if (hitInfo.isEmpty) return false
 
-      val blockstate = ShipWorld.getBlockState(block)
+    def pos = hitInfo.get.getBlockPos
+    def hitVec = hitInfo.get.hitVec
+    def side = hitInfo.get.sideHit
 
-      val message = new BlockActivatedMessage(ShipWorld.Ship,player,hitInfo.get)
-      FlyingShips.flyingShipPacketHandler.INSTANCE.sendToServer(message)
+    val message = new BlockActivatedMessage(ShipWorld.Ship,player,hitInfo.get)
+    FlyingShips.flyingShipPacketHandler.INSTANCE.sendToServer(message)
 
-      blockstate.getBlock.onBlockActivated(ShipWorld,block,blockstate,player,side,hitVec.xCoord.toFloat,hitVec.yCoord.toFloat,hitVec.zCoord.toFloat)
+    val didRightClick = simulateRightClick(player,pos,hitVec,side)
+    if (didRightClick)
+      player.swingItem()
 
-    }
-    else false
-
-
+    return didRightClick
   }
 
   // Code adapted from https://bitbucket.org/cuchaz/mod-shared/
   // Thank you Cuchaz!
   // Gets the reach distance of the player
   def getPlayerReachDistance(player: EntityPlayer): Double = player match {
-    case playerMP:EntityPlayerMP => playerMP.theItemInWorldManager.getBlockReachDistance
-    case _:AbstractClientPlayer => Minecraft.getMinecraft.playerController.getBlockReachDistance()
+    case playerMP: EntityPlayerMP => playerMP.theItemInWorldManager.getBlockReachDistance
+    case _: AbstractClientPlayer => Minecraft.getMinecraft.playerController.getBlockReachDistance()
     case _ => 0
 
+  }
+
+  // This is pretty much ripped right from PlayerControllerMP onPlayerRightClick
+   def simulateRightClick(player:EntityPlayer,pos:BlockPos,hitVec:Vec3,side:EnumFacing): Boolean = {
+
+    def hitVecX = hitVec.xCoord.toFloat
+    def hitVecY = hitVec.yCoord.toFloat
+    def hitVecZ = hitVec.zCoord.toFloat
+
+    def heldStack = player.getHeldItem
+
+    val blockState = ShipWorld.getBlockState(pos)
+
+    if (heldStack != null &&
+      heldStack.getItem != null &&
+      heldStack.getItem.onItemUseFirst(heldStack,player,ShipWorld,pos,side,hitVecX,hitVecY,hitVecZ)) {
+      return true
+    }
+
+    var flag = false
+
+    if ((!player.isSneaking || player.getHeldItem == null || player.getHeldItem.getItem.doesSneakBypassUse(ShipWorld, pos, player))) {
+      flag = blockState.getBlock.onBlockActivated(ShipWorld, pos, blockState, player, side, hitVec.xCoord.toFloat, hitVec.yCoord.toFloat, hitVec.zCoord.toFloat)
+    }
+
+    if (!flag && heldStack != null && heldStack.getItem.isInstanceOf[ItemBlock]) {
+
+      val itemblock: ItemBlock = heldStack.getItem.asInstanceOf[ItemBlock]
+
+      if (!itemblock.canPlaceBlockOnSide(ShipWorld, pos, side, player, heldStack))
+        return false
+
+    }
+
+    if (!flag && !player.isSpectator) {
+      if (heldStack == null) {
+        return false
+      }
+      else if (player.capabilities.isCreativeMode) {
+        val meta: Int = heldStack.getMetadata
+        val stackSize: Int = heldStack.stackSize
+        val flag1: Boolean = heldStack.onItemUse(player, ShipWorld, pos, side, hitVecX, hitVecY, hitVecZ)
+        heldStack.setItemDamage(meta)
+        heldStack.stackSize = stackSize
+        return flag1
+      }
+      else {
+        if (!heldStack.onItemUse(player, ShipWorld, pos, side, hitVecX, hitVecY, hitVecZ))
+          return false
+
+        if (heldStack.stackSize <= 0)
+          net.minecraftforge.event.ForgeEventFactory.onPlayerDestroyItem(player, heldStack)
+
+        return true
+      }
+    }
+    else {
+      return true
+    }
   }
 }

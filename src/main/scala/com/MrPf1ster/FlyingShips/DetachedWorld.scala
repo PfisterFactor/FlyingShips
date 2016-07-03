@@ -47,8 +47,6 @@ class DetachedWorld(OriginWorld:World, WorldName:String)
 
   override def createChunkProvider(): IChunkProvider = null
 
-
-
   @SideOnly(Side.CLIENT)
   override def getLightBrightness(pos: BlockPos) = 15
 

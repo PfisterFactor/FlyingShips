@@ -6,13 +6,13 @@ package com.MrPf1ster.FlyingShips
 
 import com.MrPf1ster.FlyingShips.network.FlyingShipsPacketHandler
 import net.minecraft.util.BlockPos
+import net.minecraftforge.fml.common.Mod
 import net.minecraftforge.fml.common.Mod.EventHandler
 import net.minecraftforge.fml.common.event.{FMLInitializationEvent, FMLPostInitializationEvent, FMLPreInitializationEvent}
-import net.minecraftforge.fml.common.{Mod, ModContainer}
 
 
 @Mod(modid = FlyingShips.MOD_ID, name = "Flying Ships", version = FlyingShips.VERSION, modLanguage = "scala")
-object FlyingShips extends ModContainer{
+object FlyingShips{
 
   implicit class BlockPosExtension(pos: BlockPos) {
     def -(pos2: BlockPos) = new BlockPos(pos.getX - pos2.getX, pos.getY - pos2.getY, pos.getZ - pos2.getZ)

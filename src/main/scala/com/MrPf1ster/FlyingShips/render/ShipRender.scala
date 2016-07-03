@@ -76,12 +76,15 @@ class ShipRender(rm: RenderManager) extends Render[EntityShip](rm) {
 
     // Render normal blocks and non-special tile entities
     GL11.glCallList(getDisplayList(shipWorld))
+
     // Render tile entities that have special renders
+    // TODO: Fix Signs
     shipWorld.TileEntities
       .filter(pair => TileEntityRendererDispatcher.instance.getSpecialRenderer(pair._2) != null)
       .foreach(pair => {
         def uPos = pair._1
         def te = pair._2
+        te.setWorldObj(shipWorld)
         // If anyone ever wants to explain why the below works i'll be happy to hear
         TileEntityRendererDispatcher.instance.renderTileEntityAt(te, -(uPos.WorldPosX - 2 * uPos.RelPosX), -(uPos.WorldPosY - 2 * uPos.RelPosY), -(uPos.WorldPosZ - 2 * uPos.RelPosZ), partialTicks, -1)
       })

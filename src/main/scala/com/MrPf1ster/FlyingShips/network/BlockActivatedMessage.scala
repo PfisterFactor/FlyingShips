@@ -1,7 +1,5 @@
 package com.MrPf1ster.FlyingShips.network
 
-import java.util.UUID
-
 import com.MrPf1ster.FlyingShips.entities.EntityShip
 import com.MrPf1ster.FlyingShips.util.ShipLocator
 import io.netty.buffer.ByteBuf
@@ -18,19 +16,19 @@ class BlockActivatedMessage(ship: EntityShip, player: EntityPlayer, movingObject
   def this() = this(null, null, null)
 
   var BlockPosition = if (movingObjectPosition != null) movingObjectPosition.getBlockPos else new BlockPos(0, 0, 0)
-  var PlayerUUID: UUID = if (player != null) player.getGameProfile.getId else new UUID(0, 0)
+  var PlayerID: Int = if (player != null) player.getEntityId else -1
   var HitVec = if (movingObjectPosition != null) movingObjectPosition.hitVec else new Vec3(-1, -1, -1)
   var HitSide = if (movingObjectPosition != null) movingObjectPosition.sideHit else EnumFacing.UP
   var ShipID = if (ship != null) ship.getEntityId else -1
 
 
   override def toBytes(buf: ByteBuf): Unit = {
+
     // BlockPosition
     buf.writeLong(BlockPosition.toLong)
 
-    // PlayerUUID
-    buf.writeLong(PlayerUUID.getLeastSignificantBits)
-    buf.writeLong(PlayerUUID.getMostSignificantBits)
+    // PlayerID
+    buf.writeInt(PlayerID)
 
     // HitVec
     buf.writeDouble(HitVec.xCoord)
@@ -46,11 +44,12 @@ class BlockActivatedMessage(ship: EntityShip, player: EntityPlayer, movingObject
   }
 
   override def fromBytes(buf: ByteBuf): Unit = {
+
     // BlockPosition
     BlockPosition = BlockPos.fromLong(buf.readLong())
 
-    // PlayerUUID
-    PlayerUUID = new UUID(buf.readLong(), buf.readLong())
+    // PlayerID
+    PlayerID = buf.readInt()
 
     // HitVec
     HitVec = new Vec3(buf.readDouble(), buf.readDouble(), buf.readDouble())
@@ -75,25 +74,21 @@ class ServerBlockActivatedMessageHandler extends IMessageHandler[BlockActivatedM
     val Message = message
     val Context = ctx
 
+
+
     // On Server
     override def run(): Unit = {
 
-
-
-      val player = ctx.getServerHandler.playerEntity
+      val player:EntityPlayer = ctx.getServerHandler.playerEntity
       val ship = ShipLocator.getShip(player.worldObj,message.ShipID)
 
       if (ship.isEmpty)
         return
 
-      def block = message.BlockPosition
-      def hitVec = message.HitVec
-      def side = message.HitSide
+      val didRightClick = ship.get.InteractionHandler.simulateRightClick(player,message.BlockPosition,message.HitVec,message.HitSide)
 
-      val blockstate = ship.get.ShipWorld.getBlockState(block)
-
-      blockstate.getBlock.onBlockActivated(ship.get.ShipWorld, block, blockstate, player, side, hitVec.xCoord.toFloat, hitVec.yCoord.toFloat, hitVec.zCoord.toFloat)
-
+      if (didRightClick)
+        player.swingItem()
 
     }
   }
