@@ -4,8 +4,8 @@ package com.MrPf1ster.FlyingShips
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream, DataInputStream, DataOutputStream}
 
 import com.MrPf1ster.FlyingShips.util.UnifiedPos
-import net.minecraft.block.Block
 import net.minecraft.block.state.IBlockState
+import net.minecraft.block.{Block, BlockAir}
 import net.minecraft.util.BlockPos
 import net.minecraft.world.World
 
@@ -14,17 +14,22 @@ import scala.collection.mutable.{Map => mMap}
 /**
   * Created by EJ on 3/3/2016.
   */
-class BlocksStorage(shipWorld: ShipWorld) {
+class BlocksStorage(ShipWorld: ShipWorld) {
 
   private var BlockMap: mMap[UnifiedPos,BlockStorage] = mMap()
 
 
   def getBlockMap = BlockMap
 
-  def setBlock(pos:BlockPos,state:IBlockState) = BlockMap.put(UnifiedPos(pos,shipWorld.OriginPos,true),new BlockStorage(state))
-  def setBlock(pos:UnifiedPos,state:IBlockState) = BlockMap.put(pos,new BlockStorage(state))
+  def setBlock(pos:BlockPos,state:IBlockState): Unit = setBlock(UnifiedPos(pos,ShipWorld.OriginPos,true),state)
+  def setBlock(pos:UnifiedPos,state:IBlockState): Unit = {
+    if (state.getBlock.isInstanceOf[BlockAir])
+      BlockMap.remove(pos)
+    else
+      BlockMap.put(pos,new BlockStorage(state))
+  }
 
-  def getBlock(pos:BlockPos) : Option[BlockStorage] = BlockMap.get(UnifiedPos(pos,shipWorld.OriginPos,true))
+  def getBlock(pos:BlockPos) : Option[BlockStorage] = BlockMap.get(UnifiedPos(pos,ShipWorld.OriginPos,true))
   def getBlock(pos:UnifiedPos) : Option[BlockStorage] = BlockMap.get(pos)
 
   def isEmpty:Boolean = BlockMap.isEmpty
@@ -34,7 +39,6 @@ class BlocksStorage(shipWorld: ShipWorld) {
     blockSet.foreach(uPos => {
       val blockStorage = new BlockStorage()
       blockStorage.readFromWorld(world,uPos)
-
       BlockMap.put(uPos,blockStorage)
 
     })
@@ -80,7 +84,7 @@ class BlocksStorage(shipWorld: ShipWorld) {
     // BlockPos
     val blockpositions = new Array[UnifiedPos](mapLength)
     for (i:Int <- 0 until mapLength)
-      blockpositions(i) = UnifiedPos(BlockPos.fromLong(in.readLong()),shipWorld.OriginPos,true)
+      blockpositions(i) = UnifiedPos(BlockPos.fromLong(in.readLong()),ShipWorld.OriginPos,true)
 
     // Block Storage
     val blockstorages = new Array[BlockStorage](mapLength)

@@ -7,6 +7,7 @@ import net.minecraft.profiler.Profiler
 import net.minecraft.tileentity.TileEntity
 import net.minecraft.util.BlockPos
 import net.minecraft.world.biome.BiomeGenBase
+import net.minecraft.world.border.WorldBorder
 import net.minecraft.world.chunk.IChunkProvider
 import net.minecraft.world.chunk.storage.IChunkLoader
 import net.minecraft.world.storage.{IPlayerFileData, ISaveHandler, WorldInfo}
@@ -42,6 +43,7 @@ object SaveHandler extends ISaveHandler {
 class DetachedWorld(OriginWorld:World, WorldName:String)
   extends World(SaveHandler, OriginWorld.getWorldInfo, OriginWorld.provider, new Profiler(), OriginWorld.isRemote) {
 
+  //worldAccesses = OriginWorld.worldAccesses
 
   override def getRenderDistanceChunks: Int = 0
 
@@ -60,6 +62,7 @@ class DetachedWorld(OriginWorld:World, WorldName:String)
 
   override def isBlockLoaded(pos: BlockPos) = true
 
+  override def getWorldBorder() = new WorldBorder()
 
   override def getLightFromNeighbors(pos: BlockPos) = 15
 

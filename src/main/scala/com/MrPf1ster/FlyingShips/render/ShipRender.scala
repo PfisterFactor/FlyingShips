@@ -98,7 +98,7 @@ class ShipRender(rm: RenderManager) extends Render[EntityShip](rm) {
       doDebugRender(shipWorld, x, y, z)
 
     // Ray-trace across the ship and return it wrapped in an option
-    val rayTrace: Option[MovingObjectPosition] = entity.InteractionHandler.getBlockPlayerIsLookingAt(partialTicks)
+    val rayTrace:Option[MovingObjectPosition] = entity.InteractionHandler.getBlockPlayerIsLookingAt(partialTicks)
 
     if (rayTrace.isDefined) {
       //println(hoveredBlockOnShip.get)

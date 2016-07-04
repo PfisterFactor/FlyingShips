@@ -6,8 +6,8 @@ import javax.vecmath.Quat4f
 import com.MrPf1ster.FlyingShips.entities.EntityShip
 import com.MrPf1ster.FlyingShips.network.BlocksChangedMessage
 import com.MrPf1ster.FlyingShips.util.{UnifiedPos, UnifiedVec, VectorUtils}
-import net.minecraft.block.Block
 import net.minecraft.block.state.IBlockState
+import net.minecraft.block.{Block, BlockAir}
 import net.minecraft.entity.{Entity, EntityHanging}
 import net.minecraft.nbt.{CompressedStreamTools, NBTTagCompound}
 import net.minecraft.tileentity.TileEntity
@@ -40,7 +40,7 @@ class ShipWorld(originWorld: World, blocks: Set[UnifiedPos], ship: EntityShip) e
     loadFromWorld(OriginWorld, blocks)
   }
 
-  // The Shipblock
+  // The Ship Block
   def ShipBlock = getBlockState(new BlockPos(0,0,0))
 
   // TODO: Change this to be the biome directly under the ship
@@ -149,31 +149,46 @@ class ShipWorld(originWorld: World, blocks: Set[UnifiedPos], ship: EntityShip) e
 
 
   override def setBlockState(pos: BlockPos, newState: IBlockState, flags: Int): Boolean = {
+    if (isRemote) return false
+
     if (applyBlockChange(pos, newState, flags) && this.isValid) {
-      if (!isRemote)
         ChangedBlocks.add(new UnifiedPos(pos, Ship.getPosition, true))
-      return true
+        pushBlockChangesToClient()
+        return true
     }
     false
   }
 
   def applyBlockChange(pos: BlockPos, newState: IBlockState, flags: Int): Boolean = {
+    if (pos == new BlockPos(0,0,0)) return false
+
     val storage: Option[BlockStorage] = BlockStore.getBlock(pos)
 
-    if (storage.isEmpty) {
-      BlockStore.setBlock(pos, newState)
-      Ship.generateBoundingBox
-    }
-    else
-      storage.get.BlockState = newState
+    /*
+    if (newState.isInstanceOf[BlockAir] && storage.isDefined)
+      storage.get.BlockState.getBlock.onBlockHarvested(this,pos,storage.get.BlockState,player)
+    */
 
-    if (!isRemote)
+    BlockStore.setBlock(pos, newState)
+
+    if (storage.isEmpty || newState.getBlock.isInstanceOf[BlockAir])
+      Ship.generateBoundingBox
+
+
+
+
+    if (!isRemote && !isAirBlock(pos))
       BlockStore.getBlock(pos).get.BlockState.getBlock.onBlockAdded(this,pos,newState)
 
     val TE = TileEntities.get(new UnifiedPos(pos, Ship.getPosition, true))
-    if (TE.isDefined)
+    if (TE.isDefined) {
       TE.get.updateContainingBlockInfo()
-    else {
+      if (isAirBlock(pos)) {
+        TE.get.invalidate()
+        TileEntities = TileEntities.filterNot(te => te._2 == TE.get)
+      }
+    }
+    else{
       val newTE = newState.getBlock.createTileEntity(this,newState)
       if (newTE != null) {
         newTE.setWorldObj(this)
@@ -268,6 +283,11 @@ class ShipWorld(originWorld: World, blocks: Set[UnifiedPos], ship: EntityShip) e
     val newVec = UnifiedVec.convertToWorld(new Vec3(x,y,z),ship.getPositionVector)
 
     OriginWorld.playSoundEffect(newVec.xCoord,newVec.yCoord,newVec.zCoord,soundName,volume,pitch)
+  }
+
+  override def playAuxSFX(par1:Int,pos:BlockPos,par3:Int) = {
+    val newPos = UnifiedPos.convertToWorld(pos,ship.getPosition)
+    OriginWorld.playAuxSFX(par1,newPos,par3)
   }
 
   override def isSideSolid(pos:BlockPos,side:EnumFacing,default:Boolean) = getBlockState(pos).getBlock.isSideSolid(this, pos, side)
