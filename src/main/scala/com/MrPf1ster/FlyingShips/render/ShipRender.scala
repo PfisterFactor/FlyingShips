@@ -3,9 +3,9 @@ package com.MrPf1ster.FlyingShips.render
 import java.nio.FloatBuffer
 import javax.vecmath.{Matrix4f, Quat4f}
 
-import com.MrPf1ster.FlyingShips.ShipWorld
 import com.MrPf1ster.FlyingShips.entities.EntityShip
 import com.MrPf1ster.FlyingShips.util.{RenderUtils, RotatedBB}
+import com.MrPf1ster.FlyingShips.world.ShipWorld
 import net.minecraft.block.state.IBlockState
 import net.minecraft.client.Minecraft
 import net.minecraft.client.renderer._

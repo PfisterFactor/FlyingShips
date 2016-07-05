@@ -1,7 +1,7 @@
 package com.MrPf1ster.FlyingShips.network
 
-import com.MrPf1ster.FlyingShips.ShipWorld
 import com.MrPf1ster.FlyingShips.util.ShipLocator
+import com.MrPf1ster.FlyingShips.world.ShipWorld
 import io.netty.buffer.ByteBuf
 import net.minecraft.client.Minecraft
 import net.minecraft.inventory.Slot

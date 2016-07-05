@@ -1,9 +1,10 @@
 package com.MrPf1ster.FlyingShips.blocks
 
+import com.MrPf1ster.FlyingShips.FlyingShips
 import com.MrPf1ster.FlyingShips.entities.EntityShip
 import com.MrPf1ster.FlyingShips.network.SpawnShipMessage
 import com.MrPf1ster.FlyingShips.util.BlockUtils
-import com.MrPf1ster.FlyingShips.{FlyingShips, ShipWorld}
+import com.MrPf1ster.FlyingShips.world.ShipWorld
 import net.minecraft.block.Block
 import net.minecraft.block.material.Material
 import net.minecraft.block.properties.{IProperty, PropertyDirection}

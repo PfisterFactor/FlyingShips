@@ -1,7 +1,8 @@
 package com.MrPf1ster.FlyingShips.entities
 
+import com.MrPf1ster.FlyingShips.FlyingShips
 import com.MrPf1ster.FlyingShips.network.{BlockDiggingMessage, BlockPlacedMessage}
-import com.MrPf1ster.FlyingShips.{FlyingShips, ShipWorld}
+import com.MrPf1ster.FlyingShips.world.ShipWorld
 import net.minecraft.client.Minecraft
 import net.minecraft.client.entity.AbstractClientPlayer
 import net.minecraft.entity.player.{EntityPlayer, EntityPlayerMP}
@@ -47,7 +48,12 @@ case class ShipInteractionHandler(ShipWorld: ShipWorld) {
     val ray: Vec3 = eyePos.addVector(lookVector.xCoord * blockReachDistance, lookVector.yCoord * blockReachDistance, lookVector.zCoord * blockReachDistance)
 
 
-    ShipWorld.rotatedRayTrace(eyePos, ray)
+    val rayTrace = ShipWorld.rayTraceBlocks(eyePos, ray)
+
+    if (rayTrace == null || rayTrace.typeOfHit != MovingObjectType.BLOCK)
+      None
+    else
+      Some(rayTrace)
 
   }
 
@@ -77,7 +83,7 @@ case class ShipInteractionHandler(ShipWorld: ShipWorld) {
 
     val hitInfo = getBlockPlayerIsLookingAt(1.0f)
 
-    if (hitInfo.isEmpty) return false
+    if (hitInfo.isEmpty) return
 
     def pos = hitInfo.get.getBlockPos
     def hitVec = hitInfo.get.hitVec

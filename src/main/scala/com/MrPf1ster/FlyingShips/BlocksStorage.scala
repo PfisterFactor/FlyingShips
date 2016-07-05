@@ -4,6 +4,7 @@ package com.MrPf1ster.FlyingShips
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream, DataInputStream, DataOutputStream}
 
 import com.MrPf1ster.FlyingShips.util.UnifiedPos
+import com.MrPf1ster.FlyingShips.world.ShipWorld
 import net.minecraft.block.state.IBlockState
 import net.minecraft.block.{Block, BlockAir}
 import net.minecraft.util.BlockPos

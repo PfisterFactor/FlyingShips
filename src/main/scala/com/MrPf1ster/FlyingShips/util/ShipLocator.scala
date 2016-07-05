@@ -13,6 +13,7 @@ import scala.collection.JavaConversions._
   */
 object ShipLocator {
   def getShips(world:World): Set[EntityShip] = {
+    if (world == null) return Set()
     val worldEntities = world.getLoadedEntityList
     worldEntities.filter(_.isInstanceOf[EntityShip]).map(_.asInstanceOf[EntityShip]).toSet
   }

@@ -1,7 +1,7 @@
 package com.MrPf1ster.FlyingShips.network
 
-import com.MrPf1ster.FlyingShips.ShipWorld
 import com.MrPf1ster.FlyingShips.util.ShipLocator
+import com.MrPf1ster.FlyingShips.world.ShipWorld
 import io.netty.buffer.ByteBuf
 import net.minecraft.block.Block
 import net.minecraft.block.material.Material
@@ -120,7 +120,7 @@ class ServerBlockDiggingMessageHandler extends IMessageHandler[BlockDiggingMessa
       def oddSwitchSyntax: Unit = {
         if (message.Status == C07PacketPlayerDigging.Action.START_DESTROY_BLOCK) {
           if (shipWorld.getWorldBorder.contains(blockpos)) {
-            onBlockClicked(player, blockpos, message.Side, shipWorld)
+            ItemInWorldManagerFaker.onBlockClicked(player, blockpos, message.Side, shipWorld)
           }
           else {
             // Handled by Shipworld
@@ -129,10 +129,10 @@ class ServerBlockDiggingMessageHandler extends IMessageHandler[BlockDiggingMessa
         }
         else {
           if (message.Status == C07PacketPlayerDigging.Action.STOP_DESTROY_BLOCK) {
-            player.theItemInWorldManager.blockRemoving(blockpos)
+            ItemInWorldManagerFaker.blockRemoving(player,blockpos,shipWorld)
           }
-          else if (message.Status eq C07PacketPlayerDigging.Action.ABORT_DESTROY_BLOCK) {
-            player.theItemInWorldManager.cancelDestroyingBlock
+          else if (message.Status == C07PacketPlayerDigging.Action.ABORT_DESTROY_BLOCK) {
+            shipWorld.sendBlockBreakProgress(player.getEntityId,blockpos,-1)
           }
           if (shipWorld.getBlockState(blockpos).getBlock.getMaterial != Material.air) {
             // Handled by Shipworld
@@ -142,108 +142,125 @@ class ServerBlockDiggingMessageHandler extends IMessageHandler[BlockDiggingMessa
         return
       }
     }
-    private def removeBlock(player:EntityPlayerMP, pos:BlockPos, canHarvest:Boolean, shipWorld: ShipWorld): Boolean = {
-      val iblockstate: IBlockState = shipWorld.getBlockState(pos)
 
-      iblockstate.getBlock.onBlockHarvested(shipWorld, pos, iblockstate, player)
-
-      val flag: Boolean = iblockstate.getBlock.removedByPlayer(shipWorld, pos, player, canHarvest)
-
-      if (flag)
-        iblockstate.getBlock.onBlockDestroyedByPlayer(shipWorld, pos, iblockstate)
-
-      return flag
-    }
-    private def tryHarvestBlock(player:EntityPlayerMP, pos: BlockPos, shipWorld: ShipWorld): Boolean = {
-      val exp: Int = net.minecraftforge.common.ForgeHooks.onBlockBreakEvent(shipWorld, player.theItemInWorldManager.getGameType, player, pos)
-
-      if (exp == -1) return false
-
-      val iblockstate: IBlockState = shipWorld.getBlockState(pos)
-      val tileentity: TileEntity = shipWorld.getTileEntity(pos)
-
-      val stack: ItemStack = player.getCurrentEquippedItem
-      if (stack != null && stack.getItem.onBlockStartBreak(stack, pos, player)) return false
-      shipWorld.playAuxSFXAtEntity(player, 2001, pos, Block.getStateId(iblockstate))
-      var flag1: Boolean = false
-      if (player.capabilities.isCreativeMode) {
-        flag1 = removeBlock(player,pos,false,shipWorld)
-      }
-      else {
-        val itemstack1: ItemStack = player.getCurrentEquippedItem
-        val flag: Boolean = iblockstate.getBlock.canHarvestBlock(shipWorld, pos, player)
-        if (itemstack1 != null) {
-          itemstack1.onBlockDestroyed(shipWorld, iblockstate.getBlock, pos, player)
-          if (itemstack1.stackSize == 0) {
-            player.destroyCurrentEquippedItem
-          }
-        }
-        flag1 = this.removeBlock(player,pos, flag, shipWorld)
-        if (flag1 && flag) {
-          iblockstate.getBlock.harvestBlock(shipWorld, player, pos, iblockstate, tileentity)
-        }
-      }
-      if (!player.capabilities.isCreativeMode && flag1 && exp > 0) {
-        iblockstate.getBlock.dropXpOnBlockBreak(shipWorld, pos, exp)
-      }
-      return flag1
-    }
-
-    private def onBlockClicked(player: EntityPlayerMP, pos: BlockPos, side: EnumFacing, shipWorld: ShipWorld): Unit = {
-      val event: PlayerInteractEvent = net.minecraftforge.event.ForgeEventFactory.onPlayerInteract(player, net.minecraftforge.event.entity.player.PlayerInteractEvent.Action.LEFT_CLICK_BLOCK, shipWorld, pos, side)
-      if (player.capabilities.isCreativeMode) {
-        if (!shipWorld.extinguishFire(null.asInstanceOf[EntityPlayer], pos, side)) {
-          this.tryHarvestBlock(player,pos,shipWorld)
-        }
-      }
-      else {
-        val block: Block = shipWorld.getBlockState(pos).getBlock
-        if (player.theItemInWorldManager.getGameType.isAdventure) {
-          if (player.isSpectator) {
-            return
-          }
-          if (!player.isAllowEdit) {
-            val itemstack: ItemStack = player.getCurrentEquippedItem
-            if (itemstack == null) {
-              return
-            }
-            if (!itemstack.canDestroy(block)) {
-              return
-            }
-          }
-        }
-
-        //this.initialDamage = this.curblockDamage
-        var f: Float = 1.0F
-        if (!block.isAir(shipWorld, pos)) {
-          if (event.useBlock != net.minecraftforge.fml.common.eventhandler.Event.Result.DENY) {
-            block.onBlockClicked(shipWorld, pos, player)
-            shipWorld.extinguishFire(null.asInstanceOf[EntityPlayer], pos, side)
-          }
-          else {
-            //player.playerNetServerHandler.sendPacket(new S23PacketBlockChange(theWorld, pos))
-          }
-          f = block.getPlayerRelativeBlockHardness(player, shipWorld, pos)
-        }
-        if (event.useItem == net.minecraftforge.fml.common.eventhandler.Event.Result.DENY) {
-          if (f >= 1.0F) {
-            //player.playerNetServerHandler.sendPacket(new S23PacketBlockChange(shipWorld, pos))
-          }
-          return
-        }
-        if (!block.isAir(shipWorld, pos) && f >= 1.0F) {
-          tryHarvestBlock(player,pos,shipWorld)
-        }
-        else {
-          //this.isDestroyingBlock = true
-          //this.field_180240_f = pos
-          val i: Int = (f * 10.0F).toInt
-          shipWorld.sendBlockBreakProgress(player.getEntityId, pos, i)
-          //this.durabilityRemainingOnBlock = i
-        }
-      }
-    }
 
   }
 
+}
+
+private object ItemInWorldManagerFaker {
+  def removeBlock(player:EntityPlayerMP, pos:BlockPos, canHarvest:Boolean, shipWorld: ShipWorld): Boolean = {
+    val iblockstate: IBlockState = shipWorld.getBlockState(pos)
+
+    iblockstate.getBlock.onBlockHarvested(shipWorld, pos, iblockstate, player)
+
+    val flag: Boolean = iblockstate.getBlock.removedByPlayer(shipWorld, pos, player, canHarvest)
+
+    if (flag)
+      iblockstate.getBlock.onBlockDestroyedByPlayer(shipWorld, pos, iblockstate)
+
+    return flag
+  }
+
+  def tryHarvestBlock(player:EntityPlayerMP, pos: BlockPos, shipWorld: ShipWorld): Boolean = {
+    val exp: Int = net.minecraftforge.common.ForgeHooks.onBlockBreakEvent(shipWorld, player.theItemInWorldManager.getGameType, player, pos)
+
+    if (exp == -1) return false
+
+    val iblockstate: IBlockState = shipWorld.getBlockState(pos)
+    val tileentity: TileEntity = shipWorld.getTileEntity(pos)
+
+    val stack: ItemStack = player.getCurrentEquippedItem
+    if (stack != null && stack.getItem.onBlockStartBreak(stack, pos, player)) return false
+    shipWorld.playAuxSFXAtEntity(player, 2001, pos, Block.getStateId(iblockstate))
+    var flag1: Boolean = false
+    if (player.capabilities.isCreativeMode) {
+      flag1 = removeBlock(player,pos,false,shipWorld)
+    }
+    else {
+      val itemstack1: ItemStack = player.getCurrentEquippedItem
+      val flag: Boolean = iblockstate.getBlock.canHarvestBlock(shipWorld, pos, player)
+      if (itemstack1 != null) {
+        itemstack1.onBlockDestroyed(shipWorld, iblockstate.getBlock, pos, player)
+        if (itemstack1.stackSize == 0) {
+          player.destroyCurrentEquippedItem
+        }
+      }
+      flag1 = this.removeBlock(player,pos, flag, shipWorld)
+      if (flag1 && flag) {
+        iblockstate.getBlock.harvestBlock(shipWorld, player, pos, iblockstate, tileentity)
+      }
+    }
+    if (!player.capabilities.isCreativeMode && flag1 && exp > 0) {
+      iblockstate.getBlock.dropXpOnBlockBreak(shipWorld, pos, exp)
+    }
+    return flag1
+  }
+
+  def onBlockClicked(player: EntityPlayerMP, pos: BlockPos, side: EnumFacing, shipWorld: ShipWorld): Unit = {
+    val event: PlayerInteractEvent = net.minecraftforge.event.ForgeEventFactory.onPlayerInteract(player, net.minecraftforge.event.entity.player.PlayerInteractEvent.Action.LEFT_CLICK_BLOCK, shipWorld, pos, side)
+    if (player.capabilities.isCreativeMode) {
+      if (!shipWorld.extinguishFire(null.asInstanceOf[EntityPlayer], pos, side)) {
+        this.tryHarvestBlock(player,pos,shipWorld)
+      }
+    }
+    else {
+      val block: Block = shipWorld.getBlockState(pos).getBlock
+      if (player.theItemInWorldManager.getGameType.isAdventure) {
+        if (player.isSpectator) {
+          return
+        }
+        if (!player.isAllowEdit) {
+          val itemstack: ItemStack = player.getCurrentEquippedItem
+          if (itemstack == null) {
+            return
+          }
+          if (!itemstack.canDestroy(block)) {
+            return
+          }
+        }
+      }
+
+      //this.initialDamage = this.curblockDamage
+      var f: Float = 1.0F
+      if (!block.isAir(shipWorld, pos)) {
+        if (event.useBlock != net.minecraftforge.fml.common.eventhandler.Event.Result.DENY) {
+          block.onBlockClicked(shipWorld, pos, player)
+          shipWorld.extinguishFire(null.asInstanceOf[EntityPlayer], pos, side)
+        }
+        else {
+          //player.playerNetServerHandler.sendPacket(new S23PacketBlockChange(theWorld, pos))
+        }
+        f = block.getPlayerRelativeBlockHardness(player, shipWorld, pos)
+      }
+      if (event.useItem == net.minecraftforge.fml.common.eventhandler.Event.Result.DENY) {
+        if (f >= 1.0F) {
+          //player.playerNetServerHandler.sendPacket(new S23PacketBlockChange(shipWorld, pos))
+        }
+        return
+      }
+      if (!block.isAir(shipWorld, pos) && f >= 1.0F) {
+        tryHarvestBlock(player,pos,shipWorld)
+      }
+      else {
+        //this.isDestroyingBlock = true
+        //this.field_180240_f = pos
+        val i: Int = (f * 10.0F).toInt
+        shipWorld.sendBlockBreakProgress(player.getEntityId, pos, i)
+        //this.durabilityRemainingOnBlock = i
+      }
+    }
+  }
+
+  def blockRemoving(player: EntityPlayerMP, pos: BlockPos, shipWorld: ShipWorld) = {
+    if (true /* pos == this.field_180240_f */) {
+     // val i: Int = this.curblockDamage - this.initialDamage
+      val block: Block = shipWorld.getBlockState(pos).getBlock
+      if (!block.isAir(shipWorld, pos)) {
+        //val f: Float = block.getPlayerRelativeBlockHardness(this.thisPlayerMP, this.thisPlayerMP.worldObj, pos) * (i + 1).toFloat
+        shipWorld.sendBlockBreakProgress(player.getEntityId, pos, -1)
+        tryHarvestBlock(player,pos,shipWorld)
+      }
+    }
+  }
 }

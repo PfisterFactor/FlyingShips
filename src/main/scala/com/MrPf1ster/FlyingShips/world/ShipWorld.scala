@@ -1,4 +1,4 @@
-package com.MrPf1ster.FlyingShips
+package com.MrPf1ster.FlyingShips.world
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream, DataInputStream, DataOutputStream}
 import javax.vecmath.Quat4f
@@ -6,12 +6,12 @@ import javax.vecmath.Quat4f
 import com.MrPf1ster.FlyingShips.entities.EntityShip
 import com.MrPf1ster.FlyingShips.network.BlocksChangedMessage
 import com.MrPf1ster.FlyingShips.util.{UnifiedPos, UnifiedVec, VectorUtils}
+import com.MrPf1ster.FlyingShips.{BlockStorage, BlocksStorage, FlyingShips}
 import net.minecraft.block.state.IBlockState
 import net.minecraft.block.{Block, BlockAir}
 import net.minecraft.entity.{Entity, EntityHanging}
 import net.minecraft.nbt.{CompressedStreamTools, NBTTagCompound}
 import net.minecraft.tileentity.TileEntity
-import net.minecraft.util.MovingObjectPosition.MovingObjectType
 import net.minecraft.util._
 import net.minecraft.world.World
 import net.minecraftforge.fml.common.network.NetworkRegistry.TargetPoint
@@ -22,7 +22,7 @@ import scala.collection.mutable.{Map => mMap, Set => mSet}
 /**
   * Created by EJ on 3/2/2016.
   */
-// TODO: Make
+
 class ShipWorld(originWorld: World, blocks: Set[UnifiedPos], ship: EntityShip) extends DetachedWorld(originWorld, "Ship") {
 
 
@@ -47,22 +47,23 @@ class ShipWorld(originWorld: World, blocks: Set[UnifiedPos], ship: EntityShip) e
   val BiomeID = OriginWorld.getBiomeGenForCoords(OriginPos).biomeID
 
   // All TileEntities on Ship, mapped with a Unified Pos
-  var TileEntities: Map[UnifiedPos, TileEntity] = moveTileEntitiesOntoShip
-  def TickableTileEntities: Map[UnifiedPos, TileEntity] = TileEntities.filter(tuple => tuple._2.isInstanceOf[ITickable])
+  var TileEntities: mMap[UnifiedPos, TileEntity] = moveTileEntitiesOntoShip
+  def TickableTileEntities: Map[UnifiedPos, TileEntity] = Map(TileEntities.filter(tuple => tuple._2.isInstanceOf[ITickable]).toSeq:_*)
 
   // All HangingEntities on ship, mapped with a Unified Pos
-  var HangingEntities: Map[UnifiedPos, EntityHanging] = null
+  // #Not implemented#
+  var HangingEntities: mMap[UnifiedPos, EntityHanging] = null
 
   private val ChangedBlocks: mSet[UnifiedPos] = mSet()
   private var doRenderUpdate = false
 
 
 
-  private def moveTileEntitiesOntoShip: Map[UnifiedPos, TileEntity] = {
+  private def moveTileEntitiesOntoShip: mMap[UnifiedPos, TileEntity] = {
     if (!isValid)
-      return Map()
+      return mMap()
 
-    BlockSet
+    mMap(BlockSet
       .filter(uPos => OriginWorld.getTileEntity(uPos.WorldPos) != null)
       .map(tileEntityUPos => {
         def tileEntity = OriginWorld.getTileEntity(tileEntityUPos.WorldPos)
@@ -81,7 +82,7 @@ class ShipWorld(originWorld: World, blocks: Set[UnifiedPos], ship: EntityShip) e
           case ex: Exception => println(s"There was an error moving TileEntity ${tileEntity.getClass.getName} at ${tileEntityUPos.WorldPos}") // Error reporting
         }
         tileEntityUPos -> copyTileEntity // Return our copied to ship tile entity for the map function
-      }).toMap
+      }).toSeq:_*)
   }
 
 
@@ -103,13 +104,14 @@ class ShipWorld(originWorld: World, blocks: Set[UnifiedPos], ship: EntityShip) e
 
   override def getTileEntity(pos: BlockPos) = TileEntities.get(new UnifiedPos(pos, OriginPos, true)).orNull
   override def setTileEntity(pos:BlockPos,te:TileEntity) = {
-    if (te != null)
-      TileEntities = TileEntities + (UnifiedPos(pos,OriginPos,true) -> te)
+    if (!te.isInvalid && te != null)
+      TileEntities.put(UnifiedPos(pos,OriginPos,true),te)
   }
 
   override def addTileEntity(te: TileEntity): Boolean = {
-    if (te.isInvalid) return false
-    TileEntities = TileEntities + (UnifiedPos(te.getPos,OriginPos,true) -> te)
+    if (te.isInvalid || te == null) return false
+
+    TileEntities.put(UnifiedPos(te.getPos,OriginPos,true), te)
     true
   }
 
@@ -147,7 +149,14 @@ class ShipWorld(originWorld: World, blocks: Set[UnifiedPos], ship: EntityShip) e
     setBlockState(pos, newState, 3)
   }
 
+  override def spawnEntityInWorld(entity:Entity): Boolean = {
+    val worldPos = UnifiedVec.convertToWorld(entity.getPositionVector, Ship.getPositionVector)
 
+    entity.setPosition(worldPos.xCoord, worldPos.yCoord, worldPos.zCoord)
+    entity.setWorld(OriginWorld)
+
+    OriginWorld.spawnEntityInWorld(entity)
+  }
   override def setBlockState(pos: BlockPos, newState: IBlockState, flags: Int): Boolean = {
     if (isRemote) return false
 
@@ -208,7 +217,7 @@ class ShipWorld(originWorld: World, blocks: Set[UnifiedPos], ship: EntityShip) e
 
   // Ray traces blocks on ship, arguments are non-relative
   // It rotates the look and ray vector against the ship's current rotation so we can use Minecraft's built in world block ray-trace
-  def rotatedRayTrace(start:Vec3, end:Vec3): Option[MovingObjectPosition] = {
+  override def rayTraceBlocks(start:Vec3, end:Vec3): MovingObjectPosition = {
 
     // Gets the opposite rotation of our entity
     val inversedRot: Quat4f = Ship.Rotation.clone().asInstanceOf[Quat4f] // clone because inverse mutates
@@ -224,13 +233,9 @@ class ShipWorld(originWorld: World, blocks: Set[UnifiedPos], ship: EntityShip) e
     // The result of the ray-trace on the ship world
     val rayTrace = Ship.ShipWorld.rayTraceBlocks(rotatedStart, rotatedEnd)
 
-    if (rayTrace != null && rayTrace.typeOfHit == MovingObjectType.BLOCK)
-      Some(rayTrace)
-    else
-      None
+    super.rayTraceBlocks(rotatedStart,rotatedEnd)
 
   }
-
 
   def getWorldData: (Array[Byte], Array[Byte]) = {
     // Block Data
@@ -270,7 +275,7 @@ class ShipWorld(originWorld: World, blocks: Set[UnifiedPos], ship: EntityShip) e
       tileentities(i) = TileEntity.createAndLoadEntity(CompressedStreamTools.readCompressed(in))
 
     // Map tile entity positions to UnifiedPositions and then zip it with the tile entities array
-    TileEntities = tileentities.map(te => UnifiedPos(te.getPos,OriginPos,true)).zip(tileentities).toMap
+    TileEntities = mMap(tileentities.map(te => UnifiedPos(te.getPos,OriginPos,true)).zip(tileentities).toSeq:_*)
   }
 
   def isValid = BlockStore.nonEmpty

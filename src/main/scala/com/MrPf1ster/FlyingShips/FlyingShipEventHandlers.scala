@@ -1,10 +1,8 @@
 package com.MrPf1ster.FlyingShips
 
 
-import com.MrPf1ster.FlyingShips.entities.EntityShip
-import com.google.common.base.Predicates
+import com.MrPf1ster.FlyingShips.util.ShipLocator
 import net.minecraft.client.Minecraft
-import net.minecraft.entity.player.EntityPlayer
 import net.minecraft.world.World
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent
 import net.minecraftforge.fml.common.gameevent.TickEvent
@@ -16,14 +14,10 @@ import net.minecraftforge.fml.common.gameevent.TickEvent.Phase
 class FlyingShipEventHandlers {
 
   def updateEntities(world: World): Unit = {
-    val ships = world.getEntities(classOf[EntityShip], Predicates.alwaysTrue[EntityShip]())
-    if (ships == null || ships.isEmpty) return
+    val ships = ShipLocator.getShips(world)
+    if (ships.isEmpty) return
 
-    val iterator = ships.iterator
-    while (iterator.hasNext) {
-      val next = iterator.next()
-      next.ShipWorld.updateEntities
-    }
+    ships.foreach(ship => ship.ShipWorld.updateEntities())
   }
 
   @SubscribeEvent
@@ -36,18 +30,14 @@ class FlyingShipEventHandlers {
 
   @SubscribeEvent
   def onClientTick(event: TickEvent.ClientTickEvent): Unit = {
-
-    if (event.phase != Phase.START) return
-
-    try {
-      def world = Minecraft.getMinecraft.getRenderViewEntity.asInstanceOf[EntityPlayer].getEntityWorld
-
-      updateEntities(world)
-    }
-    catch {
-      case e: Exception => {}
-    }
+    if (event.phase != TickEvent.Phase.END) return
+    val ships = ShipLocator.getShips(Minecraft.getMinecraft.theWorld)
+    if (ships.isEmpty) return
 
 
+
+    ships.foreach(ship => {
+      ship.InteractionHandler.ClickSimulator.sendClickBlockToController(Minecraft.getMinecraft.thePlayer)
+    })
   }
 }

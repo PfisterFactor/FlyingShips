@@ -3,9 +3,9 @@ package com.MrPf1ster.FlyingShips.entities
 import java.util.UUID
 import javax.vecmath.Quat4f
 
-import com.MrPf1ster.FlyingShips.ShipWorld
 import com.MrPf1ster.FlyingShips.blocks.ShipCreatorBlock
 import com.MrPf1ster.FlyingShips.util.{BoundingBox, UnifiedPos}
+import com.MrPf1ster.FlyingShips.world.ShipWorld
 import com.google.common.base.Predicates
 import net.minecraft.client.Minecraft
 import net.minecraft.entity.Entity
@@ -13,7 +13,7 @@ import net.minecraft.entity.player.EntityPlayer
 import net.minecraft.nbt.NBTTagCompound
 import net.minecraft.util._
 import net.minecraft.world.World
-import net.minecraft.world.chunk.Chunk
+
 import scala.collection.mutable.{Set => mSet}
 /**
   * Created by EJ on 2/21/2016.
@@ -99,7 +99,7 @@ class EntityShip(pos: BlockPos, world: World, blockSet: Set[BlockPos]) extends E
     //val deg15 = new Quat4f(0, 0, 0.94f, 0.94f)
     //deg15.mul(Rotation, deg15)
     //Rotation.interpolate(deg15, 0.01f)
-    //Rotation = new Quat4f(0.94f, 0, 0, 0.94f)
+    Rotation = new Quat4f(0, 0, 0, 1)
 
     moveEntity(motionX,motionY,motionZ)
     if (_boundingBox != null)
@@ -132,8 +132,8 @@ class EntityShip(pos: BlockPos, world: World, blockSet: Set[BlockPos]) extends E
 
   // Left Click
   override def attackEntityFrom (source:DamageSource,amount:Float) = {
-    if (source.getEntity.isInstanceOf[EntityPlayer])
-      InteractionHandler.onShipLeftClick(source.getEntity.asInstanceOf[EntityPlayer])
+    //if (source.getEntity.isInstanceOf[EntityPlayer])
+      //InteractionHandler.onShipLeftClick(source.getEntity.asInstanceOf[EntityPlayer])
 
     false
   }
