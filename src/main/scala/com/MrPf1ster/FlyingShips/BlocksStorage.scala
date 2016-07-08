@@ -22,7 +22,7 @@ class BlocksStorage(ShipWorld: ShipWorld) {
 
   def getBlockMap = BlockMap
 
-  def setBlock(pos:BlockPos,state:IBlockState): Unit = setBlock(UnifiedPos(pos,ShipWorld.OriginPos,true),state)
+  def setBlock(pos:BlockPos,state:IBlockState): Unit = setBlock(UnifiedPos(pos,ShipWorld.OriginPos,IsRelative = true),state)
   def setBlock(pos:UnifiedPos,state:IBlockState): Unit = {
     if (state.getBlock.isInstanceOf[BlockAir])
       BlockMap.remove(pos)
@@ -30,7 +30,7 @@ class BlocksStorage(ShipWorld: ShipWorld) {
       BlockMap.put(pos,new BlockStorage(state))
   }
 
-  def getBlock(pos:BlockPos) : Option[BlockStorage] = BlockMap.get(UnifiedPos(pos,ShipWorld.OriginPos,true))
+  def getBlock(pos:BlockPos) : Option[BlockStorage] = BlockMap.get(UnifiedPos(pos,ShipWorld.OriginPos,IsRelative = true))
   def getBlock(pos:UnifiedPos) : Option[BlockStorage] = BlockMap.get(pos)
 
   def isEmpty:Boolean = BlockMap.isEmpty
@@ -65,6 +65,7 @@ class BlocksStorage(ShipWorld: ShipWorld) {
     BlockMap.keys.foreach(pos => out.writeLong(pos.RelativePos.toLong))
 
     // BlockStorage
+    //noinspection ScalaDeprecation
     BlockMap.values.foreach(state => out.writeInt(Block.BLOCK_STATE_IDS.get(state.BlockState)))
 
 
@@ -85,10 +86,11 @@ class BlocksStorage(ShipWorld: ShipWorld) {
     // BlockPos
     val blockpositions = new Array[UnifiedPos](mapLength)
     for (i:Int <- 0 until mapLength)
-      blockpositions(i) = UnifiedPos(BlockPos.fromLong(in.readLong()),ShipWorld.OriginPos,true)
+      blockpositions(i) = UnifiedPos(BlockPos.fromLong(in.readLong()),ShipWorld.OriginPos,IsRelative = true)
 
     // Block Storage
     val blockstorages = new Array[BlockStorage](mapLength)
+    //noinspection ScalaDeprecation
     for (i <- 0 until mapLength)
       blockstorages(i) = new BlockStorage(Block.BLOCK_STATE_IDS.getByValue(in.readInt()))
 

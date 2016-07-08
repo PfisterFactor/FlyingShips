@@ -48,16 +48,12 @@ case class ShipInteractionHandler(ShipWorld: ShipWorld) {
     val ray: Vec3 = eyePos.addVector(lookVector.xCoord * blockReachDistance, lookVector.yCoord * blockReachDistance, lookVector.zCoord * blockReachDistance)
 
 
-    val rayTrace = ShipWorld.rayTraceBlocks(eyePos, ray)
-
-    if (rayTrace == null || rayTrace.typeOfHit != MovingObjectType.BLOCK)
-      None
-    else
-      Some(rayTrace)
+    ShipWorld.rotatedRayTrace(eyePos,ray)
 
   }
 
-
+  // Ship Right click is trigger when the entity is interacted with
+  // Ship Left click is triggered when the player left clicks due to atta
   // This executes on client only
   def onShipRightClick(player: EntityPlayer): Boolean = {
     val hitInfo = getBlockPlayerIsLookingAt(1.0f)
@@ -74,23 +70,7 @@ case class ShipInteractionHandler(ShipWorld: ShipWorld) {
     if (didRightClick)
       player.swingItem()
 
-    return didRightClick
-  }
-
-  // This only runs on client as well
-  def onShipLeftClick(player:EntityPlayer): Unit = {
-    if (!ShipWorld.isRemote) return
-
-    val hitInfo = getBlockPlayerIsLookingAt(1.0f)
-
-    if (hitInfo.isEmpty) return
-
-    def pos = hitInfo.get.getBlockPos
-    def hitVec = hitInfo.get.hitVec
-    def side = hitInfo.get.sideHit
-
-    val didLeftClick = ClickSimulator.simulateLeftClick(player,pos,side)
-
+    didRightClick
   }
 
   def sendBlockDiggingMessage(status: C07PacketPlayerDigging.Action,pos:BlockPos,side:EnumFacing) = {

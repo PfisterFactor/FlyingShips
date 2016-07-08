@@ -42,6 +42,7 @@ class BlocksChangedMessage(ship: EntityShip, changedBlocks: Array[BlockPos]) ext
     ChangedBlocks.foreach(pos => buf.writeLong(pos.toLong))
 
     // BlockStates
+    //noinspection ScalaDeprecation
     BlockStates.foreach(state => buf.writeInt(Block.BLOCK_STATE_IDS.get(state)))
 
     // TileEntities Length
@@ -69,6 +70,7 @@ class BlocksChangedMessage(ship: EntityShip, changedBlocks: Array[BlockPos]) ext
 
     // BlockStates
     for (i <- 0 until NumChangedBlocks) {
+      //noinspection ScalaDeprecation
       BlockStates = BlockStates :+ Block.BLOCK_STATE_IDS.getByValue(buf.readInt())
     }
 

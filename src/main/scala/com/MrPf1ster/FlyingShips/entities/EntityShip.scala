@@ -51,7 +51,7 @@ class EntityShip(pos: BlockPos, world: World, blockSet: Set[BlockPos]) extends E
   setPosition(posX,posY,posZ)
 
   // Fake world that holds all the blocks on the ship
-  val ShipWorld: ShipWorld = new ShipWorld(world, blockSet.map(UnifiedPos(_,getPosition,false)), this)
+  val ShipWorld: ShipWorld = new ShipWorld(world, blockSet.map(UnifiedPos(_,getPosition,IsRelative = false)), this)
 
   // Handles interacting with the ship, (left and right clicking on blocks on the ship)
   val InteractionHandler: ShipInteractionHandler = new ShipInteractionHandler(ShipWorld)
@@ -65,11 +65,11 @@ class EntityShip(pos: BlockPos, world: World, blockSet: Set[BlockPos]) extends E
 
   private var _boundingBox:BoundingBox = null
 
-  generateBoundingBox
+  generateBoundingBox()
 
   def getBoundingBox: BoundingBox = _boundingBox
 
-  def generateBoundingBox = {
+  def generateBoundingBox() = {
     _boundingBox = new BoundingBox(BoundingBox.generateRotated(ShipWorld.BlockSet, Rotation), BoundingBox.generateRotatedRelative(ShipWorld.BlockSet, Rotation), Rotation, getPositionVector)
   }
 
@@ -131,10 +131,10 @@ class EntityShip(pos: BlockPos, world: World, blockSet: Set[BlockPos]) extends E
   override def interactFirst(player:EntityPlayer) = InteractionHandler.onShipRightClick(player)
 
   // Left Click
-  override def attackEntityFrom (source:DamageSource,amount:Float) = {
+  override def attackEntityFrom (source:DamageSource,amount:Float):Boolean = {
+    if (!ShipWorld.isRemote) return false
     //if (source.getEntity.isInstanceOf[EntityPlayer])
       //InteractionHandler.onShipLeftClick(source.getEntity.asInstanceOf[EntityPlayer])
-
     false
   }
 

@@ -32,6 +32,7 @@ object ClientProxy {
     // Entities
     def rm = Minecraft.getMinecraft.getRenderManager
     val shipRender = new ShipRender(rm)
+    //noinspection ScalaDeprecation
     RenderingRegistry.registerEntityRenderingHandler(classOf[EntityShip],shipRender)
   }
   def postInit(event: FMLPostInitializationEvent) = {

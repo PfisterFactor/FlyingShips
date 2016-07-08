@@ -38,12 +38,12 @@ object BoundingBox {
   }
 
   def generateRotated(BlockSet: Set[UnifiedPos], Rotation: Quat4f): RotatedBB = {
-    val minMax = findMinMaxBlock(BlockSet, false)
+    val minMax = findMinMaxBlock(BlockSet, isRelative = false)
     new RotatedBB(new AxisAlignedBB(minMax._1, minMax._2), new Vec3(0.5, 0.5, 0.5), Rotation)
   }
 
   def generateRotatedRelative(BlockSet: Set[UnifiedPos], Rotation: Quat4f): RotatedBB = {
-    val minMax = findMinMaxBlock(BlockSet, true)
+    val minMax = findMinMaxBlock(BlockSet, isRelative = true)
     new RotatedBB(new AxisAlignedBB(minMax._1, minMax._2), new Vec3(0.5, 0.5, 0.5), Rotation)
   }
 }

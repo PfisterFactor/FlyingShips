@@ -152,7 +152,7 @@ class ServerBlockPlacedMessageHandler extends IMessageHandler[BlockPlacedMessage
           slot = player.inventoryContainer.getSlotFromInventory(player.inventory, player.inventory.currentItem)
           windowId = player.inventoryContainer.windowId
         }
-        player.openContainer.detectAndSendChanges
+        player.openContainer.detectAndSendChanges()
         player.isChangingQuantityOnly = false
         if (!ItemStack.areItemStacksEqual(player.inventory.getCurrentItem, message.HeldItem) || !placeResult) {
           netHandlerPlayServer.sendPacket(new S2FPacketSetSlot(windowId, slot.slotNumber, player.inventory.getCurrentItem))

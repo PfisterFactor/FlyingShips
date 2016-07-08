@@ -33,7 +33,7 @@ class DetachedWorld(OriginWorld:World, WorldName:String)
 
   override def isBlockLoaded(pos: BlockPos) = true
 
-  override def getWorldBorder() = new WorldBorder()
+  override def getWorldBorder = new WorldBorder()
 
   override def getLightFromNeighbors(pos: BlockPos) = 15
 

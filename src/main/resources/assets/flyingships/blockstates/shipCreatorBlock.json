@@ -4,16 +4,15 @@
       "model": "flyingships:shipCreatorBlock"
     },
     "facing=south": {
-      "model": "flyingships:shipCreatorBlock",
+      "model": "flyingships:shipCreatorBlock"
 
     },
     "facing=west": {
-      "model": "flyingships:shipCreatorBlock",
+      "model": "flyingships:shipCreatorBlock"
 
     },
     "facing=east": {
-      "model": "flyingships:shipCreatorBlock",
-      
+      "model": "flyingships:shipCreatorBlock"
     }
   }
 }

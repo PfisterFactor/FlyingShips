@@ -12,6 +12,7 @@ import net.minecraft.block.{Block, BlockAir}
 import net.minecraft.entity.{Entity, EntityHanging}
 import net.minecraft.nbt.{CompressedStreamTools, NBTTagCompound}
 import net.minecraft.tileentity.TileEntity
+import net.minecraft.util.MovingObjectPosition.MovingObjectType
 import net.minecraft.util._
 import net.minecraft.world.World
 import net.minecraftforge.fml.common.network.NetworkRegistry.TargetPoint
@@ -40,11 +41,17 @@ class ShipWorld(originWorld: World, blocks: Set[UnifiedPos], ship: EntityShip) e
     loadFromWorld(OriginWorld, blocks)
   }
 
+  // The Ship Block's Position
+  // TODO: Make the world un-relative to the ship block
+  def ShipBlockPos = new BlockPos(0,0,0)
+
   // The Ship Block
-  def ShipBlock = getBlockState(new BlockPos(0,0,0))
+  def ShipBlock = getBlockState(ShipBlockPos)
+
+
 
   // TODO: Change this to be the biome directly under the ship
-  val BiomeID = OriginWorld.getBiomeGenForCoords(OriginPos).biomeID
+  val BiomeID = OriginWorld.getBiomeGenForCoords(OriginPos()).biomeID
 
   // All TileEntities on Ship, mapped with a Unified Pos
   var TileEntities: mMap[UnifiedPos, TileEntity] = moveTileEntitiesOntoShip
@@ -99,19 +106,19 @@ class ShipWorld(originWorld: World, blocks: Set[UnifiedPos], ship: EntityShip) e
 
   override def checkNoEntityCollision(aabb:AxisAlignedBB, entity:Entity):Boolean = {
     // Todo: Implement this
-    return true
+    true
   }
 
   override def getTileEntity(pos: BlockPos) = TileEntities.get(new UnifiedPos(pos, OriginPos, true)).orNull
   override def setTileEntity(pos:BlockPos,te:TileEntity) = {
     if (!te.isInvalid && te != null)
-      TileEntities.put(UnifiedPos(pos,OriginPos,true),te)
+      TileEntities.put(UnifiedPos(pos,OriginPos,IsRelative = true),te)
   }
 
   override def addTileEntity(te: TileEntity): Boolean = {
     if (te.isInvalid || te == null) return false
 
-    TileEntities.put(UnifiedPos(te.getPos,OriginPos,true), te)
+    TileEntities.put(UnifiedPos(te.getPos,OriginPos,IsRelative = true), te)
     true
   }
 
@@ -181,7 +188,7 @@ class ShipWorld(originWorld: World, blocks: Set[UnifiedPos], ship: EntityShip) e
     BlockStore.setBlock(pos, newState)
 
     if (storage.isEmpty || newState.getBlock.isInstanceOf[BlockAir])
-      Ship.generateBoundingBox
+      Ship.generateBoundingBox()
 
 
 
@@ -217,7 +224,7 @@ class ShipWorld(originWorld: World, blocks: Set[UnifiedPos], ship: EntityShip) e
 
   // Ray traces blocks on ship, arguments are non-relative
   // It rotates the look and ray vector against the ship's current rotation so we can use Minecraft's built in world block ray-trace
-  override def rayTraceBlocks(start:Vec3, end:Vec3): MovingObjectPosition = {
+  def rotatedRayTrace(start:Vec3, end:Vec3): Option[MovingObjectPosition] = {
 
     // Gets the opposite rotation of our entity
     val inversedRot: Quat4f = Ship.Rotation.clone().asInstanceOf[Quat4f] // clone because inverse mutates
@@ -233,7 +240,10 @@ class ShipWorld(originWorld: World, blocks: Set[UnifiedPos], ship: EntityShip) e
     // The result of the ray-trace on the ship world
     val rayTrace = Ship.ShipWorld.rayTraceBlocks(rotatedStart, rotatedEnd)
 
-    super.rayTraceBlocks(rotatedStart,rotatedEnd)
+    if (rayTrace != null && rayTrace.typeOfHit == MovingObjectType.BLOCK)
+      Some(rayTrace)
+    else
+      None
 
   }
 
@@ -275,7 +285,7 @@ class ShipWorld(originWorld: World, blocks: Set[UnifiedPos], ship: EntityShip) e
       tileentities(i) = TileEntity.createAndLoadEntity(CompressedStreamTools.readCompressed(in))
 
     // Map tile entity positions to UnifiedPositions and then zip it with the tile entities array
-    TileEntities = mMap(tileentities.map(te => UnifiedPos(te.getPos,OriginPos,true)).zip(tileentities).toSeq:_*)
+    TileEntities = mMap(tileentities.map(te => UnifiedPos(te.getPos,OriginPos,IsRelative = true)).zip(tileentities).toSeq:_*)
   }
 
   def isValid = BlockStore.nonEmpty

@@ -91,33 +91,23 @@ class ServerBlockDiggingMessageHandler extends IMessageHandler[BlockDiggingMessa
       def player = netHandlerPlayServer.playerEntity
 
       val blockpos: BlockPos = message.BlockPosition
-      player.markPlayerActive
+      player.markPlayerActive()
 
 
       message.Status match {
-        case Action.DROP_ITEM => {
-          if (!player.isSpectator) {
-            player.dropOneItem(false)
-          }
-          return
-        }
-        case Action.DROP_ALL_ITEMS => {
-          if (!player.isSpectator) {
-            player.dropOneItem(true)
-          }
-          return
-        }
-        case Action.RELEASE_USE_ITEM => {
-          player.stopUsingItem
-          return
-        }
-        case Action.START_DESTROY_BLOCK => oddSwitchSyntax
-        case Action.ABORT_DESTROY_BLOCK => oddSwitchSyntax
-        case Action.STOP_DESTROY_BLOCK => oddSwitchSyntax
+        case Action.DROP_ITEM => if (!player.isSpectator) player.dropOneItem(false)
+
+        case Action.DROP_ALL_ITEMS => if (!player.isSpectator) player.dropOneItem(true)
+
+        case Action.RELEASE_USE_ITEM => player.stopUsingItem()
+
+        case Action.START_DESTROY_BLOCK => oddSwitchSyntax()
+        case Action.ABORT_DESTROY_BLOCK => oddSwitchSyntax()
+        case Action.STOP_DESTROY_BLOCK => oddSwitchSyntax()
         case _ => throw new IllegalArgumentException("Invalid player action")
       }
 
-      def oddSwitchSyntax: Unit = {
+      def oddSwitchSyntax(): Unit = {
         if (message.Status == C07PacketPlayerDigging.Action.START_DESTROY_BLOCK) {
           if (shipWorld.getWorldBorder.contains(blockpos)) {
             ItemInWorldManagerFaker.onBlockClicked(player, blockpos, message.Side, shipWorld)
@@ -139,7 +129,6 @@ class ServerBlockDiggingMessageHandler extends IMessageHandler[BlockDiggingMessa
             //player.playerNetServerHandler.sendPacket(new S23PacketBlockChange(worldserver, blockpos))
           }
         }
-        return
       }
     }
 
@@ -154,12 +143,12 @@ private object ItemInWorldManagerFaker {
 
     iblockstate.getBlock.onBlockHarvested(shipWorld, pos, iblockstate, player)
 
-    val flag: Boolean = iblockstate.getBlock.removedByPlayer(shipWorld, pos, player, canHarvest)
+    val blockWasRemoved: Boolean = iblockstate.getBlock.removedByPlayer(shipWorld, pos, player, canHarvest)
 
-    if (flag)
+    if (blockWasRemoved)
       iblockstate.getBlock.onBlockDestroyedByPlayer(shipWorld, pos, iblockstate)
 
-    return flag
+    blockWasRemoved
   }
 
   def tryHarvestBlock(player:EntityPlayerMP, pos: BlockPos, shipWorld: ShipWorld): Boolean = {
@@ -173,28 +162,28 @@ private object ItemInWorldManagerFaker {
     val stack: ItemStack = player.getCurrentEquippedItem
     if (stack != null && stack.getItem.onBlockStartBreak(stack, pos, player)) return false
     shipWorld.playAuxSFXAtEntity(player, 2001, pos, Block.getStateId(iblockstate))
-    var flag1: Boolean = false
+    var blockWasRemoved: Boolean = false
     if (player.capabilities.isCreativeMode) {
-      flag1 = removeBlock(player,pos,false,shipWorld)
+      blockWasRemoved = removeBlock(player,pos,canHarvest = false,shipWorld)
     }
     else {
       val itemstack1: ItemStack = player.getCurrentEquippedItem
-      val flag: Boolean = iblockstate.getBlock.canHarvestBlock(shipWorld, pos, player)
+      val blockCanBeHarvested: Boolean = iblockstate.getBlock.canHarvestBlock(shipWorld, pos, player)
       if (itemstack1 != null) {
         itemstack1.onBlockDestroyed(shipWorld, iblockstate.getBlock, pos, player)
         if (itemstack1.stackSize == 0) {
-          player.destroyCurrentEquippedItem
+          player.destroyCurrentEquippedItem()
         }
       }
-      flag1 = this.removeBlock(player,pos, flag, shipWorld)
-      if (flag1 && flag) {
+      blockWasRemoved = this.removeBlock(player,pos, blockCanBeHarvested, shipWorld)
+      if (blockWasRemoved && blockCanBeHarvested) {
         iblockstate.getBlock.harvestBlock(shipWorld, player, pos, iblockstate, tileentity)
       }
     }
-    if (!player.capabilities.isCreativeMode && flag1 && exp > 0) {
+    if (!player.capabilities.isCreativeMode && blockWasRemoved && exp > 0) {
       iblockstate.getBlock.dropXpOnBlockBreak(shipWorld, pos, exp)
     }
-    return flag1
+    blockWasRemoved
   }
 
   def onBlockClicked(player: EntityPlayerMP, pos: BlockPos, side: EnumFacing, shipWorld: ShipWorld): Unit = {

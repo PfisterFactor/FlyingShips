@@ -87,7 +87,7 @@ class ClientSpawnShipHandler extends IMessageHandler[SpawnShipMessage, IMessage]
 
       ship.ShipWorld.setWorldData(message.BlockData,message.TileEntityData)
 
-      ship.generateBoundingBox
+      ship.generateBoundingBox()
 
       player.worldObj.spawnEntityInWorld(ship)
 
