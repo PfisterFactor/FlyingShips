@@ -1,8 +1,0 @@
-{
-  "parent": "block/orientable",
-  "textures": {
-    "top": "flyingships:blocks/shipCreatorBlock",
-    "front": "flyingships:blocks/shipCreatorBlock_front",
-    "side": "flyingships:blocks/shipCreatorBlock"
-  }
-}

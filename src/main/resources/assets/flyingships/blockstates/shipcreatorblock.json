@@ -1,0 +1,18 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "flyingships:shipcreatorblock"
+    },
+    "facing=south": {
+      "model": "flyingships:shipcreatorblock"
+
+    },
+    "facing=west": {
+      "model": "flyingships:shipcreatorblock"
+
+    },
+    "facing=east": {
+      "model": "flyingships:shipcreatorblock"
+    }
+  }
+}
