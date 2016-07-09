@@ -39,9 +39,16 @@ class FlyingShipEventHandlers {
         val relPlayerPos = UnifiedPos.convertToRelative(playerPos,ship.getPosition)
         ship.ShipWorld.doRandomDisplayTick(relPlayerPos.getX,relPlayerPos.getZ,relPlayerPos.getZ)
       })
+      return
     }
 
     ships.foreach(ship => {
+      if (Minecraft.getMinecraft.currentScreen != null)
+        ship.InteractionHandler.ClickSimulator.leftClickCounter = 10000
+
+      if (ship.InteractionHandler.ClickSimulator.leftClickCounter > 0)
+        ship.InteractionHandler.ClickSimulator.leftClickCounter -= 1
+
       ship.InteractionHandler.ClickSimulator.sendClickBlockToController(Minecraft.getMinecraft.thePlayer)
     })
   }

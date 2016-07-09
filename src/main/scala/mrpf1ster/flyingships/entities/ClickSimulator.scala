@@ -230,10 +230,9 @@ class ClickSimulator(ShipWorld: ShipWorld) {
     def leftClick = Minecraft.getMinecraft.currentScreen == null && Minecraft.getMinecraft.gameSettings.keyBindAttack.isKeyDown && Minecraft.getMinecraft.inGameHasFocus
     def objectMouseOver = Minecraft.getMinecraft.objectMouseOver
 
-    if (!leftClick) {
+    if (!leftClick)
       this.leftClickCounter = 0
-      resetBlockRemoving(player)
-    }
+
 
     if (this.leftClickCounter <= 0 && !player.isUsingItem) {
       if (leftClick && objectMouseOver != null && objectMouseOver.typeOfHit == MovingObjectPosition.MovingObjectType.ENTITY && objectMouseOver.entityHit.isInstanceOf[EntityShip]) {
@@ -312,7 +311,12 @@ class ClickSimulator(ShipWorld: ShipWorld) {
 
     if (objectMouseOver.typeOfHit == MovingObjectType.ENTITY && objectMouseOver.entityHit.isEntityEqual(ShipWorld.Ship)) {
       val hitInfo = ShipWorld.Ship.InteractionHandler.getBlockPlayerIsLookingAt(1.0f)
-      if (hitInfo.isEmpty || hitInfo.get.typeOfHit != MovingObjectType.BLOCK) return
+
+      if (hitInfo.isEmpty || hitInfo.get.typeOfHit != MovingObjectType.BLOCK) {
+        if (!currentGameType.isCreative)
+          this.leftClickCounter = 10
+        return
+      }
 
       val blockpos: BlockPos = hitInfo.get.getBlockPos
 
