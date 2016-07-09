@@ -2,6 +2,7 @@ package mrpf1ster.flyingships.util
 
 import javax.vecmath.Quat4f
 
+import mrpf1ster.flyingships.entities.EntityShip
 import net.minecraft.util.Vec3
 
 /**
@@ -27,5 +28,16 @@ object VectorUtils {
 
 
     new Vec3(x_new, y_new, z_new)
+  }
+  // Assumes P is relative to ship
+  def rotatePointToShip(P:Vec3, Ship:EntityShip):Vec3 =
+    rotatePointByQuaternion(P.subtract(0.5,0.5,0.5),Ship.Rotation).addVector(0.5,0.5,0.5)
+  // Assumes P is relative to ship
+
+  def rotatePointFromShip(P:Vec3, Ship:EntityShip):Vec3 = {
+    val inversedRot: Quat4f = Ship.Rotation.clone().asInstanceOf[Quat4f] // clone because inverse mutates
+    inversedRot.inverse()
+
+    rotatePointByQuaternion(P.subtract(0.5,0.5,0.5),inversedRot).addVector(0.5,0.5,0.5)
   }
 }

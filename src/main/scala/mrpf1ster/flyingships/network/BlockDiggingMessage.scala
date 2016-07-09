@@ -1,19 +1,21 @@
 package mrpf1ster.flyingships.network
 
 import io.netty.buffer.ByteBuf
+import mrpf1ster.flyingships.entities.EffectRendererShip
 import mrpf1ster.flyingships.util.ShipLocator
 import mrpf1ster.flyingships.world.ShipWorld
 import net.minecraft.block.Block
 import net.minecraft.block.material.Material
 import net.minecraft.block.state.IBlockState
 import net.minecraft.client.Minecraft
+import net.minecraft.client.audio.PositionedSoundRecord
 import net.minecraft.entity.player.{EntityPlayer, EntityPlayerMP}
 import net.minecraft.item.ItemStack
 import net.minecraft.network.NetHandlerPlayServer
 import net.minecraft.network.play.client.C07PacketPlayerDigging
 import net.minecraft.network.play.client.C07PacketPlayerDigging.Action
 import net.minecraft.tileentity.TileEntity
-import net.minecraft.util.{BlockPos, EnumFacing}
+import net.minecraft.util.{BlockPos, EnumFacing, ResourceLocation}
 import net.minecraftforge.event.entity.player.PlayerInteractEvent
 import net.minecraftforge.fml.common.network.simpleimpl.{IMessage, IMessageHandler, MessageContext}
 
@@ -161,7 +163,18 @@ private object ItemInWorldManagerFaker {
 
     val stack: ItemStack = player.getCurrentEquippedItem
     if (stack != null && stack.getItem.onBlockStartBreak(stack, pos, player)) return false
-    shipWorld.playAuxSFXAtEntity(player, 2001, pos, Block.getStateId(iblockstate))
+
+    // World PlayAuxSFXAtEntity manual
+    val par4 = Block.getStateId(iblockstate) & 4095
+    val block: Block = Block.getBlockById(par4)
+
+    if (block.getMaterial != Material.air) {
+      Minecraft.getMinecraft.getSoundHandler.playSound(new PositionedSoundRecord(new ResourceLocation(block.stepSound.getBreakSound), (block.stepSound.getVolume + 1.0F) / 2.0F, block.stepSound.getFrequency * 0.8F, pos.getX.toFloat + 0.5F, pos.getY.toFloat + 0.5F, pos.getZ.toFloat + 0.5F))
+    }
+
+    EffectRendererShip.addBlockDestroyEffects(shipWorld, pos, block.getStateFromMeta(par4 >> 12 & 255))
+    // End of manual
+
     var blockWasRemoved: Boolean = false
     if (player.capabilities.isCreativeMode) {
       blockWasRemoved = removeBlock(player,pos,canHarvest = false,shipWorld)

@@ -245,7 +245,8 @@ class ClickSimulator(ShipWorld: ShipWorld) {
 
         val blockpos: BlockPos = hitInfo.get.getBlockPos
         if (ShipWorld.getBlockState(blockpos).getBlock.getMaterial != Material.air && onPlayerDamageBlock(player, blockpos, hitInfo.get.sideHit)) {
-          Minecraft.getMinecraft.effectRenderer.addBlockHitEffects(blockpos, hitInfo.get)
+          EffectRendererShip.addBlockHitEffects(ShipWorld,blockpos, hitInfo.get)
+
           player.swingItem()
         }
       }

@@ -1,6 +1,6 @@
 package mrpf1ster.flyingships
 
-import mrpf1ster.flyingships.util.ShipLocator
+import mrpf1ster.flyingships.util.{ShipLocator, UnifiedPos}
 import net.minecraft.client.Minecraft
 import net.minecraft.world.World
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent
@@ -30,17 +30,22 @@ class FlyingShipEventHandlers {
 
   @SubscribeEvent
   def onClientTick(event: TickEvent.ClientTickEvent): Unit = {
-    if (event.phase != TickEvent.Phase.END) return
     val ships = ShipLocator.getShips(Minecraft.getMinecraft.theWorld)
     if (ships.isEmpty) return
-    Minecraft.getMinecraft.gameSettings.keyBindAttack.isPressed
 
-
+    if (event.phase != TickEvent.Phase.END) {
+      val playerPos = Minecraft.getMinecraft.thePlayer.getPosition
+      ships.foreach(ship => {
+        val relPlayerPos = UnifiedPos.convertToRelative(playerPos,ship.getPosition)
+        ship.ShipWorld.doRandomDisplayTick(relPlayerPos.getX,relPlayerPos.getZ,relPlayerPos.getZ)
+      })
+    }
 
     ships.foreach(ship => {
       ship.InteractionHandler.ClickSimulator.sendClickBlockToController(Minecraft.getMinecraft.thePlayer)
     })
   }
+
   var doClick = false
   @SubscribeEvent
   def onMouseLeftClick(event: MouseInputEvent): Unit = {
