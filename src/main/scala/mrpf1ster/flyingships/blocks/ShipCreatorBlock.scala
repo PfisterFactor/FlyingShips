@@ -79,12 +79,8 @@ class ShipCreatorBlock extends Block(Material.wood) {
     a.getHorizontalIndex
   }
 
-  override def onBlockPlaced(world: World, pos: BlockPos, facing: EnumFacing, hitX: Float, hitY: Float, hitZ: Float, meta: Int, placer: EntityLivingBase) =
+  override def onBlockPlaced(world: World, pos: BlockPos, facing: EnumFacing, hitX: Float, hitY: Float, hitZ: Float, meta: Int, placer: EntityLivingBase):IBlockState =
     getDefaultState.withProperty(ShipCreatorBlock.FACING, placer.getHorizontalFacing)
-
-
-
-
 
 
 }

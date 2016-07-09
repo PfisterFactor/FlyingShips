@@ -96,11 +96,11 @@ class EntityShip(pos: BlockPos, world: World, blockSet: Set[BlockPos]) extends E
       this.setDead()
     }
 
-    //val deg15 = new Quat4f(0, 0, 0.94f, 0.94f)
-    //deg15.mul(Rotation, deg15)
-    //Rotation.interpolate(deg15, 0.01f)
-    Rotation = new Quat4f(0, 0, 0, 1)
-
+    val deg15 = new Quat4f(0, 0, 0.94f, 0.94f)
+    deg15.mul(Rotation, deg15)
+    Rotation.interpolate(deg15, 0.01f)
+    //Rotation = new Quat4f(0, 0, 0, 1)
+    ShipWorld.onShipMove()
     moveEntity(motionX,motionY,motionZ)
     if (_boundingBox != null)
       _boundingBox = _boundingBox.moveTo(getPositionVector).rotateTo(Rotation)
@@ -130,13 +130,6 @@ class EntityShip(pos: BlockPos, world: World, blockSet: Set[BlockPos]) extends E
   // Right Click
   override def interactFirst(player:EntityPlayer) = InteractionHandler.onShipRightClick(player)
 
-  // Left Click
-  override def attackEntityFrom (source:DamageSource,amount:Float):Boolean = {
-    if (!ShipWorld.isRemote) return false
-    //if (source.getEntity.isInstanceOf[EntityPlayer])
-      //InteractionHandler.onShipLeftClick(source.getEntity.asInstanceOf[EntityPlayer])
-    false
-  }
 
 
 

@@ -1,6 +1,7 @@
 package mrpf1ster.flyingships.world
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream, DataInputStream, DataOutputStream}
+import java.util
 import javax.vecmath.Quat4f
 
 import mrpf1ster.flyingships.FlyingShips
@@ -73,7 +74,7 @@ class ShipWorld(originWorld: World, blocks: Set[UnifiedPos], ship: EntityShip) e
     mMap(BlockSet
       .filter(uPos => OriginWorld.getTileEntity(uPos.WorldPos) != null)
       .map(tileEntityUPos => {
-        def tileEntity = OriginWorld.getTileEntity(tileEntityUPos.WorldPos)
+        val tileEntity = OriginWorld.getTileEntity(tileEntityUPos.WorldPos)
         var copyTileEntity:TileEntity = null
         try {
           val nbt = new NBTTagCompound
@@ -83,10 +84,9 @@ class ShipWorld(originWorld: World, blocks: Set[UnifiedPos], ship: EntityShip) e
           copyTileEntity.setWorldObj(this)
           copyTileEntity.setPos(tileEntityUPos.RelativePos)
           copyTileEntity.validate()
-          setTileEntity(copyTileEntity.getPos, copyTileEntity)
         }
         catch {
-          case ex: Exception => println(s"There was an error moving TileEntity ${tileEntity.getClass.getName} at ${tileEntityUPos.WorldPos}") // Error reporting
+          case ex: Exception => println(s"There was an error moving TileEntity ${tileEntity.getClass.getName} at ${tileEntityUPos.WorldPos}\n$ex") // Error reporting
         }
         tileEntityUPos -> copyTileEntity // Return our copied to ship tile entity for the map function
       }).toSeq:_*)
@@ -109,6 +109,11 @@ class ShipWorld(originWorld: World, blocks: Set[UnifiedPos], ship: EntityShip) e
     true
   }
 
+  // Fix for entities on ship later
+  override def getEntitiesWithinAABB[T <: Entity](classEntity: Class[_ <: T], bb: AxisAlignedBB): util.List[T] = {
+    new util.ArrayList[T]()
+  }
+
   override def getTileEntity(pos: BlockPos) = TileEntities.get(new UnifiedPos(pos, OriginPos, true)).orNull
   override def setTileEntity(pos:BlockPos,te:TileEntity) = {
     if (!te.isInvalid && te != null)
@@ -117,7 +122,6 @@ class ShipWorld(originWorld: World, blocks: Set[UnifiedPos], ship: EntityShip) e
 
   override def addTileEntity(te: TileEntity): Boolean = {
     if (te.isInvalid || te == null) return false
-
     TileEntities.put(UnifiedPos(te.getPos,OriginPos,IsRelative = true), te)
     true
   }
@@ -180,21 +184,17 @@ class ShipWorld(originWorld: World, blocks: Set[UnifiedPos], ship: EntityShip) e
 
     val storage: Option[BlockStorage] = BlockStore.getBlock(pos)
 
-    /*
-    if (newState.isInstanceOf[BlockAir] && storage.isDefined)
-      storage.get.BlockState.getBlock.onBlockHarvested(this,pos,storage.get.BlockState,player)
-    */
-
     BlockStore.setBlock(pos, newState)
+
+    if (!isRemote && !isAirBlock(pos) && storage.isEmpty) {
+      BlockStore.getBlock(pos).get.BlockState.getBlock.onBlockAdded(this,pos,newState)
+    }
+
 
     if (storage.isEmpty || newState.getBlock.isInstanceOf[BlockAir])
       Ship.generateBoundingBox()
 
 
-
-
-    if (!isRemote && !isAirBlock(pos))
-      BlockStore.getBlock(pos).get.BlockState.getBlock.onBlockAdded(this,pos,newState)
 
     val TE = TileEntities.get(new UnifiedPos(pos, Ship.getPosition, true))
     if (TE.isDefined) {
@@ -246,7 +246,6 @@ class ShipWorld(originWorld: World, blocks: Set[UnifiedPos], ship: EntityShip) e
       None
 
   }
-
   def getWorldData: (Array[Byte], Array[Byte]) = {
     // Block Data
     val blockData = BlockStore.getByteData
@@ -264,13 +263,14 @@ class ShipWorld(originWorld: World, blocks: Set[UnifiedPos], ship: EntityShip) e
       te.writeToNBT( nbt )
       CompressedStreamTools.writeCompressed(nbt,out)
     })
+
     out.close()
 
-    def tileEntData = bytes.toByteArray
+    val tileEntData = bytes.toByteArray
 
     (blockData,tileEntData)
   }
-
+  // Does not work
   def setWorldData(blockData:Array[Byte],tileEntData:Array[Byte]) = {
     // Block Data
     BlockStore.writeByteData(blockData)
@@ -279,11 +279,10 @@ class ShipWorld(originWorld: World, blocks: Set[UnifiedPos], ship: EntityShip) e
     val in = new DataInputStream(bytes)
 
     val teSize = in.readInt()
-
     val tileentities = new Array[TileEntity](teSize)
     for (i <- 0 until teSize)
       tileentities(i) = TileEntity.createAndLoadEntity(CompressedStreamTools.readCompressed(in))
-
+    in.close()
     // Map tile entity positions to UnifiedPositions and then zip it with the tile entities array
     TileEntities = mMap(tileentities.map(te => UnifiedPos(te.getPos,OriginPos,IsRelative = true)).zip(tileentities).toSeq:_*)
   }
@@ -303,6 +302,12 @@ class ShipWorld(originWorld: World, blocks: Set[UnifiedPos], ship: EntityShip) e
   override def playAuxSFX(par1:Int,pos:BlockPos,par3:Int) = {
     val newPos = UnifiedPos.convertToWorld(pos,ship.getPosition)
     OriginWorld.playAuxSFX(par1,newPos,par3)
+  }
+
+  override def spawnParticle(particleType:EnumParticleTypes,x:Double,y:Double,z:Double,xOffset:Double,yOffset:Double,zOffset:Double,par8:Int*) = {
+    val rotatedPos = UnifiedVec.convertToWorld(VectorUtils.rotatePointByQuaternion(new Vec3(x,y,z),Ship.Rotation),Ship.getPositionVector)
+    val rotatedOffset = UnifiedVec.convertToWorld(VectorUtils.rotatePointByQuaternion(new Vec3(xOffset,yOffset,zOffset),Ship.Rotation),Ship.getPositionVector)
+    OriginWorld.spawnParticle(particleType,rotatedPos.xCoord,rotatedPos.yCoord,rotatedPos.zCoord,rotatedOffset.xCoord,rotatedOffset.yCoord,rotatedOffset.zCoord,0)
   }
 
   override def isSideSolid(pos:BlockPos,side:EnumFacing,default:Boolean) = getBlockState(pos).getBlock.isSideSolid(this, pos, side)

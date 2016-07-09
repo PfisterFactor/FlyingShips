@@ -27,6 +27,7 @@ case class ShipInteractionHandler(ShipWorld: ShipWorld) {
     // If the object isn't an entity or its not the ship entity currently being rendered, exit
     // This doesn't work if you are outside the chunk the entity is stored in
     // Not very good for large ships...
+    // Todo: Figure out a way around this
     if (objectMouseOver.typeOfHit != MovingObjectType.ENTITY || !objectMouseOver.entityHit.isEntityEqual(ShipWorld.Ship)) return None
 
     // The dude

@@ -21,6 +21,7 @@ class SpawnShipMessage(ship:EntityShip) extends IMessage {
   var TileEntityLength:Int = TileEntityData.length
 
 
+
   override def toBytes(buf: ByteBuf): Unit = {
     // ShipID
     buf.writeInt(ShipID)
