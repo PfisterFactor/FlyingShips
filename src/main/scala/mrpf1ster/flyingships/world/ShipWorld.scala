@@ -304,7 +304,7 @@ class ShipWorld(originWorld: World, blocks: Set[UnifiedPos], ship: EntityShip) e
 
   override def spawnParticle(particleType:EnumParticleTypes,x:Double,y:Double,z:Double,xOffset:Double,yOffset:Double,zOffset:Double,par8:Int*) = {
     val rotatedPos = UnifiedVec.convertToWorld(VectorUtils.rotatePointToShip(new Vec3(x,y,z),Ship),Ship.getPositionVector)
-    OriginWorld.spawnParticle(particleType,rotatedPos.xCoord,rotatedPos.yCoord,rotatedPos.zCoord,xOffset,yOffset,zOffset,0)
+    OriginWorld.spawnParticle(particleType,rotatedPos.xCoord,rotatedPos.yCoord,rotatedPos.zCoord,xOffset+Ship.motionX,yOffset+Ship.motionY,zOffset+Ship.motionZ,0)
   }
   @SideOnly(Side.CLIENT)
   def doRandomDisplayTick(posX: Int, posY: Int, posZ: Int) = {

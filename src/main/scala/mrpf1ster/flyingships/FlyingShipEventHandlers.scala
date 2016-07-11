@@ -33,7 +33,7 @@ class FlyingShipEventHandlers {
     val ships = ShipLocator.getShips(Minecraft.getMinecraft.theWorld)
     if (ships.isEmpty) return
 
-    if (event.phase != TickEvent.Phase.END) {
+    if (event.phase == TickEvent.Phase.START && !Minecraft.getMinecraft.isGamePaused) {
       val playerPos = Minecraft.getMinecraft.thePlayer.getPosition
       ships.foreach(ship => {
         val relPlayerPos = UnifiedPos.convertToRelative(playerPos,ship.getPosition)

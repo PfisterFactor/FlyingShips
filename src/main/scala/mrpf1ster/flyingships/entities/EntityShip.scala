@@ -90,17 +90,19 @@ class EntityShip(pos: BlockPos, world: World, blockSet: Set[BlockPos]) extends E
 
   override def entityInit(): Unit = {
   }
+  private def debugDoRotate = {
+    val deg15 = new Quat4f(0, 0, 0.94f, 0.94f)
+    deg15.mul(Rotation, deg15)
+    Rotation.interpolate(deg15, 0.01f)
+  }
   override def onUpdate() = {
     // If the Ship is empty
     if (!ShipWorld.isValid) {
       this.setDead()
     }
 
-    val deg15 = new Quat4f(0, 0, 0.94f, 0.94f)
-    deg15.mul(Rotation, deg15)
-    Rotation.interpolate(deg15, 0.01f)
+    debugDoRotate
     //Rotation = new Quat4f(0, 0, 0, 1)
-    ShipWorld.onShipMove()
     moveEntity(motionX,motionY,motionZ)
     if (_boundingBox != null)
       _boundingBox = _boundingBox.moveTo(getPositionVector).rotateTo(Rotation)

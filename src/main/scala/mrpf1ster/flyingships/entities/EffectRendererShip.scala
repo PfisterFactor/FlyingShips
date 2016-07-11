@@ -56,7 +56,7 @@ object EffectRendererShip {
       val worldVec = UnifiedVec.convertToWorld(VectorUtils.rotatePointToShip(new Vec3(d0, d1, d2), shipWorld.Ship), shipWorld.Ship.getPositionVector)
       val a = new EntityDiggingFX.Factory
       val fx: EntityDiggingFX = a.getEntityFX(0, shipWorld.OriginWorld, worldVec.xCoord, worldVec.yCoord, worldVec.zCoord, 0.0D, 0.0D, 0.0D, Block.getStateId(iblockstate)).asInstanceOf[EntityDiggingFX]
-      Minecraft.getMinecraft.effectRenderer.addEffect(fx.func_174846_a(pos).multiplyVelocity(0.2F).multipleParticleScaleBy(0.6F))
+      Minecraft.getMinecraft.effectRenderer.addEffect(fx.func_174846_a(new BlockPos(worldVec)).multiplyVelocity(0.2F).multipleParticleScaleBy(0.6F))
     }
   }
 
@@ -78,8 +78,8 @@ object EffectRendererShip {
             val d2: Double = pos.getZ.toDouble + (l.toDouble + 0.5D) / i.toDouble
             val worldVec = UnifiedVec.convertToWorld(VectorUtils.rotatePointToShip(new Vec3(d0, d1, d2), shipWorld.Ship), shipWorld.Ship.getPositionVector)
             val a = new EntityDiggingFX.Factory
-            val fx = a.getEntityFX(0, shipWorld.OriginWorld, worldVec.xCoord, worldVec.xCoord, worldVec.xCoord, 0, 0, 0, Block.getStateId(newState)).asInstanceOf[EntityDiggingFX]
-            Minecraft.getMinecraft.effectRenderer.addEffect(fx.func_174846_a(pos))
+            val fx = a.getEntityFX(0, shipWorld.OriginWorld, worldVec.xCoord, worldVec.yCoord, worldVec.zCoord, 0, 0, 0, Block.getStateId(newState)).asInstanceOf[EntityDiggingFX]
+            Minecraft.getMinecraft.effectRenderer.addEffect(fx.func_174846_a(new BlockPos(worldVec)))
             l += 1
           }
           k += 1

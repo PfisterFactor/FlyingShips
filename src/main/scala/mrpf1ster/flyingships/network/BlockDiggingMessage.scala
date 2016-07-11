@@ -2,7 +2,7 @@ package mrpf1ster.flyingships.network
 
 import io.netty.buffer.ByteBuf
 import mrpf1ster.flyingships.entities.EffectRendererShip
-import mrpf1ster.flyingships.util.ShipLocator
+import mrpf1ster.flyingships.util.{ShipLocator, UnifiedPos}
 import mrpf1ster.flyingships.world.ShipWorld
 import net.minecraft.block.Block
 import net.minecraft.block.material.Material
@@ -169,7 +169,8 @@ private object ItemInWorldManagerFaker {
     val block: Block = Block.getBlockById(par4)
 
     if (block.getMaterial != Material.air) {
-      Minecraft.getMinecraft.getSoundHandler.playSound(new PositionedSoundRecord(new ResourceLocation(block.stepSound.getBreakSound), (block.stepSound.getVolume + 1.0F) / 2.0F, block.stepSound.getFrequency * 0.8F, pos.getX.toFloat + 0.5F, pos.getY.toFloat + 0.5F, pos.getZ.toFloat + 0.5F))
+      val worldPos = UnifiedPos.convertToWorld(pos,shipWorld.Ship.getPosition)
+      Minecraft.getMinecraft.getSoundHandler.playSound(new PositionedSoundRecord(new ResourceLocation(block.stepSound.getBreakSound), (block.stepSound.getVolume + 1.0F) / 2.0F, block.stepSound.getFrequency * 0.8F, worldPos.getX.toFloat + 0.5F, worldPos.getY.toFloat + 0.5F, worldPos.getZ.toFloat + 0.5F))
     }
 
     EffectRendererShip.addBlockDestroyEffects(shipWorld, pos, block.getStateFromMeta(par4 >> 12 & 255))
