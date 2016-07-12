@@ -3,6 +3,7 @@ package mrpf1ster.flyingships.world
 import java.util
 import java.util.Random
 
+import com.google.common.base.Predicate
 import io.netty.buffer.Unpooled
 import mrpf1ster.flyingships.FlyingShips
 import mrpf1ster.flyingships.entities.EntityShip
@@ -116,9 +117,9 @@ class ShipWorld(originWorld: World, blocks: Set[UnifiedPos], ship: EntityShip) e
   }
 
   // Fix for entities on ship later
-  override def getEntitiesWithinAABB[T <: Entity](classEntity: Class[_ <: T], bb: AxisAlignedBB): util.List[T] = {
-    new util.ArrayList[T]()
-  }
+  override def getEntitiesWithinAABB[T <: Entity](classEntity: Class[_ <: T], bb: AxisAlignedBB): util.List[T] = new util.ArrayList[T]()
+  override def getEntitiesWithinAABBExcludingEntity(entityIn: Entity, bb: AxisAlignedBB): util.List[Entity] = new util.ArrayList[Entity]()
+  override def getEntitiesWithinAABB[T <: Entity](clazz: Class[_ <: T], aabb: AxisAlignedBB, filter: Predicate[_ >: T]): util.List[T] = new util.ArrayList[T]()
 
   override def getTileEntity(pos: BlockPos) = TileEntities.get(new UnifiedPos(pos, OriginPos, true)).orNull
   override def setTileEntity(pos:BlockPos,te:TileEntity) = {
@@ -131,6 +132,12 @@ class ShipWorld(originWorld: World, blocks: Set[UnifiedPos], ship: EntityShip) e
     TileEntities.put(UnifiedPos(te.getPos,OriginPos,IsRelative = true), te)
     true
   }
+  override def removeTileEntity(pos:BlockPos): Unit = {
+    val te = getTileEntity(pos)
+    if (te == null) return
+    te.invalidate()
+    TileEntities.remove(UnifiedPos(pos,OriginPos,IsRelative = true))
+  }
 
 
   override def updateEntities(): Unit = {
@@ -140,6 +147,7 @@ class ShipWorld(originWorld: World, blocks: Set[UnifiedPos], ship: EntityShip) e
       .foreach(pair => {
         def uPos = pair._1
         def te = pair._2
+        te.setWorldObj(this) // Just in case they forget :)
         te.asInstanceOf[ITickable].update()
       })
 
@@ -177,9 +185,20 @@ class ShipWorld(originWorld: World, blocks: Set[UnifiedPos], ship: EntityShip) e
   override def setBlockState(pos: BlockPos, newState: IBlockState, flags: Int): Boolean = {
     if (isRemote) return false
 
-    if (applyBlockChange(pos, newState, flags) && this.isValid) {
-        ChangedBlocks.add(new UnifiedPos(pos, Ship.getPosition, true))
-        pushBlockChangesToClient()
+    if (this.isValid && applyBlockChange(pos, newState, flags)) {
+      if (!isRemote) {
+        if ((flags & 2) != 0) {
+          ChangedBlocks.add(new UnifiedPos(pos, Ship.getPosition, true))
+          pushBlockChangesToClient()
+        }
+        if ((flags & 1) != 0) {
+          this.notifyNeighborsOfStateChange(pos, newState.getBlock)
+          if (newState.getBlock.hasComparatorInputOverride)
+            this.updateComparatorOutputLevel(pos, newState.getBlock)
+        }
+
+
+      }
         return true
     }
     false
