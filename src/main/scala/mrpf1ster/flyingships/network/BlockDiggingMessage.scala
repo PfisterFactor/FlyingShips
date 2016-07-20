@@ -1,6 +1,7 @@
 package mrpf1ster.flyingships.network
 
 import io.netty.buffer.ByteBuf
+import mrpf1ster.flyingships.FlyingShips
 import mrpf1ster.flyingships.entities.EffectRendererShip
 import mrpf1ster.flyingships.util.{ShipLocator, UnifiedPos}
 import mrpf1ster.flyingships.world.ShipWorld
@@ -67,7 +68,7 @@ class ServerBlockDiggingMessageHandler extends IMessageHandler[BlockDiggingMessa
     if (message.ShipID == -1) return null
     if (message.BlockPosition == new BlockPos(0, 0, 0)) return null
 
-    Minecraft.getMinecraft.addScheduledTask(new BlockDiggingMessageTask(message, ctx))
+    FlyingShips.flyingShipPacketHandler.addScheduledTask(new BlockDiggingMessageTask(message, ctx))
     null
   }
 

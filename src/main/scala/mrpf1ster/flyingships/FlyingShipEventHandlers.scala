@@ -17,17 +17,21 @@ import net.minecraftforge.fml.common.gameevent.TickEvent.Phase
 class FlyingShipEventHandlers {
 
   def updateEntities(world: World): Unit = {
-    val ships = ShipLocator.getShips(world)
-    if (ships.isEmpty) return
 
-    ships.foreach(ship => ship.ShipWorld.updateEntities())
+
   }
 
   @SubscribeEvent
   def onServerTick(event: TickEvent.WorldTickEvent): Unit = {
     //Minecraft.getMinecraft.thePlayer.setInvisible(true)
     if (event.phase != Phase.START) return
-    updateEntities(event.world)
+
+    val ships = ShipLocator.getShips(event.world)
+    if (ships.isEmpty) return
+    ships.foreach(ship => {
+      ship.ShipWorld.tick()
+      ship.ShipWorld.updateEntities()
+    })
 
   }
 
@@ -79,16 +83,15 @@ class FlyingShipEventHandlers {
 
   // Hackish way to get the tile entity the player is looking at
   @SubscribeEvent
-  def playerContainerOpen(event: PlayerOpenContainerEvent): Boolean = {
-
+  def playerContainerOpen(event: PlayerOpenContainerEvent): Unit = {
     val ship = ShipLocator.getShip(Minecraft.getMinecraft.objectMouseOver)
 
-    if (ship.isEmpty)
-      event.canInteractWith
-    else {
-      event.setResult(Result.ALLOW)
-      event.entityPlayer.openContainer.canInteractWith(PlayerRelative(event.entityPlayer, ship.get.ShipWorld))
-    }
+    if (ship.isEmpty) return
 
+    val interactWith = event.entityPlayer.openContainer.canInteractWith(PlayerRelative(event.entityPlayer, ship.get.ShipWorld))
+    if (interactWith)
+      event.setResult(Result.ALLOW)
+    else
+      event.setResult(Result.DEFAULT)
   }
 }

@@ -1,6 +1,7 @@
 package mrpf1ster.flyingships.network
 
 import io.netty.buffer.ByteBuf
+import mrpf1ster.flyingships.FlyingShips
 import mrpf1ster.flyingships.entities.EntityShip
 import net.minecraft.client.Minecraft
 import net.minecraft.util.BlockPos
@@ -69,7 +70,7 @@ class SpawnShipMessage(ship:EntityShip) extends IMessage {
 class ClientSpawnShipHandler extends IMessageHandler[SpawnShipMessage, IMessage] {
   override def onMessage(message: SpawnShipMessage, ctx: MessageContext): IMessage = {
     if (message.ShipID == -1) return null
-    Minecraft.getMinecraft.addScheduledTask(new SpawnShipMessageTask(message, ctx))
+    FlyingShips.flyingShipPacketHandler.addScheduledTask(new SpawnShipMessageTask(message, ctx))
     null
   }
 

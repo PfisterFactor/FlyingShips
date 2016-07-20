@@ -29,6 +29,8 @@ object ShipLocator {
   }
 
   def getShip(movingObjectPosition: MovingObjectPosition): Option[EntityShip] = {
+    if (movingObjectPosition == null) return None
+
     if (movingObjectPosition.typeOfHit == MovingObjectType.ENTITY && movingObjectPosition.entityHit.isInstanceOf[EntityShip])
       Some(movingObjectPosition.entityHit.asInstanceOf[EntityShip])
     else

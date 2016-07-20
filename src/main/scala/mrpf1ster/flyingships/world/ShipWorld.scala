@@ -7,10 +7,10 @@ import com.google.common.base.Predicate
 import io.netty.buffer.Unpooled
 import mrpf1ster.flyingships.FlyingShips
 import mrpf1ster.flyingships.entities.EntityShip
-import mrpf1ster.flyingships.network.BlocksChangedMessage
+import mrpf1ster.flyingships.network.{BlockActionMessage, BlocksChangedMessage}
 import mrpf1ster.flyingships.util.{UnifiedPos, UnifiedVec, VectorUtils}
 import net.minecraft.block.state.IBlockState
-import net.minecraft.block.{Block, BlockAir}
+import net.minecraft.block.{Block, BlockAir, BlockEventData}
 import net.minecraft.client.Minecraft
 import net.minecraft.entity.player.EntityPlayer
 import net.minecraft.entity.{Entity, EntityHanging}
@@ -26,6 +26,7 @@ import net.minecraftforge.fml.common.network.NetworkRegistry.TargetPoint
 import net.minecraftforge.fml.relauncher.{Side, SideOnly}
 
 import scala.collection.JavaConversions._
+import scala.collection.mutable
 import scala.collection.mutable.{Map => mMap, Set => mSet}
 
 
@@ -75,6 +76,9 @@ class ShipWorld(originWorld: World, blocks: Set[UnifiedPos], ship: EntityShip) e
   private val ChangedBlocks: mSet[UnifiedPos] = mSet()
   private var doRenderUpdate = false
 
+  // Only used on Server
+  private val ServerBlockEventList = mutable.Set[BlockEventData]()
+
 
 
   private def moveTileEntitiesOntoShip: mMap[UnifiedPos, TileEntity] = {
@@ -120,9 +124,17 @@ class ShipWorld(originWorld: World, blocks: Set[UnifiedPos], ship: EntityShip) e
   }
 
   // Fix for entities on ship later
-  override def getEntitiesWithinAABB[T <: Entity](classEntity: Class[_ <: T], bb: AxisAlignedBB): util.List[T] = new util.ArrayList[T]()
-  override def getEntitiesWithinAABBExcludingEntity(entityIn: Entity, bb: AxisAlignedBB): util.List[Entity] = new util.ArrayList[Entity]()
-  override def getEntitiesWithinAABB[T <: Entity](clazz: Class[_ <: T], aabb: AxisAlignedBB, filter: Predicate[_ >: T]): util.List[T] = new util.ArrayList[T]()
+  // Also do not touch these
+  // ...
+  // Ever
+  // Java generics should not mix with Scala generics, christ.
+  override def getEntitiesWithinAABB[T <: Entity](classEntity: java.lang.Class[_ <: T], bb: AxisAlignedBB): java.util.List[T] = getEntitiesWithinAABB[T](classEntity, bb, EntitySelectors.NOT_SPECTATING)
+
+  override def getEntitiesWithinAABBExcludingEntity(entityIn: Entity, bb: AxisAlignedBB): util.List[Entity] = OriginWorld.getEntitiesWithinAABBExcludingEntity(entityIn, bb.offset(OriginVec().xCoord, OriginVec().yCoord, OriginVec().zCoord))
+
+  override def getEntitiesWithinAABB[T <: Entity](clazz: java.lang.Class[_ <: T], aabb: AxisAlignedBB, filter: Predicate[_ >: T]): util.List[T] = OriginWorld.getEntitiesWithinAABB[T](clazz, aabb.offset(OriginVec().xCoord, OriginVec().yCoord, OriginVec().zCoord), filter)
+
+  override def getEntitiesInAABBexcluding(entityIn: Entity, boundingBox: AxisAlignedBB, predicate: Predicate[_ >: Entity]): java.util.List[Entity] = OriginWorld.getEntitiesInAABBexcluding(entityIn, boundingBox.offset(OriginVec().xCoord, OriginVec().yCoord, OriginVec().zCoord), predicate)
 
   override def getTileEntity(pos: BlockPos) = TileEntities.get(new UnifiedPos(pos, OriginPos, true)).orNull
   override def setTileEntity(pos:BlockPos,te:TileEntity) = {
@@ -159,7 +171,18 @@ class ShipWorld(originWorld: World, blocks: Set[UnifiedPos], ship: EntityShip) e
     }
   }
 
+  override def tick(): Unit = {
+    if (isRemote) return
 
+    //tickUpdates(false)
+    //updateBlocks()
+    //worldTeleporter.removeStalePortalLocations(this.getTotalWorldTime)
+    //customTeleporters.foreach(tele => tele.removeStalePortalLocations(getTotalWorldTime))
+    sendQueuedBlockEvents()
+
+  }
+
+  // TODO: (Potentially?) fix this for large ships, maybe individual blocks at a time
   def pushBlockChangesToClient(): Unit = {
     if (!isValid) return
     if (Ship == null) return
@@ -211,7 +234,7 @@ class ShipWorld(originWorld: World, blocks: Set[UnifiedPos], ship: EntityShip) e
   override def getClosestPlayer(x: Double, y: Double, z: Double, distance: Double): EntityPlayer = {
     val worldVec = UnifiedVec.convertToWorld(x, y, z, OriginVec())
 
-    val players = OriginWorld.playerEntities.filter(p => !p.isSpectator && p.getDistanceSq(worldVec.xCoord, worldVec.yCoord, worldVec.zCoord) < distance * distance)
+    val players = OriginWorld.playerEntities.filter(p => !p.isSpectator && p.getDistanceSq(worldVec.xCoord, worldVec.yCoord, worldVec.zCoord) <= distance * distance)
     var playerEntity: Option[EntityPlayer] = None
 
     if (players.nonEmpty)
@@ -264,6 +287,40 @@ class ShipWorld(originWorld: World, blocks: Set[UnifiedPos], ship: EntityShip) e
 
   def onShipMove() = {
     doRenderUpdate = true
+  }
+
+  override def addBlockEvent(pos: BlockPos, block: Block, eventID: Int, eventParam: Int): Unit = {
+    if (isRemote) {
+      block.onBlockEventReceived(this, pos, getBlockState(pos), eventID, eventParam)
+      return
+    }
+
+    ServerBlockEventList.add(new BlockEventData(pos, block, eventID, eventParam))
+  }
+
+  // Only used on Server
+  private def sendQueuedBlockEvents() = {
+    ServerBlockEventList.foreach(event => {
+      if (fireBlockEvent(event)) {
+        val message = new BlockActionMessage(event.getPosition, event.getBlock, event.getEventID, event.getEventParameter, Ship.getEntityId)
+        val blockPos = UnifiedPos.convertToWorld(event.getPosition, OriginPos())
+        val targetPoint = new TargetPoint(OriginWorld.provider.getDimensionId, blockPos.getX, blockPos.getY, blockPos.getZ, 64)
+        FlyingShips.flyingShipPacketHandler.INSTANCE.sendToAllAround(message, targetPoint)
+      }
+
+    })
+    ServerBlockEventList.clear()
+
+  }
+
+  // Only used on Server
+  private def fireBlockEvent(event: BlockEventData): Boolean = {
+    val iblockstate: IBlockState = this.getBlockState(event.getPosition)
+
+    if (iblockstate.getBlock == event.getBlock)
+      iblockstate.getBlock.onBlockEventReceived(this, event.getPosition, iblockstate, event.getEventID, event.getEventParameter)
+    else
+      false
   }
 
   // Ray traces blocks on ship, arguments are non-relative
