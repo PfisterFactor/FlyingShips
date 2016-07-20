@@ -25,6 +25,7 @@ import net.minecraft.world.{World, WorldSettings}
 import net.minecraftforge.fml.common.network.NetworkRegistry.TargetPoint
 import net.minecraftforge.fml.relauncher.{Side, SideOnly}
 
+import scala.collection.JavaConversions._
 import scala.collection.mutable.{Map => mMap, Set => mSet}
 
 
@@ -41,6 +42,8 @@ class ShipWorld(originWorld: World, blocks: Set[UnifiedPos], ship: EntityShip) e
 
   // The coordinates of the ship block in the origin world. Conveniently the EntityShip's position
   def OriginPos() = Ship.getPosition
+
+  def OriginVec() = Ship.getPositionVector
 
   def BlockSet = BlockStore.getBlockMap.keys.toSet
 
@@ -204,6 +207,22 @@ class ShipWorld(originWorld: World, blocks: Set[UnifiedPos], ship: EntityShip) e
     false
   }
 
+  // Assumes coordinates are relative to the ship
+  override def getClosestPlayer(x: Double, y: Double, z: Double, distance: Double): EntityPlayer = {
+    val worldVec = UnifiedVec.convertToWorld(x, y, z, OriginVec())
+
+    val players = OriginWorld.playerEntities.filter(p => !p.isSpectator && p.getDistanceSq(worldVec.xCoord, worldVec.yCoord, worldVec.zCoord) < distance * distance)
+    var playerEntity: Option[EntityPlayer] = None
+
+    if (players.nonEmpty)
+      playerEntity = Some(players.minBy(_.getDistanceSq(worldVec.xCoord, worldVec.yCoord, worldVec.zCoord)))
+
+    if (playerEntity.isDefined)
+      PlayerRelative(playerEntity.get, this)
+    else
+      null
+  }
+
   def applyBlockChange(pos: BlockPos, newState: IBlockState, flags: Int): Boolean = {
     if (pos == new BlockPos(0,0,0)) return false
 
@@ -325,6 +344,8 @@ class ShipWorld(originWorld: World, blocks: Set[UnifiedPos], ship: EntityShip) e
     val rotatedPos = UnifiedVec.convertToWorld(VectorUtils.rotatePointToShip(new Vec3(x,y,z),Ship),Ship.getPositionVector)
     OriginWorld.spawnParticle(particleType,rotatedPos.xCoord,rotatedPos.yCoord,rotatedPos.zCoord,xOffset+Ship.motionX,yOffset+Ship.motionY,zOffset+Ship.motionZ,0)
   }
+
+  // Ripped from doVoidFogParticles in World class
   @SideOnly(Side.CLIENT)
   def doRandomDisplayTick(posX: Int, posY: Int, posZ: Int) = {
     val i: Int = 16
@@ -335,20 +356,16 @@ class ShipWorld(originWorld: World, blocks: Set[UnifiedPos], ship: EntityShip) e
 
     var j: Int = 0
     while (j < 1000) {
-      {
         val k: Int = posX + this.rand.nextInt(i) - this.rand.nextInt(i)
         val l: Int = posY + this.rand.nextInt(i) - this.rand.nextInt(i)
         val i1: Int = posZ + this.rand.nextInt(i) - this.rand.nextInt(i)
         blockpos$mutableblockpos.set(k, l, i1)
         val iblockstate: IBlockState = this.getBlockState(blockpos$mutableblockpos)
         iblockstate.getBlock.randomDisplayTick(this, blockpos$mutableblockpos, iblockstate, random)
-        if (flag && iblockstate.getBlock == Blocks.barrier) {
+      if (flag && iblockstate.getBlock == Blocks.barrier)
           this.spawnParticle(EnumParticleTypes.BARRIER, (k.toFloat + 0.5F).toDouble, (l.toFloat + 0.5F).toDouble, (i1.toFloat + 0.5F).toDouble, 0.0D, 0.0D, 0.0D, 0)
-        }
-      }
-      ({
-        j += 1; j
-      })
+
+      j += 1
     }
   }
   override def isSideSolid(pos:BlockPos,side:EnumFacing,default:Boolean) = getBlockState(pos).getBlock.isSideSolid(this, pos, side)

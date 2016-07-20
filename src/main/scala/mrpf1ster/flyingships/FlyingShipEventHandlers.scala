@@ -1,8 +1,11 @@
 package mrpf1ster.flyingships
 
 import mrpf1ster.flyingships.util.{ShipLocator, UnifiedPos}
+import mrpf1ster.flyingships.world.PlayerRelative
 import net.minecraft.client.Minecraft
 import net.minecraft.world.World
+import net.minecraftforge.event.entity.player.PlayerOpenContainerEvent
+import net.minecraftforge.fml.common.eventhandler.Event.Result
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent
 import net.minecraftforge.fml.common.gameevent.InputEvent.MouseInputEvent
 import net.minecraftforge.fml.common.gameevent.TickEvent
@@ -50,7 +53,10 @@ class FlyingShipEventHandlers {
         ship.InteractionHandler.ClickSimulator.leftClickCounter -= 1
 
       ship.InteractionHandler.ClickSimulator.sendClickBlockToController(Minecraft.getMinecraft.thePlayer)
+
+      ship.ShipWorld.updateEntities()
     })
+
   }
 
   var doClick = false
@@ -68,6 +74,21 @@ class FlyingShipEventHandlers {
 
     if (attackIsDown)
       doClick = true
+
+  }
+
+  // Hackish way to get the tile entity the player is looking at
+  @SubscribeEvent
+  def playerContainerOpen(event: PlayerOpenContainerEvent): Boolean = {
+
+    val ship = ShipLocator.getShip(Minecraft.getMinecraft.objectMouseOver)
+
+    if (ship.isEmpty)
+      event.canInteractWith
+    else {
+      event.setResult(Result.ALLOW)
+      event.entityPlayer.openContainer.canInteractWith(PlayerRelative(event.entityPlayer, ship.get.ShipWorld))
+    }
 
   }
 }

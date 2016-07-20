@@ -6,8 +6,13 @@ import net.minecraft.util.BlockPos
   * Created by EJ on 3/11/2016.
   */
 object UnifiedPos {
-  def convertToRelative(pos:BlockPos,origin:BlockPos) = pos.subtract(origin)
-  def convertToWorld(pos:BlockPos, origin:BlockPos) = pos.add(origin)
+  def convertToRelative(x: Int, y: Int, z: Int, origin: BlockPos): BlockPos = new BlockPos(x - origin.getX, y - origin.getY, z - origin.getZ)
+
+  def convertToWorld(x: Int, y: Int, z: Int, origin: BlockPos): BlockPos = new BlockPos(x + origin.getX, y + origin.getY, z + origin.getZ)
+
+  def convertToRelative(pos: BlockPos, origin: BlockPos): BlockPos = convertToRelative(pos.getX, pos.getY, pos.getZ, origin)
+
+  def convertToWorld(pos: BlockPos, origin: BlockPos): BlockPos = convertToWorld(pos.getX, pos.getY, pos.getZ, origin)
 }
 case class UnifiedPos(Position: BlockPos, Origin: () => BlockPos, IsRelative: Boolean = false) {
 

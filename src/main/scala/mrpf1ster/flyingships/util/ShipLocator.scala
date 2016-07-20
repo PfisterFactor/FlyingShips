@@ -3,6 +3,8 @@ package mrpf1ster.flyingships.util
 import java.util.UUID
 
 import mrpf1ster.flyingships.entities.EntityShip
+import net.minecraft.util.MovingObjectPosition
+import net.minecraft.util.MovingObjectPosition.MovingObjectType
 import net.minecraft.world.World
 
 import scala.collection.JavaConversions._
@@ -24,5 +26,12 @@ object ShipLocator {
 
   def getShip(world:World, entityUUID:UUID): Option[EntityShip] = {
     getShips(world).find(_.getPersistentID == entityUUID)
+  }
+
+  def getShip(movingObjectPosition: MovingObjectPosition): Option[EntityShip] = {
+    if (movingObjectPosition.typeOfHit == MovingObjectType.ENTITY && movingObjectPosition.entityHit.isInstanceOf[EntityShip])
+      Some(movingObjectPosition.entityHit.asInstanceOf[EntityShip])
+    else
+      None
   }
 }
