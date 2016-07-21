@@ -136,30 +136,38 @@ class ShipRender(rm: RenderManager) extends Render[EntityShip](rm) {
     def tessellator = Tessellator.getInstance()
     def worldRenderer = tessellator.getWorldRenderer
 
-    def i: Double = shipWorld.Ship.posX
-    def j: Double = shipWorld.Ship.posY
-    def k: Double = shipWorld.Ship.posZ
+    val i: Double = shipWorld.Ship.posX + ShipWorld.ShipBlockPos.getX
+    val j: Double = shipWorld.Ship.posY + ShipWorld.ShipBlockPos.getY
+    val k: Double = shipWorld.Ship.posZ + ShipWorld.ShipBlockPos.getZ
     worldRenderer.setTranslation(-i, -j, -k)
     worldRenderer.begin(GL11.GL_QUADS, DefaultVertexFormats.BLOCK)
 
-
+    shipWorld.BlocksOnShip.foreach(uPos => {
+      val blockState = shipWorld.getBlockState(uPos.RelativePos)
+      renderBlock(shipWorld, blockState, uPos.RelativePos, worldRenderer)
+    })
+    /*
     shipWorld.BlockSet.foreach(uPos => {
       val blockState = shipWorld.getBlockState(uPos.RelativePos)
       renderBlock(shipWorld, blockState, uPos.RelativePos, worldRenderer)
     })
+    */
+
     worldRenderer.setTranslation(0, 0, 0)
     tessellator.draw()
 
 
-    def renderBlock(shipWorld: ShipWorld, blockState: IBlockState, pos: BlockPos, worldRenderer: WorldRenderer) = {
-      // Get the block renderer
-      def blockRendererDispatcher = Minecraft.getMinecraft.getBlockRendererDispatcher
-      // Get the model of the block
-      def bakedModel = blockRendererDispatcher.getModelFromBlockState(blockState, shipWorld, pos)
-      // If our block is a normal block
-      if (blockState.getBlock.getRenderType == 3)
-        blockRendererDispatcher.getBlockModelRenderer.renderModel(shipWorld, bakedModel, blockState, pos, worldRenderer) // Render it
-    }
+
+  }
+
+  def renderBlock(shipWorld: ShipWorld, blockState: IBlockState, pos: BlockPos, worldRenderer: WorldRenderer) = {
+    // Get the block renderer
+    def blockRendererDispatcher = Minecraft.getMinecraft.getBlockRendererDispatcher
+    // Get the model of the block
+    val bakedModel = blockRendererDispatcher.getModelFromBlockState(blockState, shipWorld, pos)
+    // If our block is a normal block
+    if (blockState.getBlock.getRenderType == 3)
+      blockRendererDispatcher.getBlockModelRenderer.renderModel(shipWorld, bakedModel, blockState, pos, worldRenderer) // Render it
   }
 
   private def renderBlackOutline(ship: EntityShip, pos: BlockPos, x: Double, y: Double, z: Double, partialTicks:Float) = {
@@ -186,7 +194,7 @@ class ShipRender(rm: RenderManager) extends Render[EntityShip](rm) {
     GlStateManager.depthMask(false)
     val tessellator: Tessellator = Tessellator.getInstance
     val worldrenderer: WorldRenderer = tessellator.getWorldRenderer
-    worldrenderer.setTranslation(-ship.posX - pos.getX, -ship.posY - pos.getY, -ship.posZ - pos.getZ)
+    worldrenderer.setTranslation(-ship.posX - ShipWorld.ShipBlockPos.getX - pos.getX, -ship.posY - ShipWorld.ShipBlockPos.getY - pos.getY, -ship.posZ - ShipWorld.ShipBlockPos.getZ - pos.getZ)
 
     RenderUtils.drawRotatedBB(rotatedBB.expand(0.001), worldrenderer)
 
@@ -203,12 +211,12 @@ class ShipRender(rm: RenderManager) extends Render[EntityShip](rm) {
 
   private def doDebugRender(shipWorld: ShipWorld, x: Double, y: Double, z: Double) = {
     DebugRender.drawRotatedBoundingBox(new RotatedBB(shipWorld.Ship.getBoundingBox.RelativeAABB, new Vec3(0, 0, 0), new Quat4f(0, 0, 0, 1)), shipWorld.Ship, x, y, z)
+
     shipWorld.BlockSet.foreach(uPos => {
       val blockState = shipWorld.getBlockState(uPos.RelativePos)
       DebugRender.debugRenderBlock(shipWorld, blockState, uPos.RelativePos, x, y, z)
 
     })
-
   }
 
   private def matrixToFloatBuffer(m: Matrix4f): FloatBuffer = {

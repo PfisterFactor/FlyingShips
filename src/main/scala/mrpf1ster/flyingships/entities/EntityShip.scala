@@ -131,6 +131,8 @@ class EntityShip(pos: BlockPos, world: World, blockSet: Set[BlockPos]) extends E
   }
   override def canBeCollidedWith: Boolean = true
 
+  override def canBePushed: Boolean = false
+
   // Right Click
   override def interactFirst(player:EntityPlayer) = InteractionHandler.onShipRightClick(player)
 

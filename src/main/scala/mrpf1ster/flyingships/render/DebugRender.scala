@@ -16,7 +16,6 @@ object DebugRender {
 
   def isDebugMenuShown = Minecraft.getMinecraft.gameSettings.showDebugInfo
 
-  // Does not work
   def debugRenderBlock(shipWorld: ShipWorld, blockState: IBlockState, pos: BlockPos, x: Double, y: Double, z: Double) = {
     // Small delta so we can see the block outline
     val delta = 0.01
@@ -25,11 +24,9 @@ object DebugRender {
     block.setBlockBoundsBasedOnState(shipWorld, pos)
 
     val blockBB = block.getSelectedBoundingBox(shipWorld, pos).expand(delta, delta, delta)
-    Tessellator.getInstance().getWorldRenderer.setTranslation(-shipWorld.Ship.posX, -shipWorld.Ship.posY, -shipWorld.Ship.posZ)
     val min = new Vec3(blockBB.minX, blockBB.minY, blockBB.minZ)
     val max = new Vec3(blockBB.maxX, blockBB.maxY, blockBB.maxZ)
     drawRotatedBoundingBox(new RotatedBB(min, max, new Vec3(0.5, 0.5, 0.5), shipWorld.Ship.Rotation), shipWorld.Ship, x, y, z)
-    Tessellator.getInstance().getWorldRenderer.setTranslation(0, 0, 0)
 
   }
 
@@ -48,11 +45,11 @@ object DebugRender {
 
     val tessellator: Tessellator = Tessellator.getInstance
     val worldrenderer: WorldRenderer = tessellator.getWorldRenderer
-    worldrenderer.setTranslation(-shipEntity.posX, -shipEntity.posY, -shipEntity.posZ)
+    worldrenderer.setTranslation(-shipEntity.posX - ShipWorld.ShipBlockPos.getX, -shipEntity.posY - ShipWorld.ShipBlockPos.getY, -shipEntity.posZ - ShipWorld.ShipBlockPos.getZ)
 
     RenderUtils.drawRotatedBB(rotatedBB, worldrenderer)
 
-    Tessellator.getInstance().getWorldRenderer.setTranslation(0, 0, 0)
+    worldrenderer.setTranslation(0, 0, 0)
 
     GlStateManager.depthMask(true)
     GlStateManager.enableTexture2D()

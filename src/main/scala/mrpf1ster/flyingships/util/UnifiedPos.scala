@@ -1,14 +1,15 @@
 package mrpf1ster.flyingships.util
 
+import mrpf1ster.flyingships.world.ShipWorld
 import net.minecraft.util.BlockPos
 
 /**
   * Created by EJ on 3/11/2016.
   */
 object UnifiedPos {
-  def convertToRelative(x: Int, y: Int, z: Int, origin: BlockPos): BlockPos = new BlockPos(x - origin.getX, y - origin.getY, z - origin.getZ)
+  def convertToRelative(x: Int, y: Int, z: Int, origin: BlockPos): BlockPos = new BlockPos(x - origin.getX, y - origin.getY, z - origin.getZ).add(ShipWorld.ShipBlockPos)
 
-  def convertToWorld(x: Int, y: Int, z: Int, origin: BlockPos): BlockPos = new BlockPos(x + origin.getX, y + origin.getY, z + origin.getZ)
+  def convertToWorld(x: Int, y: Int, z: Int, origin: BlockPos): BlockPos = new BlockPos(x + origin.getX, y + origin.getY, z + origin.getZ).subtract(ShipWorld.ShipBlockPos)
 
   def convertToRelative(pos: BlockPos, origin: BlockPos): BlockPos = convertToRelative(pos.getX, pos.getY, pos.getZ, origin)
 

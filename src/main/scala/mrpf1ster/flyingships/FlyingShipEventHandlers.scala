@@ -2,6 +2,7 @@ package mrpf1ster.flyingships
 
 import mrpf1ster.flyingships.util.{ShipLocator, UnifiedPos}
 import mrpf1ster.flyingships.world.PlayerRelative
+import mrpf1ster.flyingships.world.chunk.ChunkProviderShip
 import net.minecraft.client.Minecraft
 import net.minecraft.world.World
 import net.minecraftforge.event.entity.player.PlayerOpenContainerEvent
@@ -25,7 +26,7 @@ class FlyingShipEventHandlers {
   def onServerTick(event: TickEvent.WorldTickEvent): Unit = {
     //Minecraft.getMinecraft.thePlayer.setInvisible(true)
     if (event.phase != Phase.START) return
-
+    ChunkProviderShip.ShipChunkIO.tick
     val ships = ShipLocator.getShips(event.world)
     if (ships.isEmpty) return
     ships.foreach(ship => {

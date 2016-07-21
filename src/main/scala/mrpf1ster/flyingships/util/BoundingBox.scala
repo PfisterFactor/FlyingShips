@@ -55,9 +55,9 @@ case class BoundingBox(RBB: RotatedBB, RelativeRBB: RotatedBB, Rotation: Quat4f,
 
   val RelativeMaxPos = new Vec3(RelativeRBB.Corners.maxBy(v => v.xCoord).xCoord, RelativeRBB.Corners.maxBy(v => v.yCoord).yCoord, RelativeRBB.Corners.maxBy(v => v.zCoord).zCoord)
 
-  val MinPos = RelativeMinPos.add(ShipPos)
+  val MinPos: Vec3 = UnifiedVec.convertToWorld(RelativeMinPos, ShipPos)
 
-  val MaxPos = RelativeMaxPos.add(ShipPos)
+  val MaxPos: Vec3 = UnifiedVec.convertToWorld(RelativeMaxPos, ShipPos)
 
   def AABB: AxisAlignedBB = new AxisAlignedBB(MinPos.xCoord, MinPos.yCoord, MinPos.zCoord, MaxPos.xCoord, MaxPos.yCoord, MaxPos.zCoord)
 

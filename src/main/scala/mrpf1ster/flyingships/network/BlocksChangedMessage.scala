@@ -115,8 +115,11 @@ class ClientBlocksChangedMessageHandler extends IMessageHandler[BlocksChangedMes
         return
 
 
-      for (i <- 0 until Message.NumChangedBlocks)
-        Ship.get.ShipWorld.applyBlockChange(Message.ChangedBlocks(i), Message.BlockStates(i), 3)
+      for (i <- 0 until Message.NumChangedBlocks) {
+        //Ship.get.ShipWorld.applyBlockChange(Message.ChangedBlocks(i), Message.BlockStates(i), 3)
+        Ship.get.ShipWorld.setBlockState(Message.ChangedBlocks(i), Message.BlockStates(i), 3)
+      }
+
 
       message.ChangedTileEntities.foreach(te => Ship.get.ShipWorld.addTileEntity(te))
     }
