@@ -1,6 +1,6 @@
 package mrpf1ster.flyingships.world
 
-import mrpf1ster.flyingships.util.VectorUtils
+import mrpf1ster.flyingships.util.{UnifiedVec, VectorUtils}
 import net.minecraft.entity.player.EntityPlayer
 import net.minecraft.util.{MathHelper, Vec3}
 
@@ -10,12 +10,14 @@ import net.minecraft.util.{MathHelper, Vec3}
 case class PlayerRelative(player: EntityPlayer, shipWorld: ShipWorld) extends EntityPlayer(shipWorld, player.getGameProfile) {
   override def isSpectator: Boolean = player.isSpectator
 
-  posX = player.posX - shipWorld.OriginVec().xCoord
-  posY = player.posY - shipWorld.OriginVec().yCoord
-  posZ = player.posZ - shipWorld.OriginVec().zCoord
-  lastTickPosX = player.lastTickPosX - shipWorld.OriginVec().xCoord
-  lastTickPosY = player.lastTickPosY - shipWorld.OriginVec().yCoord
-  lastTickPosZ = player.lastTickPosZ - shipWorld.OriginVec().zCoord
+  val relPosition = UnifiedVec.convertToRelative(player.posX, player.posY, player.posZ, shipWorld.OriginVec())
+  val relLastTick = UnifiedVec.convertToRelative(player.lastTickPosX, player.lastTickPosY, player.lastTickPosZ, shipWorld.OriginVec())
+  posX = relPosition.xCoord
+  posY = relPosition.yCoord
+  posZ = relPosition.zCoord
+  lastTickPosX = relLastTick.xCoord
+  lastTickPosY = relLastTick.yCoord
+  lastTickPosZ = relLastTick.zCoord
 
   override def getDistanceSq(x: Double, y: Double, z: Double): Double = {
 

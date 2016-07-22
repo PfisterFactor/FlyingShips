@@ -58,8 +58,10 @@ class FlyingShipEventHandlers {
         ship.InteractionHandler.ClickSimulator.leftClickCounter -= 1
 
       ship.InteractionHandler.ClickSimulator.sendClickBlockToController(Minecraft.getMinecraft.thePlayer)
+      if (ship.ShipWorld.isValid)
+        ship.ShipWorld.updateEntities()
 
-      ship.ShipWorld.updateEntities()
+
     })
 
   }

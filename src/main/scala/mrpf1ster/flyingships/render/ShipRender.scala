@@ -4,7 +4,7 @@ import java.nio.FloatBuffer
 import javax.vecmath.{Matrix4f, Quat4f}
 
 import mrpf1ster.flyingships.entities.EntityShip
-import mrpf1ster.flyingships.util.{RenderUtils, RotatedBB}
+import mrpf1ster.flyingships.util.{RenderUtils, RotatedBB, UnifiedPos}
 import mrpf1ster.flyingships.world.ShipWorld
 import net.minecraft.block.state.IBlockState
 import net.minecraft.client.Minecraft
@@ -18,6 +18,7 @@ import net.minecraft.util.{BlockPos, MovingObjectPosition, ResourceLocation, Vec
 import org.lwjgl.BufferUtils
 import org.lwjgl.opengl.GL11
 
+import scala.collection.JavaConversions._
 import scala.collection.mutable.{Map => mMap}
 
 
@@ -79,14 +80,14 @@ class ShipRender(rm: RenderManager) extends Render[EntityShip](rm) {
 
     // Render tile entities that have special renders
     // TODO: Fix Signs
-    shipWorld.TileEntities
-      .filter(pair => TileEntityRendererDispatcher.instance.getSpecialRenderer(pair._2) != null)
-      .foreach(pair => {
-        def uPos = pair._1
-        def te = pair._2
+    shipWorld.loadedTileEntityList
+      .filter(te => TileEntityRendererDispatcher.instance.getSpecialRenderer(te) != null)
+      .foreach(te => {
+        val relPos: BlockPos = te.getPos.subtract(ShipWorld.ShipBlockPos) // From this we get relative distance from ship block, (ship block = x:0,y:0,z:0)
+        val worldPos: BlockPos = UnifiedPos.convertToWorld(te.getPos, shipWorld.OriginPos())
         te.setWorldObj(shipWorld)
         // If anyone ever wants to explain why the below works i'll be happy to hear
-        TileEntityRendererDispatcher.instance.renderTileEntityAt(te, -(uPos.WorldPosX - 2 * uPos.RelPosX), -(uPos.WorldPosY - 2 * uPos.RelPosY), -(uPos.WorldPosZ - 2 * uPos.RelPosZ), partialTicks, -1)
+        TileEntityRendererDispatcher.instance.renderTileEntityAt(te, -(worldPos.getX - 2 * relPos.getX), -(worldPos.getY - 2 * relPos.getY), -(worldPos.getZ - 2 * relPos.getZ), partialTicks, -1)
       })
 
 
@@ -212,7 +213,7 @@ class ShipRender(rm: RenderManager) extends Render[EntityShip](rm) {
   private def doDebugRender(shipWorld: ShipWorld, x: Double, y: Double, z: Double) = {
     DebugRender.drawRotatedBoundingBox(new RotatedBB(shipWorld.Ship.getBoundingBox.RelativeAABB, new Vec3(0, 0, 0), new Quat4f(0, 0, 0, 1)), shipWorld.Ship, x, y, z)
 
-    shipWorld.BlockSet.foreach(uPos => {
+    shipWorld.BlocksOnShip.foreach(uPos => {
       val blockState = shipWorld.getBlockState(uPos.RelativePos)
       DebugRender.debugRenderBlock(shipWorld, blockState, uPos.RelativePos, x, y, z)
 

@@ -93,7 +93,8 @@ class BlocksStorage(ShipWorld: ShipWorld) {
       blockstorages(i) = new BlockStorage(Block.BLOCK_STATE_IDS.getByValue(in.readInt()))
 
     in.close()
-
+    // debug
+    (0 until mapLength).foreach(i => ShipWorld.applyBlockChange(blockpositions(i).RelativePos, blockstorages(i).BlockState, 3))
     // Zips the two arrays into a map
     BlockMap = mMap(blockpositions.zip(blockstorages).toSeq:_*)
   }

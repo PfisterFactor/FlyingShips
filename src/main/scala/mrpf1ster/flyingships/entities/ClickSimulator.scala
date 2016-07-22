@@ -67,7 +67,7 @@ class ClickSimulator(shipWorld: ShipWorld) {
 
     shipWorld.Ship.InteractionHandler.sendBlockPlacedMessage(pos, side, heldStack, hitVec)
 
-    if (blockWasActivated && player.isSpectator) return true
+    if (blockWasActivated && !player.isSpectator) return true
 
     if (heldStack == null) return false
 

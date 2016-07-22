@@ -70,7 +70,7 @@ class EntityShip(pos: BlockPos, world: World, blockSet: Set[BlockPos]) extends E
   def getBoundingBox: BoundingBox = _boundingBox
 
   def generateBoundingBox() = {
-    _boundingBox = new BoundingBox(BoundingBox.generateRotated(ShipWorld.BlockSet, Rotation), BoundingBox.generateRotatedRelative(ShipWorld.BlockSet, Rotation), Rotation, getPositionVector)
+    _boundingBox = new BoundingBox(BoundingBox.generateRotated(ShipWorld.BlocksOnShip.toSet, Rotation), BoundingBox.generateRotatedRelative(ShipWorld.BlocksOnShip.toSet, Rotation), Rotation, getPositionVector)
   }
 
   // Returns ship creator block for the ship
