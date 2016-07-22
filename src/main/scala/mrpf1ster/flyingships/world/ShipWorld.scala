@@ -488,6 +488,7 @@ class ShipWorld(originWorld: World, blocks: Set[UnifiedPos], ship: EntityShip) e
     OriginWorld.spawnParticle(particleType, rotatedPos.xCoord, rotatedPos.yCoord, rotatedPos.zCoord, xOffset + Ship.motionX, yOffset + Ship.motionY, zOffset + Ship.motionZ, 0)
   }
 
+
   // Ripped from doVoidFogParticles in World class
   @SideOnly(Side.CLIENT)
   def doRandomDisplayTick(posX: Int, posY: Int, posZ: Int) = {

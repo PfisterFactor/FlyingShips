@@ -45,7 +45,7 @@ class FlyingShipEventHandlers {
       val playerPos = Minecraft.getMinecraft.thePlayer.getPosition
       ships.foreach(ship => {
         val relPlayerPos = UnifiedPos.convertToRelative(playerPos,ship.getPosition)
-        ship.ShipWorld.doRandomDisplayTick(relPlayerPos.getX,relPlayerPos.getZ,relPlayerPos.getZ)
+        ship.ShipWorld.doRandomDisplayTick(relPlayerPos.getX, relPlayerPos.getY, relPlayerPos.getZ)
       })
       return
     }
