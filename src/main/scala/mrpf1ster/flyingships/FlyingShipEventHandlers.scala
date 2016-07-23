@@ -1,30 +1,25 @@
 package mrpf1ster.flyingships
 
+import mrpf1ster.flyingships.entities.EntityShip
 import mrpf1ster.flyingships.util.{ShipLocator, UnifiedPos}
-import mrpf1ster.flyingships.world.PlayerRelative
 import mrpf1ster.flyingships.world.chunk.ChunkProviderShip
+import mrpf1ster.flyingships.world.{PlayerRelative, ShipWorld}
 import net.minecraft.client.Minecraft
-import net.minecraft.world.World
 import net.minecraftforge.event.entity.player.PlayerOpenContainerEvent
 import net.minecraftforge.fml.common.eventhandler.Event.Result
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent
 import net.minecraftforge.fml.common.gameevent.InputEvent.MouseInputEvent
 import net.minecraftforge.fml.common.gameevent.TickEvent
 import net.minecraftforge.fml.common.gameevent.TickEvent.Phase
+import net.minecraftforge.fml.relauncher.{Side, SideOnly}
 
 /**
   * Created by EJ on 3/9/2016.
   */
 class FlyingShipEventHandlers {
 
-  def updateEntities(world: World): Unit = {
-
-
-  }
-
   @SubscribeEvent
   def onServerTick(event: TickEvent.WorldTickEvent): Unit = {
-    //Minecraft.getMinecraft.thePlayer.setInvisible(true)
     if (event.phase != Phase.START) return
     ChunkProviderShip.ShipChunkIO.tick
     val ships = ShipLocator.getShips(event.world)
@@ -36,6 +31,7 @@ class FlyingShipEventHandlers {
 
   }
 
+  @SideOnly(Side.CLIENT)
   @SubscribeEvent
   def onClientTick(event: TickEvent.ClientTickEvent): Unit = {
     val ships = ShipLocator.getShips(Minecraft.getMinecraft.theWorld)
@@ -67,6 +63,8 @@ class FlyingShipEventHandlers {
   }
 
   var doClick = false
+
+  @SideOnly(Side.CLIENT)
   @SubscribeEvent
   def onMouseLeftClick(event: MouseInputEvent): Unit = {
     val attackIsDown = Minecraft.getMinecraft.gameSettings.keyBindAttack.isKeyDown
@@ -84,10 +82,16 @@ class FlyingShipEventHandlers {
 
   }
 
-  // Hackish way to get the tile entity the player is looking at
+  // Hackish way to get the tile entity the player is interacting with
   @SubscribeEvent
   def playerContainerOpen(event: PlayerOpenContainerEvent): Unit = {
-    val ship = ShipLocator.getShip(Minecraft.getMinecraft.objectMouseOver)
+    var ship: Option[EntityShip] = None
+
+    val ships = ShipLocator.getShips(event.entityPlayer.worldObj)
+    ShipWorld.startAccessing()
+    event.entityPlayer.openContainer.canInteractWith(event.entityPlayer)
+    ship = ships.find(ent => ent.ShipWorld.wasAccessed)
+    ShipWorld.stopAccessing(event.entityPlayer.worldObj)
 
     if (ship.isEmpty) return
 

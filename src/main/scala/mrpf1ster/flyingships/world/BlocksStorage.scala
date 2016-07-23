@@ -1,10 +1,8 @@
 package mrpf1ster.flyingships.world
 
-import java.io.{ByteArrayInputStream, ByteArrayOutputStream, DataInputStream, DataOutputStream}
-
 import mrpf1ster.flyingships.util.UnifiedPos
+import net.minecraft.block.BlockAir
 import net.minecraft.block.state.IBlockState
-import net.minecraft.block.{Block, BlockAir}
 import net.minecraft.util.BlockPos
 import net.minecraft.world.World
 
@@ -50,54 +48,6 @@ class BlocksStorage(ShipWorld: ShipWorld) {
     })
   }
 
-
-  def getByteData: Array[Byte] = {
-    val bytes = new ByteArrayOutputStream()
-    val out = new DataOutputStream(bytes)
-
-
-    // Length of map
-    out.writeInt(BlockMap.size)
-
-    // BlockPos
-    BlockMap.keys.foreach(pos => out.writeLong(pos.RelativePos.toLong))
-
-    // BlockStorage
-    //noinspection ScalaDeprecation
-    BlockMap.values.foreach(state => out.writeInt(Block.BLOCK_STATE_IDS.get(state.BlockState)))
-
-
-
-    out.close()
-
-    bytes.toByteArray
-
-  }
-
-  def writeByteData(bytes:Array[Byte]) = {
-    val byteStream = new ByteArrayInputStream(bytes)
-    val in = new DataInputStream(byteStream)
-
-    // Length of map
-    val mapLength = in.readInt()
-
-    // BlockPos
-    val blockpositions = new Array[UnifiedPos](mapLength)
-    for (i:Int <- 0 until mapLength)
-      blockpositions(i) = UnifiedPos(BlockPos.fromLong(in.readLong()),ShipWorld.OriginPos,IsRelative = true)
-
-    // Block Storage
-    val blockstorages = new Array[BlockStorage](mapLength)
-    //noinspection ScalaDeprecation
-    for (i <- 0 until mapLength)
-      blockstorages(i) = new BlockStorage(Block.BLOCK_STATE_IDS.getByValue(in.readInt()))
-
-    in.close()
-    // debug
-    (0 until mapLength).foreach(i => ShipWorld.applyBlockChange(blockpositions(i).RelativePos, blockstorages(i).BlockState, 3))
-    // Zips the two arrays into a map
-    BlockMap = mMap(blockpositions.zip(blockstorages).toSeq:_*)
-  }
 
 
 }

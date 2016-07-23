@@ -16,7 +16,7 @@ import scala.collection.JavaConversions._
 object ShipLocator {
   def getShips(world:World): Set[EntityShip] = {
     if (world == null) return Set()
-    val worldEntities = world.getLoadedEntityList
+    val worldEntities = world.loadedEntityList
     worldEntities.filter(_.isInstanceOf[EntityShip]).map(_.asInstanceOf[EntityShip]).toSet
   }
 

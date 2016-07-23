@@ -1,7 +1,5 @@
 package mrpf1ster.flyingships.network
 
-import com.google.common.util.concurrent.ListenableFuture
-import net.minecraft.client.Minecraft
 import net.minecraftforge.fml.common.FMLCommonHandler
 import net.minecraftforge.fml.common.network.NetworkRegistry
 import net.minecraftforge.fml.common.network.simpleimpl.SimpleNetworkWrapper
@@ -21,13 +19,6 @@ class FlyingShipsPacketHandler {
 
   INSTANCE.registerMessage(classOf[ServerBlockPlacedMessageHandler], classOf[BlockPlacedMessage],2,Side.SERVER)
   INSTANCE.registerMessage(classOf[ServerBlockDiggingMessageHandler], classOf[BlockDiggingMessage],3,Side.SERVER)
-
-  def addScheduledTask(messageTask: Runnable): ListenableFuture[AnyRef] = {
-    if (side.isClient)
-      Minecraft.getMinecraft.addScheduledTask(messageTask)
-    else
-      FMLCommonHandler.instance.getMinecraftServerInstance.addScheduledTask(messageTask)
-  }
 
   def registerClientSide() = {
 

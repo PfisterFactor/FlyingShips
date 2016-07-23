@@ -1,23 +1,20 @@
 package mrpf1ster.flyingships.network
 
 import io.netty.buffer.ByteBuf
-import mrpf1ster.flyingships.FlyingShips
-import mrpf1ster.flyingships.entities.EffectRendererShip
-import mrpf1ster.flyingships.util.{ShipLocator, UnifiedPos}
+import mrpf1ster.flyingships.util.ShipLocator
 import mrpf1ster.flyingships.world.ShipWorld
 import net.minecraft.block.Block
 import net.minecraft.block.material.Material
 import net.minecraft.block.state.IBlockState
-import net.minecraft.client.Minecraft
-import net.minecraft.client.audio.PositionedSoundRecord
 import net.minecraft.entity.player.{EntityPlayer, EntityPlayerMP}
 import net.minecraft.item.ItemStack
 import net.minecraft.network.NetHandlerPlayServer
 import net.minecraft.network.play.client.C07PacketPlayerDigging
 import net.minecraft.network.play.client.C07PacketPlayerDigging.Action
 import net.minecraft.tileentity.TileEntity
-import net.minecraft.util.{BlockPos, EnumFacing, ResourceLocation}
+import net.minecraft.util.{BlockPos, EnumFacing}
 import net.minecraftforge.event.entity.player.PlayerInteractEvent
+import net.minecraftforge.fml.common.FMLCommonHandler
 import net.minecraftforge.fml.common.network.simpleimpl.{IMessage, IMessageHandler, MessageContext}
 
 /**
@@ -68,7 +65,7 @@ class ServerBlockDiggingMessageHandler extends IMessageHandler[BlockDiggingMessa
     if (message.ShipID == -1) return null
     if (message.BlockPosition == new BlockPos(0, 0, 0)) return null
 
-    FlyingShips.flyingShipPacketHandler.addScheduledTask(new BlockDiggingMessageTask(message, ctx))
+    FMLCommonHandler.instance.getMinecraftServerInstance.addScheduledTask(new BlockDiggingMessageTask(message, ctx))
     null
   }
 
@@ -166,15 +163,8 @@ private object ItemInWorldManagerFaker {
     if (stack != null && stack.getItem.onBlockStartBreak(stack, pos, player)) return false
 
     // World PlayAuxSFXAtEntity manual
-    val par4 = Block.getStateId(iblockstate) & 4095
-    val block: Block = Block.getBlockById(par4)
-
-    if (block.getMaterial != Material.air) {
-      val worldPos = UnifiedPos.convertToWorld(pos,shipWorld.Ship.getPosition)
-      Minecraft.getMinecraft.getSoundHandler.playSound(new PositionedSoundRecord(new ResourceLocation(block.stepSound.getBreakSound), (block.stepSound.getVolume + 1.0F) / 2.0F, block.stepSound.getFrequency * 0.8F, worldPos.getX.toFloat + 0.5F, worldPos.getY.toFloat + 0.5F, worldPos.getZ.toFloat + 0.5F))
-    }
-
-    EffectRendererShip.addBlockDestroyEffects(shipWorld, pos, block.getStateFromMeta(par4 >> 12 & 255))
+    shipWorld.playAuxSFXAtEntity(player, 2001, pos, Block.getStateId(iblockstate))
+    //EffectRendererShip.addBlockDestroyEffects(shipWorld, pos, block.getStateFromMeta(par4 >> 12 & 255))
     // End of manual
 
     var blockWasRemoved: Boolean = false

@@ -1,8 +1,8 @@
 package mrpf1ster.flyingships.network
 
 import io.netty.buffer.ByteBuf
-import mrpf1ster.flyingships.FlyingShips
 import mrpf1ster.flyingships.entities.EntityShip
+import mrpf1ster.flyingships.util.ShipLocator
 import net.minecraft.client.Minecraft
 import net.minecraft.util.BlockPos
 import net.minecraftforge.fml.common.network.simpleimpl.{IMessage, IMessageHandler, MessageContext}
@@ -42,6 +42,7 @@ class SpawnShipMessage(ship:EntityShip) extends IMessage {
     // Tile Entity Data
     buf.writeBytes(TileEntityData)
 
+
   }
 
   override def fromBytes(buf: ByteBuf): Unit = {
@@ -64,13 +65,14 @@ class SpawnShipMessage(ship:EntityShip) extends IMessage {
     // Tile Entity Data
     TileEntityData = new Array[Byte](TileEntityLength)
     buf.readBytes(TileEntityData)
+
   }
 }
 
 class ClientSpawnShipHandler extends IMessageHandler[SpawnShipMessage, IMessage] {
   override def onMessage(message: SpawnShipMessage, ctx: MessageContext): IMessage = {
     if (message.ShipID == -1) return null
-    FlyingShips.flyingShipPacketHandler.addScheduledTask(new SpawnShipMessageTask(message, ctx))
+    Minecraft.getMinecraft.addScheduledTask(new SpawnShipMessageTask(message, ctx))
     null
   }
 
@@ -83,15 +85,18 @@ class ClientSpawnShipHandler extends IMessageHandler[SpawnShipMessage, IMessage]
 
       def player = Minecraft.getMinecraft.thePlayer
 
-      val ship = new EntityShip(message.Position,player.worldObj,Set())
-      ship.setEntityId(message.ShipID)
-      ship.setLocationAndAngles(message.Position.getX(),message.Position.getY,message.Position.getZ,0,0)
+      val ship = ShipLocator.getShip(player.worldObj, message.ShipID)
 
-      ship.ShipWorld.setWorldData(message.BlockData,message.TileEntityData)
+      if (ship.isEmpty) {
+        println(s"Ship ID: ${message.ShipID} failed to be located on client!")
+        return
+      }
 
-      ship.generateBoundingBox()
+      ship.get.ShipWorld.setWorldData(message.BlockData, message.TileEntityData)
 
-      player.worldObj.spawnEntityInWorld(ship)
+      ship.get.generateBoundingBox()
+
+      player.worldObj.spawnEntityInWorld(ship.get)
 
     }
   }

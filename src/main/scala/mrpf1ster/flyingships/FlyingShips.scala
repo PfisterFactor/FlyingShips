@@ -5,19 +5,13 @@ package mrpf1ster.flyingships
   */
 
 import mrpf1ster.flyingships.network.FlyingShipsPacketHandler
-import net.minecraft.util.BlockPos
 import net.minecraftforge.fml.common.Mod
 import net.minecraftforge.fml.common.Mod.EventHandler
 import net.minecraftforge.fml.common.event.{FMLInitializationEvent, FMLPostInitializationEvent, FMLPreInitializationEvent}
 
 
 @Mod(modid = FlyingShips.MOD_ID, name = "Flying Ships", version = FlyingShips.VERSION, modLanguage = "scala")
-object FlyingShips{
-
-  implicit class BlockPosExtension(pos: BlockPos) {
-    def -(pos2: BlockPos) = new BlockPos(pos.getX - pos2.getX, pos.getY - pos2.getY, pos.getZ - pos2.getZ)
-  }
-
+object FlyingShips {
 
   final val MOD_ID = "flyingships"
   final val VERSION = "0.01"

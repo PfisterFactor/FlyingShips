@@ -52,10 +52,11 @@ class ShipRender(rm: RenderManager) extends Render[EntityShip](rm) {
     // Translate into the center of the ship block for rotation
     GL11.glTranslated(0.5, 0.5, 0.5)
 
-
+    // Interpolate rotation so it doesn't look jerky
+    entity.oldRotation.interpolate(entity.getRotation, 1.0f)
 
     // Turn a quaternion into a matrix, then into a FloatBuffer
-    val rotationBuffer = matrixToFloatBuffer(quaternionToMatrix4f(entity.Rotation)) //entity.renderMatrix)
+    val rotationBuffer = matrixToFloatBuffer(quaternionToMatrix4f(entity.oldRotation)) //entity.renderMatrix)
 
 
     // Multiply current matrix by FloatBuffer
@@ -181,7 +182,7 @@ class ShipRender(rm: RenderManager) extends Render[EntityShip](rm) {
 
     val aabb = block.getSelectedBoundingBox(ship.ShipWorld,pos)
 
-    val rotatedBB = new RotatedBB(aabb, new Vec3(0.5, 0.5, 0.5), ship.Rotation)
+    val rotatedBB = new RotatedBB(aabb, new Vec3(0.5, 0.5, 0.5), ship.getRotation)
 
     GL11.glPushMatrix()
     GL11.glTranslated(x, y, z)

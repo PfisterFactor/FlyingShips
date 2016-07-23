@@ -20,12 +20,10 @@ import net.minecraftforge.fml.relauncher.{Side, SideOnly}
   */
 
 // This class is pretty much a carbon copy of PlayerControllerMP
-@SideOnly(Side.CLIENT)
 class ClickSimulator(shipWorld: ShipWorld) {
 
+
   var leftClickCounter = 0
-
-
   private var currentBlock = new BlockPos(-1, -1, -1)
   private var currentItemHittingBlock: ItemStack = null
   private var curBlockDamageMP: Float = 0
@@ -36,6 +34,7 @@ class ClickSimulator(shipWorld: ShipWorld) {
 
   private var stepSoundTickCounter: Float = 0
 
+  @SideOnly(Side.CLIENT)
   def simulateRightClick(player: EntityPlayer, pos: BlockPos, hitVec: Vec3, side: EnumFacing): Boolean = {
 
     def hitVecX = hitVec.xCoord.toFloat
@@ -95,6 +94,7 @@ class ClickSimulator(shipWorld: ShipWorld) {
 
   }
 
+  @SideOnly(Side.CLIENT)
   def clickBlock(player: EntityPlayer, pos: BlockPos, side: EnumFacing): Boolean = {
     // Stops the player destroying the ship block
     if (pos == ShipWorld.ShipBlockPos) return false
@@ -149,6 +149,7 @@ class ClickSimulator(shipWorld: ShipWorld) {
 
   }
 
+  @SideOnly(Side.CLIENT)
   private def isHittingPosition(pos: BlockPos): Boolean = {
 
     val itemstack: ItemStack = Minecraft.getMinecraft.thePlayer.getHeldItem
@@ -162,11 +163,13 @@ class ClickSimulator(shipWorld: ShipWorld) {
 
   }
 
+  @SideOnly(Side.CLIENT)
   private def clickBlockCreative(player: EntityPlayer, pos: BlockPos, side: EnumFacing) = {
     if (!shipWorld.extinguishFire(player, pos, side))
       onPlayerDestroyBlock(player, pos, side)
   }
 
+  @SideOnly(Side.CLIENT)
   private def onPlayerDestroyBlock(player: EntityPlayer, pos: BlockPos, side: EnumFacing): Boolean = {
     if (currentGameType.isAdventure) {
       if (player.isSpectator) {
@@ -218,6 +221,7 @@ class ClickSimulator(shipWorld: ShipWorld) {
     }
   }
 
+  @SideOnly(Side.CLIENT)
   private def resetBlockRemoving(player: EntityPlayer) = {
     shipWorld.Ship.InteractionHandler.sendBlockDiggingMessage(C07PacketPlayerDigging.Action.ABORT_DESTROY_BLOCK, this.currentBlock, EnumFacing.DOWN)
     this.isHittingBlock = false
@@ -225,6 +229,7 @@ class ClickSimulator(shipWorld: ShipWorld) {
     shipWorld.sendBlockBreakProgress(player.getEntityId, this.currentBlock, -1)
   }
 
+  @SideOnly(Side.CLIENT)
   def sendClickBlockToController(player: EntityPlayer): Unit = {
 
     def leftClick = Minecraft.getMinecraft.currentScreen == null && Minecraft.getMinecraft.gameSettings.keyBindAttack.isKeyDown && Minecraft.getMinecraft.inGameHasFocus
@@ -255,6 +260,7 @@ class ClickSimulator(shipWorld: ShipWorld) {
     }
   }
 
+  @SideOnly(Side.CLIENT)
   private def onPlayerDamageBlock(player: EntityPlayer, pos: BlockPos, side: EnumFacing): Boolean = {
     //Minecraft.getMinecraft.playerController.syncCurrentPlayItem
     if (this.blockHitDelay > 0) {
@@ -300,6 +306,7 @@ class ClickSimulator(shipWorld: ShipWorld) {
       clickBlock(player, pos, side)
   }
 
+  @SideOnly(Side.CLIENT)
   def clickMouse(player: EntityPlayer): Unit = {
     if (this.leftClickCounter > 0) return
 

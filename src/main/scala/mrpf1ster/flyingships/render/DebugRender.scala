@@ -26,7 +26,7 @@ object DebugRender {
     val blockBB = block.getSelectedBoundingBox(shipWorld, pos).expand(delta, delta, delta)
     val min = new Vec3(blockBB.minX, blockBB.minY, blockBB.minZ)
     val max = new Vec3(blockBB.maxX, blockBB.maxY, blockBB.maxZ)
-    drawRotatedBoundingBox(new RotatedBB(min, max, new Vec3(0.5, 0.5, 0.5), shipWorld.Ship.Rotation), shipWorld.Ship, x, y, z)
+    drawRotatedBoundingBox(new RotatedBB(min, max, new Vec3(0.5, 0.5, 0.5), shipWorld.Ship.getRotation), shipWorld.Ship, x, y, z)
 
   }
 

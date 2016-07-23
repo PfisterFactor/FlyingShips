@@ -1,7 +1,6 @@
 package mrpf1ster.flyingships.network
 
 import io.netty.buffer.ByteBuf
-import mrpf1ster.flyingships.FlyingShips
 import mrpf1ster.flyingships.util.ShipLocator
 import net.minecraft.block.Block
 import net.minecraft.client.Minecraft
@@ -60,7 +59,7 @@ class BlockActionMessage(blockPos: BlockPos, block: Block, data1: Int, data2: In
 class ClientBlockActionMessageHandler extends IMessageHandler[BlockActionMessage, IMessage] {
   override def onMessage(message: BlockActionMessage, ctx: MessageContext): IMessage = {
     if (message.ShipID == -1) return null
-    FlyingShips.flyingShipPacketHandler.addScheduledTask(new BlockActionMessageTask(message, ctx))
+    Minecraft.getMinecraft.addScheduledTask(new BlockActionMessageTask(message, ctx))
     null
   }
 
