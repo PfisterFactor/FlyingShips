@@ -86,7 +86,7 @@ class ShipRender(rm: RenderManager) extends Render[EntityShip](rm) {
 
 
     // Render normal blocks and non-special tile entities
-    GL11.glCallList(getDisplayList(shipWorld.asInstanceOf[ShipWorldClient]))
+    GL11.glCallList(getDisplayList(shipWorld))
 
     // Render tile entities that have special renders
     // TODO: Fix Signs

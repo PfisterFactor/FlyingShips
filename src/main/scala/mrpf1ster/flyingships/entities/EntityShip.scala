@@ -5,6 +5,7 @@ import javax.vecmath.Quat4f
 
 import com.google.common.base.Predicates
 import mrpf1ster.flyingships.blocks.ShipCreatorBlock
+import mrpf1ster.flyingships.network.ClientSpawnShipHandler
 import mrpf1ster.flyingships.util.{BoundingBox, UnifiedPos}
 import mrpf1ster.flyingships.world.{ShipWorld, ShipWorldClient, ShipWorldServer}
 import net.minecraft.client.Minecraft
@@ -127,9 +128,13 @@ class EntityShip(pos: BlockPos, world: World, blockSet: Set[BlockPos]) extends E
 
   override def onUpdate(): Unit = {
     if (ShipWorld == null) return
-    // If the Ship is empty
-    if (!ShipWorld.isValid) {
+    // If the Ship is empty and theres no spawn entry for it, delete it
+    val hasSpawnListing = ClientSpawnShipHandler.spawnQueue.contains(getEntityId)
+    if (!ShipWorld.isValid && !hasSpawnListing) {
       this.setDead()
+    }
+    else if (hasSpawnListing) {
+      ClientSpawnShipHandler.onShipSpawn(getEntityId)
     }
 
     if (ShipWorld.isRemote)

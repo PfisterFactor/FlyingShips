@@ -3,13 +3,12 @@ package mrpf1ster.flyingships.world
 import mrpf1ster.flyingships.entities.EntityShip
 import mrpf1ster.flyingships.render.ShipRenderGlobal
 import mrpf1ster.flyingships.util.UnifiedPos
-import mrpf1ster.flyingships.world.chunk.ClientChunkProviderShip
 import net.minecraft.block.Block
 import net.minecraft.block.state.IBlockState
 import net.minecraft.init.Blocks
 import net.minecraft.util.BlockPos
 import net.minecraft.world.World
-import net.minecraft.world.chunk.{Chunk, IChunkProvider}
+import net.minecraft.world.chunk.Chunk
 
 /**
   * Created by ej on 7/25/16.
@@ -18,8 +17,6 @@ class ShipWorldClient(originWorld: World, ship: EntityShip) extends ShipWorld(or
   var doRenderUpdate = false
   val ShipRenderGlobal = new ShipRenderGlobal(this)
   addWorldAccess(ShipRenderGlobal)
-
-  override def createChunkProvider(): IChunkProvider = new ClientChunkProviderShip(this)
 
   override def applyBlockChange(pos: BlockPos, newState: IBlockState, flags: Int): Boolean = {
     val uPos = UnifiedPos(pos, OriginPos, IsRelative = true)
@@ -53,7 +50,7 @@ class ShipWorldClient(originWorld: World, ship: EntityShip) extends ShipWorld(or
 
   override def tick() = {}
 
-  override def setBlockState(pos: BlockPos, newState: IBlockState, flags: Int) = true
+  override def setBlockState(pos: BlockPos, newState: IBlockState, flags: Int): Boolean = true
 
   override def onShipMove() = {
     doRenderUpdate = true

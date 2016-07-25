@@ -4,14 +4,12 @@ import mrpf1ster.flyingships.FlyingShips
 import mrpf1ster.flyingships.entities.EntityShip
 import mrpf1ster.flyingships.network.{BlockActionMessage, BlocksChangedMessage}
 import mrpf1ster.flyingships.util.UnifiedPos
-import mrpf1ster.flyingships.world.chunk.ChunkProviderShip
 import net.minecraft.block.state.IBlockState
 import net.minecraft.block.{Block, BlockEventData}
 import net.minecraft.init.Blocks
 import net.minecraft.util.BlockPos
 import net.minecraft.world.World
-import net.minecraft.world.chunk.storage.AnvilChunkLoader
-import net.minecraft.world.chunk.{Chunk, IChunkProvider}
+import net.minecraft.world.chunk.Chunk
 import net.minecraftforge.fml.common.network.NetworkRegistry.TargetPoint
 
 import scala.collection.mutable
@@ -27,10 +25,6 @@ class ShipWorldServer(originWorld: World, ship: EntityShip) extends ShipWorld(or
 
   private val ChangedBlocks: mSet[UnifiedPos] = mSet()
 
-  override def createChunkProvider(): IChunkProvider = {
-    val anvilLoader = new AnvilChunkLoader(saveHandler.getWorldDirectory)
-    new ChunkProviderShip(this, anvilLoader)
-  }
 
   override def tick(): Unit = {
     //tickUpdates(false)

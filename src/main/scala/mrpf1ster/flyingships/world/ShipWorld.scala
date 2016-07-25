@@ -8,6 +8,7 @@ import com.google.common.base.Predicate
 import io.netty.buffer.Unpooled
 import mrpf1ster.flyingships.entities.EntityShip
 import mrpf1ster.flyingships.util.{ShipLocator, UnifiedPos, UnifiedVec, VectorUtils}
+import mrpf1ster.flyingships.world.chunk.ChunkProviderShip
 import net.minecraft.block.Block
 import net.minecraft.block.state.IBlockState
 import net.minecraft.client.Minecraft
@@ -20,6 +21,7 @@ import net.minecraft.network.PacketBuffer
 import net.minecraft.tileentity.TileEntity
 import net.minecraft.util._
 import net.minecraft.world.chunk.IChunkProvider
+import net.minecraft.world.chunk.storage.AnvilChunkLoader
 import net.minecraft.world.{IInteractionObject, World, WorldSettings}
 import net.minecraftforge.fml.relauncher.{Side, SideOnly}
 
@@ -107,7 +109,10 @@ abstract class ShipWorld(originWorld: World, ship: EntityShip) extends DetachedW
       })
   }
 
-  override def createChunkProvider(): IChunkProvider
+  override def createChunkProvider(): IChunkProvider = {
+    val anvilLoader = new AnvilChunkLoader(saveHandler.getWorldDirectory)
+    new ChunkProviderShip(this, anvilLoader)
+  }
 
   override def getProviderName: String = chunkProvider.makeString()
 
@@ -135,8 +140,7 @@ abstract class ShipWorld(originWorld: World, ship: EntityShip) extends DetachedW
 
 
   override def spawnEntityInWorld(entity: Entity): Boolean = {
-    val worldPos = UnifiedVec.convertToWorld(entity.getPositionVector, Ship.getPositionVector)
-
+    val worldPos = UnifiedVec.convertToWorld(VectorUtils.rotatePointToShip(entity.getPositionVector, Ship), Ship.getPositionVector)
     entity.setPosition(worldPos.xCoord, worldPos.yCoord, worldPos.zCoord)
     entity.setWorld(OriginWorld)
 

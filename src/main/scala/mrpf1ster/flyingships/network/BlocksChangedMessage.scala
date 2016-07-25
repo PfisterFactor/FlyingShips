@@ -119,16 +119,22 @@ class ClientBlocksChangedMessageHandler extends IMessageHandler[BlocksChangedMes
       for (i <- 0 until Message.NumChangedBlocks) {
         //Ship.get.ShipWorld.applyBlockChange(Message.ChangedBlocks(i), Message.BlockStates(i), 3)
         val blockstate = Ship.get.ShipWorld.getBlockState(Message.ChangedBlocks(i))
-        if (blockstate != Message.BlockStates(i))
+        if (blockstate != Message.BlockStates(i)) {
           Ship.get.ShipWorld.applyBlockChange(Message.ChangedBlocks(i), Message.BlockStates(i), 3)
+        }
+
       }
 
 
       message.ChangedTileEntitiesNBT.foreach(nbt => {
         val te = TileEntity.createAndLoadEntity(nbt)
+        te.setWorldObj(Ship.get.ShipWorld)
+        te.validate()
         val teOnShip = Ship.get.ShipWorld.getTileEntity(te.getPos)
         if (teOnShip != null)
           teOnShip.readFromNBT(nbt)
+        else
+          Ship.get.ShipWorld.addTileEntity(te)
       })
     }
   }
