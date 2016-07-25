@@ -6,7 +6,7 @@ import javax.vecmath.Quat4f
 import com.google.common.base.Predicates
 import mrpf1ster.flyingships.blocks.ShipCreatorBlock
 import mrpf1ster.flyingships.util.{BoundingBox, UnifiedPos}
-import mrpf1ster.flyingships.world.ShipWorld
+import mrpf1ster.flyingships.world.{ShipWorld, ShipWorldClient, ShipWorldServer}
 import net.minecraft.client.Minecraft
 import net.minecraft.entity.Entity
 import net.minecraft.entity.player.EntityPlayer
@@ -51,21 +51,20 @@ class EntityShip(pos: BlockPos, world: World, blockSet: Set[BlockPos]) extends E
   setPosition(posX,posY,posZ)
 
   // Fake world that holds all the blocks on the ship
-  val ShipWorld: ShipWorld = new ShipWorld(world, this)
-  ShipWorld.moveBlocks(blockSet.map(UnifiedPos(_, getPosition, IsRelative = false)))
+  val ShipWorld: ShipWorld = if (worldObj.isRemote) new ShipWorldClient(worldObj, this) else new ShipWorldServer(worldObj, this)
+  ShipWorld.moveBlocks(blockSet.map(UnifiedPos(_, ShipWorld.OriginPos, IsRelative = false)))
 
   // Handles interacting with the ship, (left and right clicking on blocks on the ship)
   // Relevant only on client
   val InteractionHandler: ShipInteractionHandler = new ShipInteractionHandler(ShipWorld)
 
-
   // Rotation of the ship in Quaternions
-  private var Rotation: Quat4f = if (!ShipWorld.isRemote) new Quat4f(0f, 0f, 0f, 1f) else new Quat4f(dataWatcher.getWatchableObjectFloat(5), dataWatcher.getWatchableObjectFloat(6), dataWatcher.getWatchableObjectFloat(7), dataWatcher.getWatchableObjectFloat(8))
+  private var Rotation: Quat4f = new Quat4f(0, 0, 0, 1f)
 
   var oldRotation: Quat4f = Rotation
 
   // Returns ship direction based on which way the creator block is facing
-  val ShipDirection: EnumFacing = if (ShipWorld.isValid) ShipWorld.ShipBlock.getValue(ShipCreatorBlock.FACING) else null
+  def ShipDirection: EnumFacing = if (ShipWorld != null && ShipWorld.isValid) ShipWorld.ShipBlock.getValue(ShipCreatorBlock.FACING) else null
 
 
   private var _boundingBox:BoundingBox = null
@@ -83,7 +82,7 @@ class EntityShip(pos: BlockPos, world: World, blockSet: Set[BlockPos]) extends E
   def ShipBlock = ShipWorld.ShipBlock
 
 
-  override def getEntityBoundingBox = if (ShipWorld.isValid && _boundingBox != null) _boundingBox.AABB else new AxisAlignedBB(0, 0, 0, 0, 0, 0)
+  override def getEntityBoundingBox = if (ShipWorld != null && ShipWorld.isValid && _boundingBox != null) _boundingBox.AABB else new AxisAlignedBB(0, 0, 0, 0, 0, 0)
 
 
   override def writeEntityToNBT(tagCompound: NBTTagCompound): Unit = {
@@ -93,7 +92,6 @@ class EntityShip(pos: BlockPos, world: World, blockSet: Set[BlockPos]) extends E
   override def readEntityFromNBT(tagCompound: NBTTagCompound): Unit = {
 
   }
-
   override def entityInit(): Unit = {
     dataWatcher.addObject[Float](5, 0.0f)
     dataWatcher.addObject[Float](6, 0.0f)
@@ -126,7 +124,9 @@ class EntityShip(pos: BlockPos, world: World, blockSet: Set[BlockPos]) extends E
   }
 
   def getRotation: Quat4f = Rotation
-  override def onUpdate() = {
+
+  override def onUpdate(): Unit = {
+    if (ShipWorld == null) return
     // If the Ship is empty
     if (!ShipWorld.isValid) {
       this.setDead()

@@ -60,6 +60,7 @@ object EffectRendererShip {
     }
   }
 
+  // Assumes a relative pos
   def addBlockDestroyEffects(shipWorld: ShipWorld, pos: BlockPos, state: IBlockState) {
     if (!state.getBlock.isAir(shipWorld, pos) && !state.getBlock.addDestroyEffects(shipWorld, pos, Minecraft.getMinecraft.effectRenderer)) {
       val newState = state.getBlock.getActualState(state, shipWorld, pos)

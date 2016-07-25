@@ -5,7 +5,7 @@ import javax.vecmath.{Matrix4f, Quat4f}
 
 import mrpf1ster.flyingships.entities.EntityShip
 import mrpf1ster.flyingships.util.{RenderUtils, RotatedBB, UnifiedPos}
-import mrpf1ster.flyingships.world.ShipWorld
+import mrpf1ster.flyingships.world.{ShipWorld, ShipWorldClient}
 import net.minecraft.block.state.IBlockState
 import net.minecraft.client.Minecraft
 import net.minecraft.client.renderer._
@@ -77,7 +77,7 @@ class ShipRender(rm: RenderManager) extends Render[EntityShip](rm) {
 
 
     // Render normal blocks and non-special tile entities
-    GL11.glCallList(getDisplayList(shipWorld))
+    GL11.glCallList(getDisplayList(shipWorld.asInstanceOf[ShipWorldClient]))
 
     // Render tile entities that have special renders
     // TODO: Fix Signs
@@ -97,7 +97,7 @@ class ShipRender(rm: RenderManager) extends Render[EntityShip](rm) {
     GL11.glPopMatrix()
 
     if (DebugRender.isDebugMenuShown)
-      doDebugRender(shipWorld, x, y, z)
+      doDebugRender(shipWorld.asInstanceOf[ShipWorldClient], x, y, z)
 
     // Ray-trace across the ship and return it wrapped in an option
     val rayTrace:Option[MovingObjectPosition] = entity.InteractionHandler.getBlockPlayerIsLookingAt(partialTicks)
@@ -113,12 +113,13 @@ class ShipRender(rm: RenderManager) extends Render[EntityShip](rm) {
 
 
   }
-  private def getDisplayList(shipWorld: ShipWorld): Int = {
+
+  private def getDisplayList(shipWorld: ShipWorldClient): Int = {
     var id = displayListIDs.get(shipWorld)
-    if (id.isDefined && shipWorld.needsRenderUpdate) {
+    if (id.isDefined && shipWorld.doRenderUpdate) {
       GL11.glDeleteLists(id.get, 1)
       id = None
-      shipWorld.onRenderUpdate()
+      shipWorld.doRenderUpdate = false
     }
     if (id.isEmpty) {
       // create a new list
@@ -133,7 +134,7 @@ class ShipRender(rm: RenderManager) extends Render[EntityShip](rm) {
     id.get
   }
 
-  private def renderShip(shipWorld: ShipWorld) = {
+  private def renderShip(shipWorld: ShipWorldClient) = {
     // Setup tessellator and worldRenderer
     def tessellator = Tessellator.getInstance()
     def worldRenderer = tessellator.getWorldRenderer
@@ -211,7 +212,7 @@ class ShipRender(rm: RenderManager) extends Render[EntityShip](rm) {
   }
 
 
-  private def doDebugRender(shipWorld: ShipWorld, x: Double, y: Double, z: Double) = {
+  private def doDebugRender(shipWorld: ShipWorldClient, x: Double, y: Double, z: Double) = {
     DebugRender.drawRotatedBoundingBox(new RotatedBB(shipWorld.Ship.getBoundingBox.RelativeAABB, new Vec3(0, 0, 0), new Quat4f(0, 0, 0, 1)), shipWorld.Ship, x, y, z)
 
     shipWorld.BlocksOnShip.foreach(uPos => {

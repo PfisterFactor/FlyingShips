@@ -222,7 +222,8 @@ class ClickSimulator(shipWorld: ShipWorld) {
   }
 
   @SideOnly(Side.CLIENT)
-  private def resetBlockRemoving(player: EntityPlayer) = {
+  private def resetBlockRemoving(player: EntityPlayer): Unit = {
+    if (shipWorld == null) return
     shipWorld.Ship.InteractionHandler.sendBlockDiggingMessage(C07PacketPlayerDigging.Action.ABORT_DESTROY_BLOCK, this.currentBlock, EnumFacing.DOWN)
     this.isHittingBlock = false
     this.curBlockDamageMP = 0.0F

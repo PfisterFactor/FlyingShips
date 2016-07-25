@@ -6,30 +6,24 @@ import java.util.{Random, UUID}
 
 import com.google.common.base.Predicate
 import io.netty.buffer.Unpooled
-import mrpf1ster.flyingships.FlyingShips
 import mrpf1ster.flyingships.entities.EntityShip
-import mrpf1ster.flyingships.network.{BlockActionMessage, BlocksChangedMessage}
 import mrpf1ster.flyingships.util.{ShipLocator, UnifiedPos, UnifiedVec, VectorUtils}
-import mrpf1ster.flyingships.world.chunk.ChunkProviderShip
+import net.minecraft.block.Block
 import net.minecraft.block.state.IBlockState
-import net.minecraft.block.{Block, BlockEventData}
 import net.minecraft.client.Minecraft
+import net.minecraft.entity.Entity
 import net.minecraft.entity.player.EntityPlayer
-import net.minecraft.entity.{Entity, EntityHanging}
 import net.minecraft.init.Blocks
 import net.minecraft.item.ItemStack
 import net.minecraft.nbt.NBTTagCompound
 import net.minecraft.network.PacketBuffer
 import net.minecraft.tileentity.TileEntity
 import net.minecraft.util._
-import net.minecraft.world.chunk.storage.AnvilChunkLoader
-import net.minecraft.world.chunk.{Chunk, IChunkProvider}
+import net.minecraft.world.chunk.IChunkProvider
 import net.minecraft.world.{IInteractionObject, World, WorldSettings}
-import net.minecraftforge.fml.common.network.NetworkRegistry.TargetPoint
 import net.minecraftforge.fml.relauncher.{Side, SideOnly}
 
 import scala.collection.JavaConversions._
-import scala.collection.mutable
 import scala.collection.mutable.{Map => mMap, Set => mSet}
 
 
@@ -49,17 +43,13 @@ object ShipWorld {
 
   def stopAccessing(world: World): Unit = {
     doAccessing = false
-    ShipLocator.getShips(world).foreach(ent => ent.ShipWorld.wasAccessed = false)
+    ShipLocator.getShips(world).foreach(ent => if (ent.ShipWorld != null) ent.ShipWorld.wasAccessed = false)
   }
 }
 
-class ShipWorld(originWorld: World, ship: EntityShip) extends DetachedWorld(originWorld, "Ship", UUID.randomUUID()) {
-
-
+abstract class ShipWorld(originWorld: World, ship: EntityShip) extends DetachedWorld(originWorld, "Ship", UUID.randomUUID()) {
   val OriginWorld = originWorld
-
   val Ship = ship
-
   // The coordinates of the ship block in the origin world. Conveniently the EntityShip's position
   def OriginPos() = Ship.getPosition
 
@@ -69,19 +59,8 @@ class ShipWorld(originWorld: World, ship: EntityShip) extends DetachedWorld(orig
 
   val BlocksOnShip: mSet[UnifiedPos] = mSet()
 
-
   // TODO: Change this to be the biome directly under the ship
   val BiomeID = OriginWorld.getBiomeGenForCoords(OriginPos()).biomeID
-
-  // All HangingEntities on ship, mapped with a Unified Pos
-  // #Not implemented#
-  var HangingEntities: mMap[UnifiedPos, EntityHanging] = null
-
-  private val ChangedBlocks: mSet[UnifiedPos] = mSet()
-  private var doRenderUpdate = false
-
-  // Only used on Server
-  private val ServerBlockEventList = mutable.Set[BlockEventData]()
 
   // The Ship Block
   def ShipBlock = getBlockState(ShipWorld.ShipBlockPos)
@@ -128,22 +107,7 @@ class ShipWorld(originWorld: World, ship: EntityShip) extends DetachedWorld(orig
       })
   }
 
-
-  /*
-  override def getBlockState(pos: BlockPos) = {
-    val got = BlockStore.getBlock(pos)
-    if (got.isDefined)
-      got.get.BlockState // Got get got get got get
-    else
-      Block.getStateById(0)
-
-  }
-  */
-
-  override def createChunkProvider(): IChunkProvider = {
-    val anvilLoader = new AnvilChunkLoader(saveHandler.getWorldDirectory)
-    new ChunkProviderShip(this, anvilLoader)
-  }
+  override def createChunkProvider(): IChunkProvider
 
   override def getProviderName: String = chunkProvider.makeString()
 
@@ -167,38 +131,8 @@ class ShipWorld(originWorld: World, ship: EntityShip) extends DetachedWorld(orig
 
   override def getEntitiesInAABBexcluding(entityIn: Entity, boundingBox: AxisAlignedBB, predicate: Predicate[_ >: Entity]): java.util.List[Entity] = OriginWorld.getEntitiesInAABBexcluding(entityIn, boundingBox.offset(OriginVec().xCoord, OriginVec().yCoord, OriginVec().zCoord), predicate).filterNot(ent => ent.isInstanceOf[EntityShip])
 
+  override def tick(): Unit
 
-  override def markBlockForUpdate(pos: BlockPos) = {
-    ChangedBlocks.add(UnifiedPos(pos, OriginPos, IsRelative = true))
-    pushBlockChangesToClient()
-  }
-
-
-  override def tick(): Unit = {
-    if (isRemote) return
-
-    //tickUpdates(false)
-    //updateBlocks()
-    //worldTeleporter.removeStalePortalLocations(this.getTotalWorldTime)
-    //customTeleporters.foreach(tele => tele.removeStalePortalLocations(getTotalWorldTime))
-    this.chunkProvider.unloadQueuedChunks()
-
-    sendQueuedBlockEvents()
-  }
-
-  // TODO: (Potentially?) fix this for large ships, maybe individual blocks at a time
-  def pushBlockChangesToClient(): Unit = {
-    if (!isValid) return
-    if (Ship == null) return
-    if (ChangedBlocks.isEmpty) return
-
-    val message = new BlocksChangedMessage(Ship, ChangedBlocks.map(pos => pos.RelativePos).toArray)
-    val targetPoint = new TargetPoint(OriginWorld.provider.getDimensionId, Ship.getPosition.getX, Ship.getPosition.getY, Ship.getPosition.getZ, 64)
-    FlyingShips.flyingShipPacketHandler.INSTANCE.sendToAllAround(message, targetPoint)
-
-    ChangedBlocks.clear()
-
-  }
 
   override def spawnEntityInWorld(entity: Entity): Boolean = {
     val worldPos = UnifiedVec.convertToWorld(entity.getPositionVector, Ship.getPositionVector)
@@ -209,12 +143,7 @@ class ShipWorld(originWorld: World, ship: EntityShip) extends DetachedWorld(orig
     OriginWorld.spawnEntityInWorld(entity)
   }
 
-  override def setBlockState(pos: BlockPos, newState: IBlockState, flags: Int): Boolean = {
-    if (isRemote) return true
-    if (pos == ShipWorld.ShipBlockPos) return false
-    applyBlockChange(pos, newState, flags)
-
-  }
+  override def setBlockState(pos: BlockPos, newState: IBlockState, flags: Int): Boolean
 
   // Hackish way to get the tile entity the player is interacting with in the onPlayerContainerOpen event
   var wasAccessed = false
@@ -228,42 +157,9 @@ class ShipWorld(originWorld: World, ship: EntityShip) extends DetachedWorld(orig
     te
   }
 
-  def applyBlockChange(pos: BlockPos, newState: IBlockState, flags: Int): Boolean = {
-    val uPos = UnifiedPos(pos, OriginPos, IsRelative = true)
-    val contains = BlocksOnShip.contains(uPos)
-    BlocksOnShip.add(uPos)
-    if (!contains && newState.getBlock != Blocks.air) {
-      Ship.generateBoundingBox()
-    }
-    else if (newState.getBlock == Blocks.air) {
-      BlocksOnShip.remove(uPos)
-      Ship.generateBoundingBox()
-    }
+  def applyBlockChange(pos: BlockPos, newState: IBlockState, flags: Int): Boolean
 
-    val chunk: Chunk = this.getChunkFromBlockCoords(pos)
-    val block: Block = newState.getBlock
-    val oldBlock: Block = getBlockState(pos).getBlock
-    val oldLight: Int = oldBlock.getLightValue(this, pos)
-    val oldOpacity: Int = oldBlock.getLightOpacity(this, pos)
-    val iblockstate: IBlockState = chunk.setBlockState(pos, newState)
-
-    if (iblockstate == null) return false
-    if (block.getLightOpacity(this, pos) != oldOpacity || block.getLightValue(this, pos) != oldLight)
-      this.checkLight(pos)
-
-
-    this.markAndNotifyBlock(pos, chunk, iblockstate, newState, flags)
-    if (!isRemote && (flags & 2) != 0) {
-      ChangedBlocks.add(new UnifiedPos(pos, Ship.getPosition, true))
-      pushBlockChangesToClient()
-    }
-    doRenderUpdate = true
-    true
-  }
-
-  def onShipMove() = {
-    doRenderUpdate = true
-  }
+  def onShipMove(): Unit
 
   // Assumes coordinates are relative to the ship
   override def getClosestPlayer(x: Double, y: Double, z: Double, distance: Double): EntityPlayer = {
@@ -282,39 +178,8 @@ class ShipWorld(originWorld: World, ship: EntityShip) extends DetachedWorld(orig
   }
 
 
-  override def addBlockEvent(pos: BlockPos, block: Block, eventID: Int, eventParam: Int): Unit = {
-    if (isRemote) {
-      block.onBlockEventReceived(this, pos, getBlockState(pos), eventID, eventParam)
-      return
-    }
+  def addBlockEvent(pos: BlockPos, block: Block, eventID: Int, eventParam: Int): Unit
 
-    ServerBlockEventList.add(new BlockEventData(pos, block, eventID, eventParam))
-  }
-
-  // Only used on Server
-  private def sendQueuedBlockEvents() = {
-    ServerBlockEventList.foreach(event => {
-      if (fireBlockEvent(event)) {
-        val message = new BlockActionMessage(event.getPosition, event.getBlock, event.getEventID, event.getEventParameter, Ship.getEntityId)
-        val blockPos = UnifiedPos.convertToWorld(event.getPosition, OriginPos())
-        val targetPoint = new TargetPoint(OriginWorld.provider.getDimensionId, blockPos.getX, blockPos.getY, blockPos.getZ, 64)
-        FlyingShips.flyingShipPacketHandler.INSTANCE.sendToAllAround(message, targetPoint)
-      }
-
-    })
-    ServerBlockEventList.clear()
-
-  }
-
-  // Only used on Server
-  private def fireBlockEvent(event: BlockEventData): Boolean = {
-    val iblockstate: IBlockState = this.getBlockState(event.getPosition)
-
-    if (iblockstate.getBlock == event.getBlock)
-      iblockstate.getBlock.onBlockEventReceived(this, event.getPosition, iblockstate, event.getEventID, event.getEventParameter)
-    else
-      false
-  }
 
   // Ray traces blocks on ship, arguments are non-relative
   // It rotates the look and ray vector against the ship's current rotation so we can use Minecraft's built in world block ray-trace
@@ -403,28 +268,10 @@ class ShipWorld(originWorld: World, ship: EntityShip) extends DetachedWorld(orig
 
   def isValid = BlocksOnShip.nonEmpty
 
-  def needsRenderUpdate() = doRenderUpdate
-
-  def onRenderUpdate() = {
-    doRenderUpdate = false
-  }
-
   override def playSoundEffect(x: Double, y: Double, z: Double, soundName: String, volume: Float, pitch: Float) = {
-    val newVec = UnifiedVec.convertToWorld(new Vec3(x, y, z), ship.getPositionVector)
-
+    val newVec = UnifiedVec.convertToWorld(new Vec3(x, y, z), Ship.getPositionVector)
     OriginWorld.playSoundEffect(newVec.xCoord, newVec.yCoord, newVec.zCoord, soundName, volume, pitch)
   }
-
-  override def playAuxSFXAtEntity(player: EntityPlayer, sfxType: Int, pos: BlockPos, par4: Int) = {
-    val newPos = UnifiedPos.convertToWorld(pos, ship.getPosition)
-    OriginWorld.playAuxSFXAtEntity(player, sfxType, pos, par4)
-  }
-
-  override def spawnParticle(particleType: EnumParticleTypes, x: Double, y: Double, z: Double, xOffset: Double, yOffset: Double, zOffset: Double, par8: Int*) = {
-    val rotatedPos = UnifiedVec.convertToWorld(VectorUtils.rotatePointToShip(new Vec3(x, y, z), Ship), Ship.getPositionVector)
-    OriginWorld.spawnParticle(particleType, rotatedPos.xCoord, rotatedPos.yCoord, rotatedPos.zCoord, xOffset + Ship.motionX, yOffset + Ship.motionY, zOffset + Ship.motionZ, 0)
-  }
-
 
   // Ripped from doVoidFogParticles in World class
   // Todo: Make a less laggy way to do this

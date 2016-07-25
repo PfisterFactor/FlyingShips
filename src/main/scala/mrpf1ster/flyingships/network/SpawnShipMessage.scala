@@ -92,6 +92,7 @@ class ClientSpawnShipHandler extends IMessageHandler[SpawnShipMessage, IMessage]
         return
       }
 
+
       ship.get.ShipWorld.setWorldData(message.BlockData, message.TileEntityData)
 
       ship.get.generateBoundingBox()

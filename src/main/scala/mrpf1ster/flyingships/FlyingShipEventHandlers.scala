@@ -25,8 +25,10 @@ class FlyingShipEventHandlers {
     val ships = ShipLocator.getShips(event.world)
     if (ships.isEmpty) return
     ships.foreach(ship => {
-      ship.ShipWorld.tick()
-      ship.ShipWorld.updateEntities()
+      if (ship.ShipWorld != null) {
+        ship.ShipWorld.tick()
+        ship.ShipWorld.updateEntities()
+      }
     })
 
   }
@@ -40,8 +42,10 @@ class FlyingShipEventHandlers {
     if (event.phase == TickEvent.Phase.START && !Minecraft.getMinecraft.isGamePaused) {
       val playerPos = Minecraft.getMinecraft.thePlayer.getPosition
       ships.foreach(ship => {
-        val relPlayerPos = UnifiedPos.convertToRelative(playerPos,ship.getPosition)
-        ship.ShipWorld.doRandomDisplayTick(relPlayerPos.getX, relPlayerPos.getY, relPlayerPos.getZ)
+        if (ship.ShipWorld != null) {
+          val relPlayerPos = UnifiedPos.convertToRelative(playerPos, ship.getPosition)
+          ship.ShipWorld.doRandomDisplayTick(relPlayerPos.getX, relPlayerPos.getY, relPlayerPos.getZ)
+        }
       })
       return
     }
@@ -54,7 +58,7 @@ class FlyingShipEventHandlers {
         ship.InteractionHandler.ClickSimulator.leftClickCounter -= 1
 
       ship.InteractionHandler.ClickSimulator.sendClickBlockToController(Minecraft.getMinecraft.thePlayer)
-      if (ship.ShipWorld.isValid)
+      if (ship.ShipWorld != null && ship.ShipWorld.isValid)
         ship.ShipWorld.updateEntities()
 
 
@@ -90,7 +94,7 @@ class FlyingShipEventHandlers {
     val ships = ShipLocator.getShips(event.entityPlayer.worldObj)
     ShipWorld.startAccessing()
     event.entityPlayer.openContainer.canInteractWith(event.entityPlayer)
-    ship = ships.find(ent => ent.ShipWorld.wasAccessed)
+    ship = ships.find(ent => ent.ShipWorld != null && ent.ShipWorld.wasAccessed)
     ShipWorld.stopAccessing(event.entityPlayer.worldObj)
 
     if (ship.isEmpty) return
