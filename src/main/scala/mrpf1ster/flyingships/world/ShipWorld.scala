@@ -78,7 +78,7 @@ class ShipWorld(originWorld: World, ship: EntityShip) extends DetachedWorld(orig
   val BiomeID = OriginWorld.getBiomeGenForCoords(OriginPos()).biomeID
 
   // All TileEntities on Ship, mapped with a Unified Pos
-  var TileEntities: mMap[UnifiedPos, TileEntity] = moveTileEntitiesOntoShip
+  var TileEntities: mMap[UnifiedPos, TileEntity] = mMap()
 
   def TickableTileEntities: Map[UnifiedPos, TileEntity] = Map(TileEntities.filter(tuple => tuple._2.isInstanceOf[ITickable]).toSeq: _*)
 
@@ -92,47 +92,46 @@ class ShipWorld(originWorld: World, ship: EntityShip) extends DetachedWorld(orig
   // Only used on Server
   private val ServerBlockEventList = mutable.Set[BlockEventData]()
 
+  def moveBlocks(blockSet: Set[UnifiedPos]): Unit = {
+    def blockIsValid(blockstate: IBlockState): Boolean = blockstate != null && blockstate.getBlock != Blocks.air
+    // Move blocks onto ship
+    blockSet
+      .map(pos => (pos, OriginWorld.getBlockState(pos.WorldPos)))
+      .filter(pair => blockIsValid(pair._2))
+      .foreach(pair => {
+        BlocksOnShip.add(pair._1); applyBlockChange(pair._1.RelativePos, pair._2, 0)
+      })
 
-  def moveBlocksOnShip(blocks: Set[UnifiedPos]) = {
-    blocks.foreach(uPos => {
-      val blockstate = OriginWorld.getBlockState(uPos.WorldPos)
-      if (blockstate != null && blockstate.getBlock != Blocks.air) {
-        BlocksOnShip.add(uPos)
-        setBlockState(uPos.RelativePos, blockstate, 0)
-      }
-    })
-  }
-
-  private def moveTileEntitiesOntoShip: mMap[UnifiedPos, TileEntity] = {
-    if (!isValid)
-      return mMap()
-    mMap(BlocksOnShip
-      .filter(uPos => OriginWorld.getTileEntity(uPos.WorldPos) != null)
-      .map(tileEntityUPos => {
-        val tileEntity = OriginWorld.getTileEntity(tileEntityUPos.WorldPos)
-        var copyTileEntity: TileEntity = null
+    if (!this.isValid) return
+    // Move tile entities onto ship
+    BlocksOnShip
+      .map(uPos => (uPos, OriginWorld.getTileEntity(uPos.WorldPos)))
+      .filter(_._2 != null)
+      .foreach(pair => {
         try {
           val nbt = new NBTTagCompound
-          tileEntity.writeToNBT(nbt)
-          val teOnShip = getTileEntity(tileEntityUPos.RelativePos)
+          pair._2.writeToNBT(nbt)
+          // Check if a tile entity was already created
+          val teOnShip = getTileEntity(pair._1.RelativePos)
           if (teOnShip != null) {
             teOnShip.readFromNBT(nbt)
             teOnShip.validate()
             teOnShip.setWorldObj(this)
+            teOnShip.setPos(pair._1.RelativePos)
           }
           else {
-            copyTileEntity = TileEntity.createAndLoadEntity(nbt)
+            val copyTileEntity = TileEntity.createAndLoadEntity(nbt)
             copyTileEntity.setWorldObj(this)
-            copyTileEntity.setPos(tileEntityUPos.RelativePos)
+            copyTileEntity.setPos(pair._1.RelativePos)
             copyTileEntity.validate()
+            addTileEntity(copyTileEntity)
           }
 
         }
         catch {
-          case ex: Exception => println(s"There was an error moving TileEntity ${tileEntity.getClass.getName} at ${tileEntityUPos.WorldPos}\n$ex") // Error reporting
+          case ex: Exception => println(s"There was an error moving TileEntity ${pair._2.getClass.getName} at ${pair._1.WorldPos}\n$ex") // Error reporting
         }
-        tileEntityUPos -> copyTileEntity // Return our copied to ship tile entity for the map function
-      }).toSeq: _*)
+      })
   }
 
 
@@ -234,6 +233,7 @@ class ShipWorld(originWorld: World, ship: EntityShip) extends DetachedWorld(orig
       wasAccessed = false
     te
   }
+
   def applyBlockChange(pos: BlockPos, newState: IBlockState, flags: Int): Boolean = {
     val uPos = UnifiedPos(pos, OriginPos, true)
     val contains = BlocksOnShip.contains(uPos)

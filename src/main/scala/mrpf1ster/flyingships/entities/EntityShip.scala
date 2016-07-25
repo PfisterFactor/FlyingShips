@@ -52,7 +52,7 @@ class EntityShip(pos: BlockPos, world: World, blockSet: Set[BlockPos]) extends E
 
   // Fake world that holds all the blocks on the ship
   val ShipWorld: ShipWorld = new ShipWorld(world, this)
-  ShipWorld.moveBlocksOnShip(blockSet.map(UnifiedPos(_, getPosition, IsRelative = false)))
+  ShipWorld.moveBlocks(blockSet.map(UnifiedPos(_, getPosition, IsRelative = false)))
 
   // Handles interacting with the ship, (left and right clicking on blocks on the ship)
   // Relevant only on client

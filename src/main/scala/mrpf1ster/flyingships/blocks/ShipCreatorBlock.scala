@@ -12,6 +12,7 @@ import net.minecraft.block.state.{BlockState, IBlockState}
 import net.minecraft.creativetab.CreativeTabs
 import net.minecraft.entity.EntityLivingBase
 import net.minecraft.entity.player.EntityPlayer
+import net.minecraft.init.Blocks
 import net.minecraft.util.{BlockPos, EnumFacing}
 import net.minecraft.world.World
 import net.minecraftforge.fml.common.registry.GameRegistry
@@ -50,11 +51,10 @@ class ShipCreatorBlock extends Block(Material.wood) {
 
       val message = new SpawnShipMessage(shipEntity)
       FlyingShips.flyingShipPacketHandler.INSTANCE.sendToAll(message)
-
       // Destroy all the blocks
       blocksConnected.foreach(pos => {
         worldIn.removeTileEntity(pos)
-        worldIn.setBlockToAir(pos)
+        worldIn.setBlockState(pos, Blocks.air.getDefaultState, 2)
       })
     }
     true
