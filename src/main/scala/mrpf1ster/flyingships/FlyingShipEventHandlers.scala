@@ -21,7 +21,7 @@ class FlyingShipEventHandlers {
   @SubscribeEvent
   def onServerTick(event: TickEvent.WorldTickEvent): Unit = {
     if (event.phase != Phase.START) return
-    ChunkProviderShip.ShipChunkIO.tick
+    ChunkProviderShip.ShipChunkIO.tick()
     val ships = ShipLocator.getShips(event.world)
     if (ships.isEmpty) return
     ships.foreach(ship => {

@@ -21,7 +21,6 @@ import net.minecraft.item.ItemStack
 import net.minecraft.nbt.NBTTagCompound
 import net.minecraft.network.PacketBuffer
 import net.minecraft.tileentity.TileEntity
-import net.minecraft.util.MovingObjectPosition.MovingObjectType
 import net.minecraft.util._
 import net.minecraft.world.chunk.storage.AnvilChunkLoader
 import net.minecraft.world.chunk.{Chunk, IChunkProvider}
@@ -70,17 +69,9 @@ class ShipWorld(originWorld: World, ship: EntityShip) extends DetachedWorld(orig
 
   val BlocksOnShip: mSet[UnifiedPos] = mSet()
 
-  // The Ship Block
-  def ShipBlock = getBlockState(ShipWorld.ShipBlockPos)
-
 
   // TODO: Change this to be the biome directly under the ship
   val BiomeID = OriginWorld.getBiomeGenForCoords(OriginPos()).biomeID
-
-  // All TileEntities on Ship, mapped with a Unified Pos
-  var TileEntities: mMap[UnifiedPos, TileEntity] = mMap()
-
-  def TickableTileEntities: Map[UnifiedPos, TileEntity] = Map(TileEntities.filter(tuple => tuple._2.isInstanceOf[ITickable]).toSeq: _*)
 
   // All HangingEntities on ship, mapped with a Unified Pos
   // #Not implemented#
@@ -91,6 +82,9 @@ class ShipWorld(originWorld: World, ship: EntityShip) extends DetachedWorld(orig
 
   // Only used on Server
   private val ServerBlockEventList = mutable.Set[BlockEventData]()
+
+  // The Ship Block
+  def ShipBlock = getBlockState(ShipWorld.ShipBlockPos)
 
   def moveBlocks(blockSet: Set[UnifiedPos]): Unit = {
     def blockIsValid(blockstate: IBlockState): Boolean = blockstate != null && blockstate.getBlock != Blocks.air
@@ -175,7 +169,7 @@ class ShipWorld(originWorld: World, ship: EntityShip) extends DetachedWorld(orig
 
 
   override def markBlockForUpdate(pos: BlockPos) = {
-    ChangedBlocks.add(UnifiedPos(pos, OriginPos, true))
+    ChangedBlocks.add(UnifiedPos(pos, OriginPos, IsRelative = true))
     pushBlockChangesToClient()
   }
 
@@ -218,12 +212,12 @@ class ShipWorld(originWorld: World, ship: EntityShip) extends DetachedWorld(orig
   override def setBlockState(pos: BlockPos, newState: IBlockState, flags: Int): Boolean = {
     if (isRemote) return true
     if (pos == ShipWorld.ShipBlockPos) return false
-    return applyBlockChange(pos, newState, flags)
+    applyBlockChange(pos, newState, flags)
 
   }
 
+  // Hackish way to get the tile entity the player is interacting with in the onPlayerContainerOpen event
   var wasAccessed = false
-
   override def getTileEntity(pos: BlockPos) = {
     val te = super.getTileEntity(pos)
     if (ShipWorld.doAccessing) {
@@ -235,7 +229,7 @@ class ShipWorld(originWorld: World, ship: EntityShip) extends DetachedWorld(orig
   }
 
   def applyBlockChange(pos: BlockPos, newState: IBlockState, flags: Int): Boolean = {
-    val uPos = UnifiedPos(pos, OriginPos, true)
+    val uPos = UnifiedPos(pos, OriginPos, IsRelative = true)
     val contains = BlocksOnShip.contains(uPos)
     BlocksOnShip.add(uPos)
     if (!contains && newState.getBlock != Blocks.air) {
@@ -246,23 +240,17 @@ class ShipWorld(originWorld: World, ship: EntityShip) extends DetachedWorld(orig
       Ship.generateBoundingBox()
     }
 
-
-
-
     val chunk: Chunk = this.getChunkFromBlockCoords(pos)
     val block: Block = newState.getBlock
     val oldBlock: Block = getBlockState(pos).getBlock
     val oldLight: Int = oldBlock.getLightValue(this, pos)
     val oldOpacity: Int = oldBlock.getLightOpacity(this, pos)
     val iblockstate: IBlockState = chunk.setBlockState(pos, newState)
-    if (iblockstate == null)
-      return false
 
-    val block1: Block = iblockstate.getBlock
-
-    if (block.getLightOpacity(this, pos) != oldOpacity || block.getLightValue(this, pos) != oldLight) {
+    if (iblockstate == null) return false
+    if (block.getLightOpacity(this, pos) != oldOpacity || block.getLightValue(this, pos) != oldLight)
       this.checkLight(pos)
-    }
+
 
     this.markAndNotifyBlock(pos, chunk, iblockstate, newState, flags)
     if (!isRemote && (flags & 2) != 0) {
@@ -270,7 +258,7 @@ class ShipWorld(originWorld: World, ship: EntityShip) extends DetachedWorld(orig
       pushBlockChangesToClient()
     }
     doRenderUpdate = true
-    return true
+    true
   }
 
   def onShipMove() = {
@@ -330,7 +318,7 @@ class ShipWorld(originWorld: World, ship: EntityShip) extends DetachedWorld(orig
 
   // Ray traces blocks on ship, arguments are non-relative
   // It rotates the look and ray vector against the ship's current rotation so we can use Minecraft's built in world block ray-trace
-  def rotatedRayTrace(start: Vec3, end: Vec3): Option[MovingObjectPosition] = {
+  override def rayTraceBlocks(start: Vec3, end: Vec3): MovingObjectPosition = {
 
     val relativeStart = UnifiedVec.convertToRelative(start, Ship.getPositionVector)
     val relativeEnd = UnifiedVec.convertToRelative(end, Ship.getPositionVector)
@@ -339,14 +327,9 @@ class ShipWorld(originWorld: World, ship: EntityShip) extends DetachedWorld(orig
     val rotatedStart = VectorUtils.rotatePointFromShip(relativeStart, Ship)
     val rotatedEnd = VectorUtils.rotatePointFromShip(relativeEnd, Ship)
 
+
     // The result of the ray-trace on the ship world
-    val rayTrace = Ship.ShipWorld.rayTraceBlocks(rotatedStart, rotatedEnd)
-
-    if (rayTrace != null && rayTrace.typeOfHit == MovingObjectType.BLOCK)
-      Some(rayTrace)
-    else
-      None
-
+    return super.rayTraceBlocks(rotatedStart, rotatedEnd)
   }
 
   def getWorldData: (Array[Byte], Array[Byte]) = {
@@ -373,10 +356,8 @@ class ShipWorld(originWorld: World, ship: EntityShip) extends DetachedWorld(orig
     // Tile Entities
     val buffer = new PacketBuffer(Unpooled.buffer())
 
-    buffer.writeInt(TileEntities.size)
-    TileEntities.foreach(pair => {
-      def uPos = pair._1
-      def te = pair._2
+    buffer.writeInt(loadedTileEntityList.size)
+    loadedTileEntityList.foreach(te => {
       val nbt = new NBTTagCompound()
       te.writeToNBT(nbt)
       buffer.writeNBTTagCompoundToBuffer(nbt)
@@ -397,17 +378,17 @@ class ShipWorld(originWorld: World, ship: EntityShip) extends DetachedWorld(orig
 
     // BlockPos
     val blockpositions = new Array[UnifiedPos](mapLength)
+
     for (i: Int <- 0 until mapLength)
       blockpositions(i) = UnifiedPos(BlockPos.fromLong(in.readLong()), OriginPos, IsRelative = true)
 
-    // Block Storage
-    val blockstorages = new Array[BlockStorage](mapLength)
+    val blockstates: Array[IBlockState] = new Array(mapLength)
     //noinspection ScalaDeprecation
     for (i <- 0 until mapLength)
-      blockstorages(i) = new BlockStorage(Block.BLOCK_STATE_IDS.getByValue(in.readInt()))
+      blockstates(i) = Block.BLOCK_STATE_IDS.getByValue(in.readInt())
 
     in.close()
-    (0 until mapLength).foreach(i => applyBlockChange(blockpositions(i).RelativePos, blockstorages(i).BlockState, 3))
+    (0 until mapLength).foreach(i => applyBlockChange(blockpositions(i).RelativePos, blockstates(i), 3))
 
     val buffer = new PacketBuffer(Unpooled.copiedBuffer(tileEntData))
 
@@ -416,13 +397,13 @@ class ShipWorld(originWorld: World, ship: EntityShip) extends DetachedWorld(orig
     for (i <- 0 until teSize)
       tileentities(i) = TileEntity.createAndLoadEntity(buffer.readNBTTagCompoundFromBuffer())
 
-    // Map tile entity positions to UnifiedPositions and then zip it with the tile entities array
-    TileEntities = mMap(tileentities.map(te => UnifiedPos(te.getPos, OriginPos, IsRelative = true)).zip(tileentities).toSeq: _*)
+    // Load in tile entities
+    tileentities.foreach(loadedTileEntityList.add)
   }
 
   def isValid = BlocksOnShip.nonEmpty
 
-  def needsRenderUpdate() = doRenderUpdate // debug
+  def needsRenderUpdate() = doRenderUpdate
 
   def onRenderUpdate() = {
     doRenderUpdate = false
@@ -446,6 +427,7 @@ class ShipWorld(originWorld: World, ship: EntityShip) extends DetachedWorld(orig
 
 
   // Ripped from doVoidFogParticles in World class
+  // Todo: Make a less laggy way to do this
   @SideOnly(Side.CLIENT)
   def doRandomDisplayTick(posX: Int, posY: Int, posZ: Int) = {
     val i: Int = 16

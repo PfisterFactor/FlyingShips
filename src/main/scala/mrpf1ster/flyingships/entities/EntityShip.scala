@@ -102,7 +102,7 @@ class EntityShip(pos: BlockPos, world: World, blockSet: Set[BlockPos]) extends E
 
   }
 
-  private def debugDoRotate = {
+  private def debugDoRotate() = {
     val deg15 = new Quat4f(0, 0, 0.94f, 0.94f)
     deg15.mul(Rotation, deg15)
     val newRot = Rotation.clone().asInstanceOf[Quat4f]
@@ -135,7 +135,7 @@ class EntityShip(pos: BlockPos, world: World, blockSet: Set[BlockPos]) extends E
     if (ShipWorld.isRemote)
       updateRotationFromServer()
     else {
-      debugDoRotate
+      debugDoRotate()
       moveEntity(motionX, motionY, motionZ)
     }
 

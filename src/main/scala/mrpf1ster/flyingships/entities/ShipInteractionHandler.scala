@@ -51,12 +51,16 @@ case class ShipInteractionHandler(ShipWorld: ShipWorld) {
     val ray: Vec3 = eyePos.addVector(lookVector.xCoord * blockReachDistance, lookVector.yCoord * blockReachDistance, lookVector.zCoord * blockReachDistance)
 
 
-    ShipWorld.rotatedRayTrace(eyePos,ray)
+    val mop = ShipWorld.rayTraceBlocks(eyePos, ray)
+
+    if (mop != null && mop.typeOfHit == MovingObjectType.BLOCK)
+      Some(mop)
+    else
+      None
 
   }
 
   // Ship Right click is trigger when the entity is interacted with
-  // Ship Left click is triggered when the player left clicks due to atta
   // This executes on client only
   def onShipRightClick(player: EntityPlayer): Boolean = {
     val hitInfo = getBlockPlayerIsLookingAt(1.0f)

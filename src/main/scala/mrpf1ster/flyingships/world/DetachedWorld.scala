@@ -14,7 +14,7 @@ import net.minecraftforge.fml.relauncher.{Side, SideOnly}
 
 
 class DetachedWorld(OriginWorld: World, WorldName: String, uuid: UUID)
-  extends World(new AnvilSaveHandler(new File(OriginWorld.getSaveHandler.getWorldDirectory, "ShipWorlds"), s"${uuid}", false), OriginWorld.getWorldInfo, OriginWorld.provider, new Profiler(), OriginWorld.isRemote) {
+  extends World(new AnvilSaveHandler(new File(OriginWorld.getSaveHandler.getWorldDirectory, "ShipWorlds"), s"$uuid", false), OriginWorld.getWorldInfo, OriginWorld.provider, new Profiler(), OriginWorld.isRemote) {
   val UUID = uuid
   //worldAccesses = OriginWorld.worldAccesses
 

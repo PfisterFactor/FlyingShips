@@ -127,12 +127,12 @@ class ClickSimulator(shipWorld: ShipWorld) {
 
       shipWorld.Ship.InteractionHandler.sendBlockDiggingMessage(C07PacketPlayerDigging.Action.START_DESTROY_BLOCK, pos, side)
       val block1: Block = shipWorld.getBlockState(pos).getBlock
-      val blockIsntAir: Boolean = block1.getMaterial != Material.air
+      val blockIsNotAir: Boolean = block1.getMaterial != Material.air
 
-      if (blockIsntAir && this.curBlockDamageMP == 0.0F)
+      if (blockIsNotAir && this.curBlockDamageMP == 0.0F)
         block1.onBlockClicked(shipWorld, pos, Minecraft.getMinecraft.thePlayer)
 
-      if (blockIsntAir && block1.getPlayerRelativeBlockHardness(Minecraft.getMinecraft.thePlayer, shipWorld, pos) >= 1.0F) {
+      if (blockIsNotAir && block1.getPlayerRelativeBlockHardness(Minecraft.getMinecraft.thePlayer, shipWorld, pos) >= 1.0F) {
         this.onPlayerDestroyBlock(player, pos, side)
       }
       else {
