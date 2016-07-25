@@ -1,10 +1,12 @@
 package mrpf1ster.flyingships
 
 import mrpf1ster.flyingships.entities.EntityShip
+import mrpf1ster.flyingships.network.ClientSpawnShipHandler
 import mrpf1ster.flyingships.util.{ShipLocator, UnifiedPos}
 import mrpf1ster.flyingships.world.chunk.ChunkProviderShip
 import mrpf1ster.flyingships.world.{PlayerRelative, ShipWorld}
 import net.minecraft.client.Minecraft
+import net.minecraftforge.event.entity.EntityJoinWorldEvent
 import net.minecraftforge.event.entity.player.PlayerOpenContainerEvent
 import net.minecraftforge.fml.common.eventhandler.Event.Result
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent
@@ -104,5 +106,12 @@ class FlyingShipEventHandlers {
       event.setResult(Result.ALLOW)
     else
       event.setResult(Result.DEFAULT)
+  }
+
+  @SideOnly(Side.CLIENT)
+  @SubscribeEvent
+  def spawnShipEvent(event: EntityJoinWorldEvent): Unit = {
+    if (!event.entity.isInstanceOf[EntityShip]) return
+    ClientSpawnShipHandler.onShipSpawn(event.entity.getEntityId)
   }
 }
