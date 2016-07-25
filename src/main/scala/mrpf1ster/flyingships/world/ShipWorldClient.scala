@@ -10,15 +10,14 @@ import net.minecraft.init.Blocks
 import net.minecraft.util.BlockPos
 import net.minecraft.world.World
 import net.minecraft.world.chunk.{Chunk, IChunkProvider}
-import net.minecraftforge.fml.relauncher.{Side, SideOnly}
 
 /**
   * Created by ej on 7/25/16.
   */
-@SideOnly(Side.CLIENT)
 class ShipWorldClient(originWorld: World, ship: EntityShip) extends ShipWorld(originWorld, ship) {
   var doRenderUpdate = false
-  addWorldAccess(new ShipRenderGlobal(this))
+  val ShipRenderGlobal = new ShipRenderGlobal(this)
+  addWorldAccess(ShipRenderGlobal)
 
   override def createChunkProvider(): IChunkProvider = new ClientChunkProviderShip(this)
 

@@ -18,6 +18,7 @@ import scala.collection.mutable
 /**
   * Created by ej on 7/25/16.
   */
+
 case class ShipRenderGlobal(shipWorld: ShipWorldClient) extends IWorldAccess {
   val DamagedBlocks: mutable.Map[Int, DestroyBlockProgress] = mutable.Map()
 

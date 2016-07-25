@@ -80,7 +80,6 @@ object ClientSpawnShipHandler {
     val message = spawnQueue.get(shipID)
     if (message.isDefined) {
       Minecraft.getMinecraft.addScheduledTask(new SpawnShipMessageTask(message.get, null, spawnQueue))
-      println("taken out of spawnqueue")
     }
 
 
@@ -114,7 +113,6 @@ class SpawnShipMessageTask(message: SpawnShipMessage, ctx: MessageContext, spawn
       }
       else {
         SpawnQueue.put(message.ShipID, message)
-        println("put into spawnqueue")
       }
 
       return
