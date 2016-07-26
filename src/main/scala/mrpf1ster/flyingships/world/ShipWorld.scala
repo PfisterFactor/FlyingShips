@@ -67,14 +67,30 @@ abstract class ShipWorld(originWorld: World, ship: EntityShip, uUID: UUID) exten
   def ShipBlock = getBlockState(ShipWorld.ShipBlockPos)
 
   def moveBlocks(blockSet: Set[UnifiedPos]): Unit = {
-    def blockIsValid(blockstate: IBlockState): Boolean = blockstate != null && blockstate.getBlock != Blocks.air
+    def blockIsValid(uPos: UnifiedPos): Boolean = {
+      val blockstate = OriginWorld.getBlockState(uPos.WorldPos)
+      blockstate != null && blockstate.getBlock != Blocks.air
+    }
+    def blockIsFullCube(uPos: UnifiedPos) = OriginWorld.getBlockState(uPos.WorldPos).getBlock.isFullCube
+
     // Move blocks onto ship
-    blockSet
-      .map(pos => (pos, OriginWorld.getBlockState(pos.WorldPos)))
-      .filter(pair => blockIsValid(pair._2))
-      .foreach(pair => {
-        BlocksOnShip.add(pair._1); applyBlockChange(pair._1.RelativePos, pair._2, 0)
-      })
+    // First the solid blocks, then everything else
+    // So torches and blocks that depend on other blocks get set correctly
+    // Todo: Clean this up and implement a hierarchy for blocks
+    val filteredSet = blockSet.filter(blockIsValid)
+    val firstBlocks = filteredSet.filter(blockIsFullCube)
+    val everythingElse = filteredSet -- firstBlocks
+
+    firstBlocks.foreach(uPos => {
+      val bs = OriginWorld.getBlockState(uPos.WorldPos)
+      BlocksOnShip.add(uPos)
+      applyBlockChange(uPos.RelativePos, bs, 0)
+    })
+    everythingElse.foreach(uPos => {
+      val bs = OriginWorld.getBlockState(uPos.WorldPos)
+      BlocksOnShip.add(uPos)
+      applyBlockChange(uPos.RelativePos, bs, 0)
+    })
 
     if (!this.isValid) return
     // Move tile entities onto ship

@@ -67,7 +67,6 @@ class EntityShip(pos: BlockPos, world: World, blockSet: Set[BlockPos]) extends E
     InteractionHandler = new ShipInteractionHandler(Shipworld)
   }
   override def writeEntityToNBT(tagCompound: NBTTagCompound): Unit = {
-
     // Quaternion Rotation
     updateRotationFromServer()
     tagCompound.setFloat("RotX", Rotation.getX)
@@ -110,11 +109,8 @@ class EntityShip(pos: BlockPos, world: World, blockSet: Set[BlockPos]) extends E
 
   override def setDead() = {
     super.setDead()
-    if (Shipworld != null && !Shipworld.isRemote) {
+    if (Shipworld != null && !Shipworld.isRemote)
       Path(Shipworld.getSaveHandler.getWorldDirectory.getPath).deleteRecursively()
-    }
-
-
   }
 
   private def debugDoRotate() = {
