@@ -1,11 +1,12 @@
 package mrpf1ster.flyingships
 
 import mrpf1ster.flyingships.entities.EntityShip
-import mrpf1ster.flyingships.network.ClientSpawnShipHandler
+import mrpf1ster.flyingships.network.{ClientSpawnShipHandler, SpawnShipMessage}
 import mrpf1ster.flyingships.util.{ShipLocator, UnifiedPos}
 import mrpf1ster.flyingships.world.chunk.ChunkProviderShip
 import mrpf1ster.flyingships.world.{PlayerRelative, ShipWorld}
 import net.minecraft.client.Minecraft
+import net.minecraft.entity.player.EntityPlayerMP
 import net.minecraftforge.event.entity.EntityJoinWorldEvent
 import net.minecraftforge.event.entity.player.PlayerOpenContainerEvent
 import net.minecraftforge.fml.common.eventhandler.Event.Result
@@ -27,9 +28,9 @@ class FlyingShipEventHandlers {
     val ships = ShipLocator.getShips(event.world)
     if (ships.isEmpty) return
     ships.foreach(ship => {
-      if (ship.ShipWorld != null) {
-        ship.ShipWorld.tick()
-        ship.ShipWorld.updateEntities()
+      if (ship.Shipworld != null) {
+        ship.Shipworld.tick()
+        ship.Shipworld.updateEntities()
       }
     })
 
@@ -44,9 +45,9 @@ class FlyingShipEventHandlers {
     if (event.phase == TickEvent.Phase.START && !Minecraft.getMinecraft.isGamePaused) {
       val playerPos = Minecraft.getMinecraft.thePlayer.getPosition
       ships.foreach(ship => {
-        if (ship.ShipWorld != null) {
+        if (ship.Shipworld != null) {
           val relPlayerPos = UnifiedPos.convertToRelative(playerPos, ship.getPosition)
-          ship.ShipWorld.doRandomDisplayTick(relPlayerPos.getX, relPlayerPos.getY, relPlayerPos.getZ)
+          ship.Shipworld.doRandomDisplayTick(relPlayerPos.getX, relPlayerPos.getY, relPlayerPos.getZ)
         }
       })
       return
@@ -60,8 +61,8 @@ class FlyingShipEventHandlers {
         ship.InteractionHandler.ClickSimulator.leftClickCounter -= 1
 
       ship.InteractionHandler.ClickSimulator.sendClickBlockToController(Minecraft.getMinecraft.thePlayer)
-      if (ship.ShipWorld != null && ship.ShipWorld.isValid)
-        ship.ShipWorld.updateEntities()
+      if (ship.Shipworld != null && ship.Shipworld.isValid)
+        ship.Shipworld.updateEntities()
 
 
     })
@@ -96,22 +97,35 @@ class FlyingShipEventHandlers {
     val ships = ShipLocator.getShips(event.entityPlayer.worldObj)
     ShipWorld.startAccessing()
     event.entityPlayer.openContainer.canInteractWith(event.entityPlayer)
-    ship = ships.find(ent => ent.ShipWorld != null && ent.ShipWorld.wasAccessed)
+    ship = ships.find(ent => ent.Shipworld != null && ent.Shipworld.wasAccessed)
     ShipWorld.stopAccessing(event.entityPlayer.worldObj)
 
     if (ship.isEmpty) return
 
-    val interactWith = event.entityPlayer.openContainer.canInteractWith(PlayerRelative(event.entityPlayer, ship.get.ShipWorld))
+    val interactWith = event.entityPlayer.openContainer.canInteractWith(PlayerRelative(event.entityPlayer, ship.get.Shipworld))
     if (interactWith)
       event.setResult(Result.ALLOW)
     else
       event.setResult(Result.DEFAULT)
   }
 
-  @SideOnly(Side.CLIENT)
-  @SubscribeEvent
-  def spawnShipEvent(event: EntityJoinWorldEvent): Unit = {
-    if (!event.entity.isInstanceOf[EntityShip]) return
-    ClientSpawnShipHandler.onShipSpawn(event.entity.getEntityId)
+  private def sendAllShipsToClient(playerMP: EntityPlayerMP) = {
+    def sendShipToClient(ship: EntityShip) = FlyingShips.flyingShipPacketHandler.INSTANCE.sendTo(new SpawnShipMessage(ship), playerMP)
+
+    ShipLocator.getShips(playerMP.worldObj).foreach(sendShipToClient)
   }
+
+  private def sendShipToAllClients(ship: EntityShip) = {
+    val message = new SpawnShipMessage(ship)
+    FlyingShips.flyingShipPacketHandler.INSTANCE.sendToAll(message)
+  }
+
+  @SubscribeEvent
+  def onEntitySpawn(event: EntityJoinWorldEvent): Unit = event.entity match {
+    case playerMP: EntityPlayerMP => sendAllShipsToClient(playerMP)
+    case ship: EntityShip if ship.worldObj.isRemote => ClientSpawnShipHandler.onShipSpawn(ship.getEntityId)
+    case ship: EntityShip if !ship.worldObj.isRemote => sendShipToAllClients(ship)
+    case _ =>
+  }
+
 }

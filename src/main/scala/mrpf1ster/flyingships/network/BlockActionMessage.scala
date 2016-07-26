@@ -71,7 +71,7 @@ class ClientBlockActionMessageHandler extends IMessageHandler[BlockActionMessage
         println(s"Empty ship in block action message task, ID: ${message.ShipID}!")
         return
       }
-      ship.get.ShipWorld.addBlockEvent(message.BlockPosition, message.BlockOf, message.Data1, message.Data2)
+      ship.get.Shipworld.addBlockEvent(message.BlockPosition, message.BlockOf, message.Data1, message.Data2)
     }
   }
 

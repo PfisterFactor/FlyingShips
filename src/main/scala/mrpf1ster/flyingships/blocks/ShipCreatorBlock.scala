@@ -2,8 +2,7 @@ package mrpf1ster.flyingships.blocks
 
 import mrpf1ster.flyingships.FlyingShips
 import mrpf1ster.flyingships.entities.EntityShip
-import mrpf1ster.flyingships.network.SpawnShipMessage
-import mrpf1ster.flyingships.util.BlockUtils
+import mrpf1ster.flyingships.util.{BlockUtils, UnifiedPos}
 import mrpf1ster.flyingships.world.ShipWorld
 import net.minecraft.block.Block
 import net.minecraft.block.material.Material
@@ -41,11 +40,11 @@ class ShipCreatorBlock extends Block(Material.wood) {
     if (blocksConnected.size > 1) {
       val shipEntity = new EntityShip(pos, worldIn, blocksConnected)
       shipEntity.setLocationAndAngles(pos.getX,pos.getY,pos.getZ,0,0)
+      shipEntity.createShipWorld()
+      shipEntity.Shipworld.moveBlocks(blocksConnected.map(UnifiedPos(_, shipEntity.Shipworld.OriginPos, IsRelative = false)))
 
       worldIn.spawnEntityInWorld(shipEntity)
 
-      val message = new SpawnShipMessage(shipEntity)
-      FlyingShips.flyingShipPacketHandler.INSTANCE.sendToAll(message)
       // Destroy all the blocks
       blocksConnected.foreach(pos => {
         worldIn.removeTileEntity(pos)

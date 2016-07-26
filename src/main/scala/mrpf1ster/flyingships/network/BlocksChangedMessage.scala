@@ -20,10 +20,10 @@ class BlocksChangedMessage(ship: EntityShip, changedBlocks: Array[BlockPos]) ext
 
   var ShipID = if (ship != null) ship.getEntityId else -1
   var ChangedBlocks = changedBlocks
-  var BlockStates: Array[IBlockState] = if (ship != null) ChangedBlocks.map(pos => ship.ShipWorld.getBlockState(pos)) else Array()
+  var BlockStates: Array[IBlockState] = if (ship != null) ChangedBlocks.map(pos => ship.Shipworld.getBlockState(pos)) else Array()
   var NumChangedBlocks = ChangedBlocks.length
   var ChangedTileEntitiesNBT: Array[NBTTagCompound] = if (ship != null)
-    changedBlocks.map(pos => Option(ship.ShipWorld.getTileEntity(pos))).filter(opt => opt.isDefined).map(opt => opt.get).map(te => {
+    changedBlocks.map(pos => Option(ship.Shipworld.getTileEntity(pos))).filter(opt => opt.isDefined).map(opt => opt.get).map(te => {
       val nbt = new NBTTagCompound()
       te.writeToNBT(nbt)
       nbt
@@ -118,9 +118,9 @@ class ClientBlocksChangedMessageHandler extends IMessageHandler[BlocksChangedMes
 
       for (i <- 0 until Message.NumChangedBlocks) {
         //Ship.get.ShipWorld.applyBlockChange(Message.ChangedBlocks(i), Message.BlockStates(i), 3)
-        val blockstate = Ship.get.ShipWorld.getBlockState(Message.ChangedBlocks(i))
+        val blockstate = Ship.get.Shipworld.getBlockState(Message.ChangedBlocks(i))
         if (blockstate != Message.BlockStates(i)) {
-          Ship.get.ShipWorld.applyBlockChange(Message.ChangedBlocks(i), Message.BlockStates(i), 3)
+          Ship.get.Shipworld.applyBlockChange(Message.ChangedBlocks(i), Message.BlockStates(i), 3)
         }
 
       }
@@ -128,13 +128,13 @@ class ClientBlocksChangedMessageHandler extends IMessageHandler[BlocksChangedMes
 
       message.ChangedTileEntitiesNBT.foreach(nbt => {
         val te = TileEntity.createAndLoadEntity(nbt)
-        te.setWorldObj(Ship.get.ShipWorld)
+        te.setWorldObj(Ship.get.Shipworld)
         te.validate()
-        val teOnShip = Ship.get.ShipWorld.getTileEntity(te.getPos)
+        val teOnShip = Ship.get.Shipworld.getTileEntity(te.getPos)
         if (teOnShip != null)
           teOnShip.readFromNBT(nbt)
         else
-          Ship.get.ShipWorld.addTileEntity(te)
+          Ship.get.Shipworld.addTileEntity(te)
       })
     }
   }

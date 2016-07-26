@@ -21,7 +21,6 @@ import net.minecraft.network.PacketBuffer
 import net.minecraft.tileentity.TileEntity
 import net.minecraft.util._
 import net.minecraft.world.chunk.IChunkProvider
-import net.minecraft.world.chunk.storage.AnvilChunkLoader
 import net.minecraft.world.{IInteractionObject, World, WorldSettings}
 import net.minecraftforge.fml.relauncher.{Side, SideOnly}
 
@@ -45,11 +44,11 @@ object ShipWorld {
 
   def stopAccessing(world: World): Unit = {
     doAccessing = false
-    ShipLocator.getShips(world).foreach(ent => if (ent.ShipWorld != null) ent.ShipWorld.wasAccessed = false)
+    ShipLocator.getShips(world).foreach(ent => if (ent.Shipworld != null) ent.Shipworld.wasAccessed = false)
   }
 }
 
-abstract class ShipWorld(originWorld: World, ship: EntityShip) extends DetachedWorld(originWorld, "Ship", UUID.randomUUID()) {
+abstract class ShipWorld(originWorld: World, ship: EntityShip, uUID: UUID) extends DetachedWorld(originWorld, "Ship", uUID) {
   val OriginWorld = originWorld
   val Ship = ship
   // The coordinates of the ship block in the origin world. Conveniently the EntityShip's position
@@ -59,7 +58,7 @@ abstract class ShipWorld(originWorld: World, ship: EntityShip) extends DetachedW
 
   chunkProvider = createChunkProvider()
 
-  val BlocksOnShip: mSet[UnifiedPos] = mSet()
+  var BlocksOnShip: mSet[UnifiedPos] = mSet()
 
   // TODO: Change this to be the biome directly under the ship
   val BiomeID = OriginWorld.getBiomeGenForCoords(OriginPos()).biomeID
@@ -109,10 +108,7 @@ abstract class ShipWorld(originWorld: World, ship: EntityShip) extends DetachedW
       })
   }
 
-  override def createChunkProvider(): IChunkProvider = {
-    val anvilLoader = new AnvilChunkLoader(saveHandler.getWorldDirectory)
-    new ChunkProviderShip(this, anvilLoader)
-  }
+  override def createChunkProvider(): IChunkProvider
 
   override def getProviderName: String = chunkProvider.makeString()
 
@@ -270,7 +266,7 @@ abstract class ShipWorld(originWorld: World, ship: EntityShip) extends DetachedW
     tileentities.foreach(loadedTileEntityList.add)
   }
 
-  def isValid = BlocksOnShip.nonEmpty
+  def isValid = BlocksOnShip.nonEmpty && chunkProvider.asInstanceOf[ChunkProviderShip].ChunkMap.size != 0
 
   override def playSoundEffect(x: Double, y: Double, z: Double, soundName: String, volume: Float, pitch: Float) = {
     val newVec = UnifiedVec.convertToWorld(new Vec3(x, y, z), Ship.getPositionVector)

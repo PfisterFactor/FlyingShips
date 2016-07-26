@@ -3,9 +3,14 @@ package mrpf1ster.flyingships.network
 import io.netty.buffer.ByteBuf
 import mrpf1ster.flyingships.entities.EntityShip
 import mrpf1ster.flyingships.network.ClientSpawnShipHandler.SpawnQueue
-import mrpf1ster.flyingships.util.ShipLocator
+import mrpf1ster.flyingships.util.{ShipLocator, UnifiedPos}
+import mrpf1ster.flyingships.world.ShipWorldClient
+import mrpf1ster.flyingships.world.chunk.ChunkProviderShip
 import net.minecraft.client.Minecraft
+import net.minecraft.network.play.server.S21PacketChunkData
 import net.minecraft.util.BlockPos
+import net.minecraft.world.ChunkCoordIntPair
+import net.minecraft.world.chunk.Chunk
 import net.minecraftforge.fml.common.network.simpleimpl.{IMessage, IMessageHandler, MessageContext}
 
 import scala.collection.mutable
@@ -14,13 +19,16 @@ import scala.collection.mutable
   * Created by EJ on 7/1/2016.
   */
 class SpawnShipMessage(ship: EntityShip) extends IMessage {
-  private val shipdata = if (ship != null) ship.ShipWorld.getWorldData else (Array[Byte](), Array[Byte]())
+
   var ShipID = if (ship != null) ship.getEntityId else -1
-  var Position: BlockPos = if (ship != null) ship.getPosition else new BlockPos(-1, -1, -1)
-  var BlockData: Array[Byte] = if (ship != null) shipdata._1 else Array()
-  var BlockLength: Int = BlockData.length
-  var TileEntityData: Array[Byte] = if (ship != null) shipdata._2 else Array()
-  var TileEntityLength: Int = TileEntityData.length
+
+  private val chunksToSave: mutable.Map[ChunkCoordIntPair, S21PacketChunkData.Extracted] = if (ship != null) ship.Shipworld.getChunkProvider.asInstanceOf[ChunkProviderShip].ChunkMap.map(pair => (pair._1, S21PacketChunkData.func_179756_a(pair._2, true, true, 65535))).filter(p => p._2.dataSize > 0) else mutable.Map()
+  var ChunkLength: Int = chunksToSave.size
+  var ChunkCoords: Array[ChunkCoordIntPair] = chunksToSave.keys.toArray
+  var ChunkData: Array[S21PacketChunkData.Extracted] = chunksToSave.values.toArray
+  var BlockPosLength: Int = if (ship != null) ship.Shipworld.BlocksOnShip.size else -1
+  var Blockpos: Set[BlockPos] = if (ship != null) ship.Shipworld.BlocksOnShip.map(pos => pos.RelativePos).toSet else Set()
+
 
   def this() = this(null)
 
@@ -28,21 +36,25 @@ class SpawnShipMessage(ship: EntityShip) extends IMessage {
     // ShipID
     buf.writeInt(ShipID)
 
-    // Ship Position
-    buf.writeLong(Position.toLong)
+    // Chunk Length
+    buf.writeInt(ChunkLength)
 
-    // Block Data Length
-    buf.writeInt(BlockLength)
+    // Chunk Coords
+    ChunkCoords.foreach(pair => {
+      buf.writeInt(pair.chunkXPos); buf.writeInt(pair.chunkZPos)
+    })
 
-    // Block Data
-    buf.writeBytes(BlockData)
+    // Chunk Data
+    ChunkData.foreach(data => {
+      buf.writeShort(data.dataSize & 65535)
+      buf.writeBytes(data.data)
+    })
 
-    // Tile Entity Data Length
-    buf.writeInt(TileEntityLength)
+    // BlockPosLength
+    buf.writeInt(BlockPosLength)
 
-    // Tile Entity Data
-    buf.writeBytes(TileEntityData)
-
+    // Blockpos
+    Blockpos.foreach(pos => buf.writeLong(pos.toLong))
 
   }
 
@@ -50,23 +62,37 @@ class SpawnShipMessage(ship: EntityShip) extends IMessage {
     // Ship ID
     ShipID = buf.readInt()
 
-    // Ship Position
-    Position = BlockPos.fromLong(buf.readLong())
+    // Chunk Length
+    ChunkLength = buf.readInt()
 
-    // Block Data Length
-    BlockLength = buf.readInt()
+    // Chunk Coords
+    ChunkCoords = (0 until ChunkLength).map(x => new ChunkCoordIntPair(buf.readInt(), buf.readInt())).toArray
 
-    // Block Data
-    BlockData = new Array[Byte](BlockLength)
-    buf.readBytes(BlockData)
+    // Chunk Data
+    ChunkData = Array.fill(ChunkLength)(new S21PacketChunkData.Extracted())
+    ChunkData.foreach(data => {
+      data.dataSize = buf.readShort() & 65535
+      data.data = new Array[Byte](func_180737_a(Integer.bitCount(data.dataSize), true, true));
+      buf.readBytes(data.data)
+    })
 
-    // Tile Entity Data Length
-    TileEntityLength = buf.readInt()
+    // BlockPosLength
+    BlockPosLength = buf.readInt()
 
-    // Tile Entity Data
-    TileEntityData = new Array[Byte](TileEntityLength)
-    buf.readBytes(TileEntityData)
+    // BlockPos
+    Blockpos = (0 until BlockPosLength).map(i => BlockPos.fromLong(buf.readLong())).toSet
 
+
+  }
+
+  protected def func_180737_a(par1: Int, par2: Boolean, par3: Boolean): Int = {
+    val i: Int = par1 * 2 * 16 * 16 * 16
+    val j: Int = par1 * 16 * 16 * 16 / 2
+    val k: Int = if (par2) par1 * 16 * 16 * 16 / 2
+    else 0
+    val l: Int = if (par3) 256
+    else 0
+    return i + j + k + l
   }
 }
 
@@ -79,6 +105,7 @@ object ClientSpawnShipHandler {
   def onShipSpawn(shipID: Int) = {
     val message = spawnQueue.get(shipID)
     if (message.isDefined) {
+      spawnQueue.remove(shipID)
       Minecraft.getMinecraft.addScheduledTask(new SpawnShipMessageTask(message.get, null, spawnQueue))
     }
 
@@ -105,6 +132,8 @@ class SpawnShipMessageTask(message: SpawnShipMessage, ctx: MessageContext, spawn
 
     val ship = ShipLocator.getShip(player.worldObj, message.ShipID)
 
+
+
     if (ship.isEmpty) {
       // This packet got received before the vanilla entity spawn packet. So we add it to a map and wait for the packet to be received
       if (SpawnQueue.contains(message.ShipID)) {
@@ -117,9 +146,20 @@ class SpawnShipMessageTask(message: SpawnShipMessage, ctx: MessageContext, spawn
 
       return
     }
+    ship.get.createShipWorld()
 
+    val shipWorld = ship.get.Shipworld.asInstanceOf[ShipWorldClient]
 
-    ship.get.ShipWorld.setWorldData(message.BlockData, message.TileEntityData)
+    val chunks: Array[Chunk] = message.ChunkCoords.map(coord => shipWorld.getChunkFromChunkCoords(coord.chunkXPos, coord.chunkZPos))
+    chunks.zip(message.ChunkData).foreach(pair => pair._1.fillChunk(pair._2.data, pair._2.dataSize, true))
+
+    shipWorld.BlocksOnShip = mutable.Set(message.Blockpos.map(UnifiedPos(_, shipWorld.OriginPos, IsRelative = true)).toSeq: _*)
+
+    shipWorld.BlocksOnShip.foreach(pos => {
+      val te = shipWorld.getTileEntity(pos.RelativePos)
+      if (te != null)
+        shipWorld.loadedTileEntityList.add(te)
+    })
 
     ship.get.generateBoundingBox()
 

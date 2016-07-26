@@ -48,7 +48,7 @@ class ShipRender(rm: RenderManager) extends Render[EntityShip](rm) {
 
   override def doRender(entity: EntityShip, x: Double, y: Double, z: Double, entityYaw: Float, partialTicks: Float) = {
 
-    def shipWorld = entity.ShipWorld.asInstanceOf[ShipWorldClient]
+    def shipWorld = entity.Shipworld.asInstanceOf[ShipWorldClient]
 
 
 
@@ -235,13 +235,13 @@ class ShipRender(rm: RenderManager) extends Render[EntityShip](rm) {
 
   private def renderBlackOutline(ship: EntityShip, pos: BlockPos, x: Double, y: Double, z: Double, partialTicks: Float) = {
 
-    val blockstate = ship.ShipWorld.getBlockState(pos)
+    val blockstate = ship.Shipworld.getBlockState(pos)
 
     val block = blockstate.getBlock
 
-    block.setBlockBoundsBasedOnState(ship.ShipWorld, pos)
+    block.setBlockBoundsBasedOnState(ship.Shipworld, pos)
 
-    val aabb = block.getSelectedBoundingBox(ship.ShipWorld, pos)
+    val aabb = block.getSelectedBoundingBox(ship.Shipworld, pos)
 
     val rotatedBB = new RotatedBB(aabb, new Vec3(0.5, 0.5, 0.5), ship.getRotation)
 

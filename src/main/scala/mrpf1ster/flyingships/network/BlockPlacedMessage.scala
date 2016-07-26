@@ -94,7 +94,7 @@ class ServerBlockPlacedMessageHandler extends IMessageHandler[BlockPlacedMessage
         return
 
 
-      processPacket(ctx.getServerHandler, ship.get.ShipWorld)
+      processPacket(ctx.getServerHandler, ship.get.Shipworld)
 
     }
 

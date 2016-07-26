@@ -1,8 +1,11 @@
 package mrpf1ster.flyingships.world
 
+import java.util.UUID
+
 import mrpf1ster.flyingships.entities.EntityShip
 import mrpf1ster.flyingships.render.ShipRenderGlobal
 import mrpf1ster.flyingships.util.UnifiedPos
+import mrpf1ster.flyingships.world.chunk.ClientChunkProviderShip
 import net.minecraft.block.Block
 import net.minecraft.block.state.IBlockState
 import net.minecraft.init.Blocks
@@ -13,11 +16,15 @@ import net.minecraft.world.chunk.Chunk
 /**
   * Created by ej on 7/25/16.
   */
-class ShipWorldClient(originWorld: World, ship: EntityShip) extends ShipWorld(originWorld, ship) {
+class ShipWorldClient(originWorld: World, ship: EntityShip) extends ShipWorld(originWorld, ship, new UUID(0, 0)) {
   var doRenderUpdate = false
   val ShipRenderGlobal = new ShipRenderGlobal(this)
   addWorldAccess(ShipRenderGlobal)
 
+
+  override def createChunkProvider() = {
+    new ClientChunkProviderShip(this)
+  }
   override def applyBlockChange(pos: BlockPos, newState: IBlockState, flags: Int): Boolean = {
     val uPos = UnifiedPos(pos, OriginPos, IsRelative = true)
     val contains = BlocksOnShip.contains(uPos)

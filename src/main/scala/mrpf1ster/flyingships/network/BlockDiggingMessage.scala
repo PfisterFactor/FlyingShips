@@ -84,7 +84,7 @@ class ServerBlockDiggingMessageHandler extends IMessageHandler[BlockDiggingMessa
       if (Ship.isEmpty)
         return
 
-      processPacket(ctx.getServerHandler, Ship.get.ShipWorld)
+      processPacket(ctx.getServerHandler, Ship.get.Shipworld)
     }
 
     def processPacket(netHandlerPlayServer: NetHandlerPlayServer, shipWorld: ShipWorld): Unit = {

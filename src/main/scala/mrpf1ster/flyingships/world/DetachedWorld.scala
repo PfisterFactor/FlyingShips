@@ -3,6 +3,7 @@ package mrpf1ster.flyingships.world
 import java.io.File
 import java.util.UUID
 
+import mrpf1ster.flyingships.world.chunk.DummySaveHandler
 import net.minecraft.profiler.Profiler
 import net.minecraft.util.BlockPos
 import net.minecraft.world.biome.BiomeGenBase
@@ -14,7 +15,7 @@ import net.minecraftforge.fml.relauncher.{Side, SideOnly}
 
 
 class DetachedWorld(OriginWorld: World, WorldName: String, uuid: UUID)
-  extends World(new AnvilSaveHandler(new File(OriginWorld.getSaveHandler.getWorldDirectory, "ShipWorlds"), s"$uuid", false), OriginWorld.getWorldInfo, OriginWorld.provider, new Profiler(), OriginWorld.isRemote) {
+  extends World(if (uuid.getLeastSignificantBits != 0 && uuid.getMostSignificantBits != 0) new AnvilSaveHandler(new File(OriginWorld.getSaveHandler.getWorldDirectory, "ShipWorlds"), s"$uuid", false) else new DummySaveHandler(), OriginWorld.getWorldInfo, OriginWorld.provider, new Profiler(), OriginWorld.isRemote) {
   val UUID = uuid
   //worldAccesses = OriginWorld.worldAccesses
 

@@ -1,4 +1,4 @@
-package mrpf1ster.flyingships.world
+package mrpf1ster.flyingships.world.chunk
 
 import java.io.File
 
@@ -8,13 +8,12 @@ import net.minecraft.world.chunk.storage.IChunkLoader
 import net.minecraft.world.storage.{IPlayerFileData, ISaveHandler, WorldInfo}
 
 /**
-  * Created by EJ on 3/2/2016.
+  * Created by ej on 7/26/16.
   */
-
-object SaveHandler extends ISaveHandler {
+class DummySaveHandler extends ISaveHandler {
   override def getWorldDirectory: File = null
 
-  override def getWorldDirectoryName: String = null
+  override def getWorldDirectoryName: String = ""
 
   override def checkSessionLock(): Unit = {}
 
