@@ -6,7 +6,6 @@ import mrpf1ster.flyingships.world.ShipWorld
 import net.minecraft.block.Block
 import net.minecraft.block.material.Material
 import net.minecraft.block.state.IBlockState
-import net.minecraft.client.Minecraft
 import net.minecraft.entity.player.{EntityPlayer, EntityPlayerMP}
 import net.minecraft.item.ItemStack
 import net.minecraft.network.NetHandlerPlayServer
@@ -15,6 +14,7 @@ import net.minecraft.network.play.client.C07PacketPlayerDigging.Action
 import net.minecraft.tileentity.TileEntity
 import net.minecraft.util.{BlockPos, EnumFacing}
 import net.minecraftforge.event.entity.player.PlayerInteractEvent
+import net.minecraftforge.fml.common.FMLCommonHandler
 import net.minecraftforge.fml.common.network.simpleimpl.{IMessage, IMessageHandler, MessageContext}
 
 /**
@@ -65,7 +65,7 @@ class ServerBlockDiggingMessageHandler extends IMessageHandler[BlockDiggingMessa
     if (message.ShipID == -1) return null
     if (message.BlockPosition == new BlockPos(0, 0, 0)) return null
 
-    Minecraft.getMinecraft.addScheduledTask(new BlockDiggingMessageTask(message, ctx))
+    FMLCommonHandler.instance.getMinecraftServerInstance.addScheduledTask(new BlockDiggingMessageTask(message, ctx))
     null
   }
 
@@ -84,7 +84,7 @@ class ServerBlockDiggingMessageHandler extends IMessageHandler[BlockDiggingMessa
       if (Ship.isEmpty)
         return
 
-      processPacket(ctx.getServerHandler, Ship.get.ShipWorld)
+      processPacket(ctx.getServerHandler, Ship.get.Shipworld)
     }
 
     def processPacket(netHandlerPlayServer: NetHandlerPlayServer, shipWorld: ShipWorld): Unit = {
@@ -161,7 +161,12 @@ private object ItemInWorldManagerFaker {
 
     val stack: ItemStack = player.getCurrentEquippedItem
     if (stack != null && stack.getItem.onBlockStartBreak(stack, pos, player)) return false
+
+    // World PlayAuxSFXAtEntity manual
     shipWorld.playAuxSFXAtEntity(player, 2001, pos, Block.getStateId(iblockstate))
+    //EffectRendererShip.addBlockDestroyEffects(shipWorld, pos, block.getStateFromMeta(par4 >> 12 & 255))
+    // End of manual
+
     var blockWasRemoved: Boolean = false
     if (player.capabilities.isCreativeMode) {
       blockWasRemoved = removeBlock(player,pos,canHarvest = false,shipWorld)

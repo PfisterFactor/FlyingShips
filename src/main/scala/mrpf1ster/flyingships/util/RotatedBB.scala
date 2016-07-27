@@ -2,6 +2,7 @@ package mrpf1ster.flyingships.util
 
 import javax.vecmath.Quat4f
 
+import mrpf1ster.flyingships.world.ShipWorld
 import net.minecraft.util.{AxisAlignedBB, Vec3}
 
 /**
@@ -27,7 +28,7 @@ case class RotatedBB(MinPos: Vec3, MaxPos: Vec3, RotationPoint: Vec3, Rotation: 
       MaxPos) // Forward Top Right
 
     a map (corner => {
-      VectorUtils.rotatePointByQuaternion(corner.subtract(RotationPoint), Rotation).add(RotationPoint)
+      VectorUtils.rotatePointByQuaternion(corner.subtract(RotationPoint).subtract(ShipWorld.ShipBlockVec), Rotation).add(RotationPoint).add(ShipWorld.ShipBlockVec)
     })
   }
 

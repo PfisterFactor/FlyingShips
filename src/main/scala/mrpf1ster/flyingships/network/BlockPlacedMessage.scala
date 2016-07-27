@@ -3,13 +3,13 @@ package mrpf1ster.flyingships.network
 import io.netty.buffer.ByteBuf
 import mrpf1ster.flyingships.util.ShipLocator
 import mrpf1ster.flyingships.world.ShipWorld
-import net.minecraft.client.Minecraft
 import net.minecraft.inventory.Slot
 import net.minecraft.item.ItemStack
 import net.minecraft.network.NetHandlerPlayServer
 import net.minecraft.network.play.server.S2FPacketSetSlot
 import net.minecraft.util._
 import net.minecraftforge.event.entity.player.PlayerInteractEvent
+import net.minecraftforge.fml.common.FMLCommonHandler
 import net.minecraftforge.fml.common.network.ByteBufUtils
 import net.minecraftforge.fml.common.network.simpleimpl.{IMessage, IMessageHandler, MessageContext}
 
@@ -72,11 +72,11 @@ class BlockPlacedMessage(shipID:Int, pos:BlockPos, side:Int, heldItem:ItemStack,
 class ServerBlockPlacedMessageHandler extends IMessageHandler[BlockPlacedMessage, IMessage] {
   override def onMessage(message: BlockPlacedMessage, ctx: MessageContext): IMessage = {
     if (message.ShipID == -1) return null
-    Minecraft.getMinecraft.addScheduledTask(new BlockActivatedMessageTask(message, ctx))
+    FMLCommonHandler.instance.getMinecraftServerInstance.addScheduledTask(new BlockPlacedMessageTask(message, ctx))
     null
   }
 
-  class BlockActivatedMessageTask(message: BlockPlacedMessage, ctx: MessageContext) extends Runnable {
+  class BlockPlacedMessageTask(message: BlockPlacedMessage, ctx: MessageContext) extends Runnable {
     val Message = message
     val Context = ctx
 
@@ -94,7 +94,7 @@ class ServerBlockPlacedMessageHandler extends IMessageHandler[BlockPlacedMessage
         return
 
 
-      processPacket(ctx.getServerHandler, ship.get.ShipWorld)
+      processPacket(ctx.getServerHandler, ship.get.Shipworld)
 
     }
 

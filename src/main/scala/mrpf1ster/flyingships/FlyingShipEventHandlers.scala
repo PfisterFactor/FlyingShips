@@ -1,47 +1,77 @@
 package mrpf1ster.flyingships
 
-import mrpf1ster.flyingships.util.ShipLocator
+import mrpf1ster.flyingships.entities.EntityShip
+import mrpf1ster.flyingships.network.{ClientSpawnShipHandler, SpawnShipMessage}
+import mrpf1ster.flyingships.util.{ShipLocator, UnifiedPos}
+import mrpf1ster.flyingships.world.chunk.ChunkProviderShip
+import mrpf1ster.flyingships.world.{PlayerRelative, ShipWorld}
 import net.minecraft.client.Minecraft
-import net.minecraft.world.World
+import net.minecraft.entity.player.EntityPlayerMP
+import net.minecraftforge.event.entity.EntityJoinWorldEvent
+import net.minecraftforge.event.entity.player.PlayerOpenContainerEvent
+import net.minecraftforge.fml.common.eventhandler.Event.Result
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent
 import net.minecraftforge.fml.common.gameevent.InputEvent.MouseInputEvent
 import net.minecraftforge.fml.common.gameevent.TickEvent
 import net.minecraftforge.fml.common.gameevent.TickEvent.Phase
+import net.minecraftforge.fml.relauncher.{Side, SideOnly}
 
 /**
   * Created by EJ on 3/9/2016.
   */
 class FlyingShipEventHandlers {
 
-  def updateEntities(world: World): Unit = {
-    val ships = ShipLocator.getShips(world)
-    if (ships.isEmpty) return
-
-    ships.foreach(ship => ship.ShipWorld.updateEntities())
-  }
-
   @SubscribeEvent
   def onServerTick(event: TickEvent.WorldTickEvent): Unit = {
-    //Minecraft.getMinecraft.thePlayer.setInvisible(true)
     if (event.phase != Phase.START) return
-    updateEntities(event.world)
+    ChunkProviderShip.ShipChunkIO.tick()
+    val ships = ShipLocator.getShips(event.world)
+    if (ships.isEmpty) return
+    ships.foreach(ship => {
+      if (ship.Shipworld != null) {
+        ship.Shipworld.tick()
+        ship.Shipworld.updateEntities()
+      }
+    })
 
   }
 
+  @SideOnly(Side.CLIENT)
   @SubscribeEvent
   def onClientTick(event: TickEvent.ClientTickEvent): Unit = {
-    if (event.phase != TickEvent.Phase.END) return
     val ships = ShipLocator.getShips(Minecraft.getMinecraft.theWorld)
     if (ships.isEmpty) return
-    Minecraft.getMinecraft.gameSettings.keyBindAttack.isPressed
 
-
+    if (event.phase == TickEvent.Phase.START && !Minecraft.getMinecraft.isGamePaused) {
+      val playerPos = Minecraft.getMinecraft.thePlayer.getPosition
+      ships.foreach(ship => {
+        if (ship.Shipworld != null) {
+          val relPlayerPos = UnifiedPos.convertToRelative(playerPos, ship.getPosition)
+          ship.Shipworld.doRandomDisplayTick(relPlayerPos.getX, relPlayerPos.getY, relPlayerPos.getZ)
+        }
+      })
+      return
+    }
 
     ships.foreach(ship => {
+      if (Minecraft.getMinecraft.currentScreen != null)
+        ship.InteractionHandler.ClickSimulator.leftClickCounter = 10000
+
+      if (ship.InteractionHandler.ClickSimulator.leftClickCounter > 0)
+        ship.InteractionHandler.ClickSimulator.leftClickCounter -= 1
+
       ship.InteractionHandler.ClickSimulator.sendClickBlockToController(Minecraft.getMinecraft.thePlayer)
+      if (ship.Shipworld != null && ship.Shipworld.isValid)
+        ship.Shipworld.updateEntities()
+
+
     })
+
   }
+
   var doClick = false
+
+  @SideOnly(Side.CLIENT)
   @SubscribeEvent
   def onMouseLeftClick(event: MouseInputEvent): Unit = {
     val attackIsDown = Minecraft.getMinecraft.gameSettings.keyBindAttack.isKeyDown
@@ -58,4 +88,44 @@ class FlyingShipEventHandlers {
       doClick = true
 
   }
+
+  // Hackish way to get the tile entity the player is interacting with
+  @SubscribeEvent
+  def playerContainerOpen(event: PlayerOpenContainerEvent): Unit = {
+    var ship: Option[EntityShip] = None
+
+    val ships = ShipLocator.getShips(event.entityPlayer.worldObj)
+    ShipWorld.startAccessing()
+    event.entityPlayer.openContainer.canInteractWith(event.entityPlayer)
+    ship = ships.find(ent => ent.Shipworld != null && ent.Shipworld.wasAccessed)
+    ShipWorld.stopAccessing(event.entityPlayer.worldObj)
+
+    if (ship.isEmpty) return
+
+    val interactWith = event.entityPlayer.openContainer.canInteractWith(PlayerRelative(event.entityPlayer, ship.get.Shipworld))
+    if (interactWith)
+      event.setResult(Result.ALLOW)
+    else
+      event.setResult(Result.DEFAULT)
+  }
+
+  private def sendAllShipsToClient(playerMP: EntityPlayerMP) = {
+    def sendShipToClient(ship: EntityShip) = FlyingShips.flyingShipPacketHandler.INSTANCE.sendTo(new SpawnShipMessage(ship), playerMP)
+
+    ShipLocator.getShips(playerMP.worldObj).foreach(sendShipToClient)
+  }
+
+  private def sendShipToAllClients(ship: EntityShip) = {
+    val message = new SpawnShipMessage(ship)
+    FlyingShips.flyingShipPacketHandler.INSTANCE.sendToAll(message)
+  }
+
+  @SubscribeEvent
+  def onEntitySpawn(event: EntityJoinWorldEvent): Unit = event.entity match {
+    case playerMP: EntityPlayerMP => sendAllShipsToClient(playerMP)
+    case ship: EntityShip if ship.worldObj.isRemote => ClientSpawnShipHandler.onShipSpawn(ship.getEntityId)
+    case ship: EntityShip if !ship.worldObj.isRemote => sendShipToAllClients(ship)
+    case _ =>
+  }
+
 }

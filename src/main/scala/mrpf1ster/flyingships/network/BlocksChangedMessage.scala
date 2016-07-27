@@ -20,12 +20,16 @@ class BlocksChangedMessage(ship: EntityShip, changedBlocks: Array[BlockPos]) ext
 
   var ShipID = if (ship != null) ship.getEntityId else -1
   var ChangedBlocks = changedBlocks
-  var BlockStates: Array[IBlockState] = if (ship != null) ChangedBlocks.map(pos => ship.ShipWorld.getBlockState(pos)) else Array()
+  var BlockStates: Array[IBlockState] = if (ship != null) ChangedBlocks.map(pos => ship.Shipworld.getBlockState(pos)) else Array()
   var NumChangedBlocks = ChangedBlocks.length
-  var ChangedTileEntities: Array[TileEntity] = if (ship != null)
-    changedBlocks.map( pos => Option(ship.ShipWorld.getTileEntity(pos))).filter(opt => opt.isDefined).map(opt => opt.get)
+  var ChangedTileEntitiesNBT: Array[NBTTagCompound] = if (ship != null)
+    changedBlocks.map(pos => Option(ship.Shipworld.getTileEntity(pos))).filter(opt => opt.isDefined).map(opt => opt.get).map(te => {
+      val nbt = new NBTTagCompound()
+      te.writeToNBT(nbt)
+      nbt
+    })
   else Array()
-  var NumChangedTileEntities = ChangedTileEntities.length
+  var NumChangedTileEntities = ChangedTileEntitiesNBT.length
 
 
 
@@ -49,9 +53,7 @@ class BlocksChangedMessage(ship: EntityShip, changedBlocks: Array[BlockPos]) ext
     buf.writeInt(NumChangedTileEntities)
 
     // TileEntities
-    ChangedTileEntities.foreach(te => {
-      val nbt = new NBTTagCompound
-      te.writeToNBT(nbt)
+    ChangedTileEntitiesNBT.foreach(nbt => {
       ByteBufUtils.writeTag(buf,nbt)
     })
   }
@@ -78,7 +80,7 @@ class BlocksChangedMessage(ship: EntityShip, changedBlocks: Array[BlockPos]) ext
     NumChangedTileEntities = buf.readInt()
 
     for (i <- 0 until NumChangedTileEntities) {
-      ChangedTileEntities = ChangedTileEntities.:+(TileEntity.createAndLoadEntity(ByteBufUtils.readTag(buf)))
+      ChangedTileEntitiesNBT = ChangedTileEntitiesNBT :+ ByteBufUtils.readTag(buf)
     }
 
 
@@ -114,10 +116,26 @@ class ClientBlocksChangedMessageHandler extends IMessageHandler[BlocksChangedMes
         return
 
 
-      for (i <- 0 until Message.NumChangedBlocks)
-        Ship.get.ShipWorld.applyBlockChange(Message.ChangedBlocks(i), Message.BlockStates(i), 3)
+      for (i <- 0 until Message.NumChangedBlocks) {
+        //Ship.get.ShipWorld.applyBlockChange(Message.ChangedBlocks(i), Message.BlockStates(i), 3)
+        val blockstate = Ship.get.Shipworld.getBlockState(Message.ChangedBlocks(i))
+        if (blockstate != Message.BlockStates(i)) {
+          Ship.get.Shipworld.applyBlockChange(Message.ChangedBlocks(i), Message.BlockStates(i), 3)
+        }
 
-      message.ChangedTileEntities.foreach(te => Ship.get.ShipWorld.addTileEntity(te))
+      }
+
+
+      message.ChangedTileEntitiesNBT.foreach(nbt => {
+        val te = TileEntity.createAndLoadEntity(nbt)
+        te.setWorldObj(Ship.get.Shipworld)
+        te.validate()
+        val teOnShip = Ship.get.Shipworld.getTileEntity(te.getPos)
+        if (teOnShip != null)
+          teOnShip.readFromNBT(nbt)
+        else
+          Ship.get.Shipworld.addTileEntity(te)
+      })
     }
   }
 

@@ -10,6 +10,7 @@ import net.minecraft.item.ItemStack
 import net.minecraft.network.play.client.C07PacketPlayerDigging
 import net.minecraft.util.MovingObjectPosition.MovingObjectType
 import net.minecraft.util.{BlockPos, EnumFacing, MovingObjectPosition, Vec3}
+import net.minecraftforge.fml.relauncher.{Side, SideOnly}
 
 /**
   * Created by EJ on 3/6/2016.
@@ -19,6 +20,7 @@ case class ShipInteractionHandler(ShipWorld: ShipWorld) {
   val ClickSimulator = new ClickSimulator(ShipWorld)
 
   // Gets the block the mouse is over on the passed ship entity
+  @SideOnly(Side.CLIENT)
   def getBlockPlayerIsLookingAt(partialTicks: Float): Option[MovingObjectPosition] = {
 
     // Gets the object our mouse is over
@@ -49,12 +51,16 @@ case class ShipInteractionHandler(ShipWorld: ShipWorld) {
     val ray: Vec3 = eyePos.addVector(lookVector.xCoord * blockReachDistance, lookVector.yCoord * blockReachDistance, lookVector.zCoord * blockReachDistance)
 
 
-    ShipWorld.rotatedRayTrace(eyePos,ray)
+    val mop = ShipWorld.rayTraceBlocks(eyePos, ray)
+
+    if (mop != null && mop.typeOfHit == MovingObjectType.BLOCK)
+      Some(mop)
+    else
+      None
 
   }
 
   // Ship Right click is trigger when the entity is interacted with
-  // Ship Left click is triggered when the player left clicks due to atta
   // This executes on client only
   def onShipRightClick(player: EntityPlayer): Boolean = {
     val hitInfo = getBlockPlayerIsLookingAt(1.0f)
@@ -74,17 +80,18 @@ case class ShipInteractionHandler(ShipWorld: ShipWorld) {
     didRightClick
   }
 
+  @SideOnly(Side.CLIENT)
   def sendBlockDiggingMessage(status: C07PacketPlayerDigging.Action,pos:BlockPos,side:EnumFacing) = {
     val message = new BlockDiggingMessage(status,pos,side,ShipWorld.Ship.getEntityId)
     FlyingShips.flyingShipPacketHandler.INSTANCE.sendToServer(message)
   }
+
+  @SideOnly(Side.CLIENT)
   def sendBlockPlacedMessage(pos:BlockPos,side:EnumFacing,heldItem:ItemStack,hitVec:Vec3) = {
     val message = new BlockPlacedMessage(ShipWorld.Ship.getEntityId,pos,side.getIndex,heldItem, hitVec)
     FlyingShips.flyingShipPacketHandler.INSTANCE.sendToServer(message)
   }
-
   // Code adapted from https://bitbucket.org/cuchaz/mod-shared/
-  // Thank you Cuchaz!
   // Gets the reach distance of the player
   def getPlayerReachDistance(player: EntityPlayer): Double = player match {
     case playerMP: EntityPlayerMP => playerMP.theItemInWorldManager.getBlockReachDistance
@@ -92,8 +99,6 @@ case class ShipInteractionHandler(ShipWorld: ShipWorld) {
     case _ => 0
 
   }
-
-
 
 
 }

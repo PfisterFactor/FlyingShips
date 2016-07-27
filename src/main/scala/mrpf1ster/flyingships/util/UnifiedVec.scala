@@ -1,13 +1,19 @@
 package mrpf1ster.flyingships.util
 
+import mrpf1ster.flyingships.world.ShipWorld
 import net.minecraft.util.Vec3
 
 /**
   * Created by EJ on 4/13/2016.
   */
 object UnifiedVec {
-  def convertToRelative(vec:Vec3,origin:Vec3) = vec.subtract(origin)
-  def convertToWorld(vec:Vec3, origin:Vec3) = vec.add(origin)
+  def convertToRelative(x: Double, y: Double, z: Double, origin: Vec3): Vec3 = new Vec3(x - origin.xCoord, y - origin.yCoord, z - origin.zCoord).add(ShipWorld.ShipBlockVec)
+
+  def convertToWorld(x: Double, y: Double, z: Double, origin: Vec3): Vec3 = new Vec3(x + origin.xCoord, y + origin.yCoord, z + origin.zCoord).subtract(ShipWorld.ShipBlockVec)
+
+  def convertToRelative(vec: Vec3, origin: Vec3): Vec3 = convertToRelative(vec.xCoord, vec.yCoord, vec.zCoord, origin)
+
+  def convertToWorld(vec: Vec3, origin: Vec3): Vec3 = convertToWorld(vec.xCoord, vec.yCoord, vec.zCoord, origin)
 }
 case class UnifiedVec(Vector: Vec3, Origin: () => Vec3, IsRelative: Boolean) {
 

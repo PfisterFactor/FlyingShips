@@ -20,12 +20,10 @@ import net.minecraftforge.fml.relauncher.{Side, SideOnly}
   */
 
 // This class is pretty much a carbon copy of PlayerControllerMP
-@SideOnly(Side.CLIENT)
-class ClickSimulator(ShipWorld: ShipWorld) {
+class ClickSimulator(shipWorld: ShipWorld) {
+
 
   var leftClickCounter = 0
-
-
   private var currentBlock = new BlockPos(-1, -1, -1)
   private var currentItemHittingBlock: ItemStack = null
   private var curBlockDamageMP: Float = 0
@@ -36,6 +34,7 @@ class ClickSimulator(ShipWorld: ShipWorld) {
 
   private var stepSoundTickCounter: Float = 0
 
+  @SideOnly(Side.CLIENT)
   def simulateRightClick(player: EntityPlayer, pos: BlockPos, hitVec: Vec3, side: EnumFacing): Boolean = {
 
     def hitVecX = hitVec.xCoord.toFloat
@@ -44,30 +43,30 @@ class ClickSimulator(ShipWorld: ShipWorld) {
 
     def heldStack = player.getHeldItem
 
-    val blockState = ShipWorld.getBlockState(pos)
+    val blockState = shipWorld.getBlockState(pos)
 
     if (heldStack != null &&
       heldStack.getItem != null &&
-      heldStack.getItem.onItemUseFirst(heldStack, player, ShipWorld, pos, side, hitVecX, hitVecY, hitVecZ)) {
+      heldStack.getItem.onItemUseFirst(heldStack, player, shipWorld, pos, side, hitVecX, hitVecY, hitVecZ)) {
       return true
     }
 
     var blockWasActivated = false
 
-    if (!player.isSneaking || player.getHeldItem == null || player.getHeldItem.getItem.doesSneakBypassUse(ShipWorld, pos, player))
-      blockWasActivated = blockState.getBlock.onBlockActivated(ShipWorld, pos, blockState, player, side, hitVec.xCoord.toFloat, hitVec.yCoord.toFloat, hitVec.zCoord.toFloat)
+    if (!player.isSneaking || player.getHeldItem == null || player.getHeldItem.getItem.doesSneakBypassUse(shipWorld, pos, player))
+      blockWasActivated = blockState.getBlock.onBlockActivated(shipWorld, pos, blockState, player, side, hitVec.xCoord.toFloat, hitVec.yCoord.toFloat, hitVec.zCoord.toFloat)
 
     if (!blockWasActivated && heldStack != null && heldStack.getItem.isInstanceOf[ItemBlock]) {
 
       val itemblock: ItemBlock = heldStack.getItem.asInstanceOf[ItemBlock]
 
-      if (!itemblock.canPlaceBlockOnSide(ShipWorld, pos, side, player, heldStack))
+      if (!itemblock.canPlaceBlockOnSide(shipWorld, pos, side, player, heldStack))
         return false
     }
 
-    ShipWorld.Ship.InteractionHandler.sendBlockPlacedMessage(pos, side, heldStack, hitVec)
+    shipWorld.Ship.InteractionHandler.sendBlockPlacedMessage(pos, side, heldStack, hitVec)
 
-    if (blockWasActivated && player.isSpectator) return true
+    if (blockWasActivated && !player.isSpectator) return true
 
     if (heldStack == null) return false
 
@@ -75,13 +74,13 @@ class ClickSimulator(ShipWorld: ShipWorld) {
     if (player.capabilities.isCreativeMode) {
       val meta: Int = heldStack.getMetadata
       val stackSize: Int = heldStack.stackSize
-      val itemWasUsed: Boolean = heldStack.onItemUse(player, ShipWorld, pos, side, hitVecX, hitVecY, hitVecZ)
+      val itemWasUsed: Boolean = heldStack.onItemUse(player, shipWorld, pos, side, hitVecX, hitVecY, hitVecZ)
       heldStack.setItemDamage(meta)
       heldStack.stackSize = stackSize
       return itemWasUsed
     }
 
-    val itemWasUsed = heldStack.onItemUse(player, ShipWorld, pos, side, hitVecX, hitVecY, hitVecZ)
+    val itemWasUsed = heldStack.onItemUse(player, shipWorld, pos, side, hitVecX, hitVecY, hitVecZ)
 
     if (!itemWasUsed)
       return false
@@ -95,6 +94,7 @@ class ClickSimulator(ShipWorld: ShipWorld) {
 
   }
 
+  @SideOnly(Side.CLIENT)
   def clickBlock(player: EntityPlayer, pos: BlockPos, side: EnumFacing): Boolean = {
     // Stops the player destroying the ship block
     if (pos == ShipWorld.ShipBlockPos) return false
@@ -104,7 +104,7 @@ class ClickSimulator(ShipWorld: ShipWorld) {
     if (currentGameType.isAdventure) {
 
       if (!player.isAllowEdit) {
-        val block: Block = ShipWorld.getBlockState(pos).getBlock
+        val block: Block = shipWorld.getBlockState(pos).getBlock
         val itemstack: ItemStack = player.getCurrentEquippedItem
 
         if (itemstack == null) return false
@@ -112,10 +112,10 @@ class ClickSimulator(ShipWorld: ShipWorld) {
       }
     }
 
-    if (!ShipWorld.getWorldBorder.contains(pos)) return false
+    if (!shipWorld.getWorldBorder.contains(pos)) return false
 
     if (currentGameType.isCreative) {
-      ShipWorld.Ship.InteractionHandler.sendBlockDiggingMessage(C07PacketPlayerDigging.Action.START_DESTROY_BLOCK, pos, side)
+      shipWorld.Ship.InteractionHandler.sendBlockDiggingMessage(C07PacketPlayerDigging.Action.START_DESTROY_BLOCK, pos, side)
       clickBlockCreative(player, pos, side)
       this.blockHitDelay = 5
       return true
@@ -123,16 +123,16 @@ class ClickSimulator(ShipWorld: ShipWorld) {
 
     if (!this.isHittingBlock || !isHittingPosition(pos)) {
       if (this.isHittingBlock)
-        ShipWorld.Ship.InteractionHandler.sendBlockDiggingMessage(C07PacketPlayerDigging.Action.ABORT_DESTROY_BLOCK, pos, side)
+        shipWorld.Ship.InteractionHandler.sendBlockDiggingMessage(C07PacketPlayerDigging.Action.ABORT_DESTROY_BLOCK, pos, side)
 
-      ShipWorld.Ship.InteractionHandler.sendBlockDiggingMessage(C07PacketPlayerDigging.Action.START_DESTROY_BLOCK, pos, side)
-      val block1: Block = ShipWorld.getBlockState(pos).getBlock
-      val blockIsntAir: Boolean = block1.getMaterial != Material.air
+      shipWorld.Ship.InteractionHandler.sendBlockDiggingMessage(C07PacketPlayerDigging.Action.START_DESTROY_BLOCK, pos, side)
+      val block1: Block = shipWorld.getBlockState(pos).getBlock
+      val blockIsNotAir: Boolean = block1.getMaterial != Material.air
 
-      if (blockIsntAir && this.curBlockDamageMP == 0.0F)
-        block1.onBlockClicked(ShipWorld, pos, Minecraft.getMinecraft.thePlayer)
+      if (blockIsNotAir && this.curBlockDamageMP == 0.0F)
+        block1.onBlockClicked(shipWorld, pos, Minecraft.getMinecraft.thePlayer)
 
-      if (blockIsntAir && block1.getPlayerRelativeBlockHardness(Minecraft.getMinecraft.thePlayer, ShipWorld, pos) >= 1.0F) {
+      if (blockIsNotAir && block1.getPlayerRelativeBlockHardness(Minecraft.getMinecraft.thePlayer, shipWorld, pos) >= 1.0F) {
         this.onPlayerDestroyBlock(player, pos, side)
       }
       else {
@@ -141,7 +141,7 @@ class ClickSimulator(ShipWorld: ShipWorld) {
         this.currentItemHittingBlock = Minecraft.getMinecraft.thePlayer.getHeldItem
         this.curBlockDamageMP = 0.0F
         this.stepSoundTickCounter = 0.0F
-        ShipWorld.sendBlockBreakProgress(Minecraft.getMinecraft.thePlayer.getEntityId, this.currentBlock, (this.curBlockDamageMP * 10.0F).toInt - 1)
+        shipWorld.sendBlockBreakProgress(Minecraft.getMinecraft.thePlayer.getEntityId, this.currentBlock, (this.curBlockDamageMP * 10.0F).toInt - 1)
       }
     }
     true
@@ -149,6 +149,7 @@ class ClickSimulator(ShipWorld: ShipWorld) {
 
   }
 
+  @SideOnly(Side.CLIENT)
   private def isHittingPosition(pos: BlockPos): Boolean = {
 
     val itemstack: ItemStack = Minecraft.getMinecraft.thePlayer.getHeldItem
@@ -162,18 +163,20 @@ class ClickSimulator(ShipWorld: ShipWorld) {
 
   }
 
+  @SideOnly(Side.CLIENT)
   private def clickBlockCreative(player: EntityPlayer, pos: BlockPos, side: EnumFacing) = {
-    if (!ShipWorld.extinguishFire(player, pos, side))
+    if (!shipWorld.extinguishFire(player, pos, side))
       onPlayerDestroyBlock(player, pos, side)
   }
 
+  @SideOnly(Side.CLIENT)
   private def onPlayerDestroyBlock(player: EntityPlayer, pos: BlockPos, side: EnumFacing): Boolean = {
     if (currentGameType.isAdventure) {
       if (player.isSpectator) {
         return false
       }
       if (!player.isAllowEdit) {
-        val block: Block = ShipWorld.getBlockState(pos).getBlock
+        val block: Block = shipWorld.getBlockState(pos).getBlock
         val itemstack: ItemStack = player.getCurrentEquippedItem
         if (itemstack == null) {
           return false
@@ -193,59 +196,62 @@ class ClickSimulator(ShipWorld: ShipWorld) {
       false
     }
     else {
-      val iblockstate: IBlockState = ShipWorld.getBlockState(pos)
+      val iblockstate: IBlockState = shipWorld.getBlockState(pos)
       val block1: Block = iblockstate.getBlock
       if (block1.getMaterial == Material.air) {
         false
       }
       else {
-        ShipWorld.playAuxSFX(2001, pos, Block.getStateId(iblockstate))
+        shipWorld.playAuxSFX(2001, pos, Block.getStateId(iblockstate))
         if (!player.capabilities.isCreativeMode) {
           val itemstack1: ItemStack = player.getCurrentEquippedItem
           if (itemstack1 != null) {
-            itemstack1.onBlockDestroyed(ShipWorld, block1, pos, player)
+            itemstack1.onBlockDestroyed(shipWorld, block1, pos, player)
             if (itemstack1.stackSize == 0) {
               player.destroyCurrentEquippedItem()
             }
           }
         }
-        val blockWasRemovedByPlayer = block1.removedByPlayer(ShipWorld, pos, player, false)
+        val blockWasRemovedByPlayer = block1.removedByPlayer(shipWorld, pos, player, false)
         if (blockWasRemovedByPlayer) {
-          block1.onBlockDestroyedByPlayer(ShipWorld, pos, iblockstate)
+          block1.onBlockDestroyedByPlayer(shipWorld, pos, iblockstate)
         }
         blockWasRemovedByPlayer
       }
     }
   }
 
-  private def resetBlockRemoving(player: EntityPlayer) = {
-    ShipWorld.Ship.InteractionHandler.sendBlockDiggingMessage(C07PacketPlayerDigging.Action.ABORT_DESTROY_BLOCK, this.currentBlock, EnumFacing.DOWN)
+  @SideOnly(Side.CLIENT)
+  private def resetBlockRemoving(player: EntityPlayer): Unit = {
+    if (shipWorld == null) return
+    shipWorld.Ship.InteractionHandler.sendBlockDiggingMessage(C07PacketPlayerDigging.Action.ABORT_DESTROY_BLOCK, this.currentBlock, EnumFacing.DOWN)
     this.isHittingBlock = false
     this.curBlockDamageMP = 0.0F
-    ShipWorld.sendBlockBreakProgress(player.getEntityId, this.currentBlock, -1)
+    shipWorld.sendBlockBreakProgress(player.getEntityId, this.currentBlock, -1)
   }
 
+  @SideOnly(Side.CLIENT)
   def sendClickBlockToController(player: EntityPlayer): Unit = {
 
     def leftClick = Minecraft.getMinecraft.currentScreen == null && Minecraft.getMinecraft.gameSettings.keyBindAttack.isKeyDown && Minecraft.getMinecraft.inGameHasFocus
     def objectMouseOver = Minecraft.getMinecraft.objectMouseOver
 
-    if (!leftClick) {
+    if (!leftClick)
       this.leftClickCounter = 0
-      resetBlockRemoving(player)
-    }
+
 
     if (this.leftClickCounter <= 0 && !player.isUsingItem) {
       if (leftClick && objectMouseOver != null && objectMouseOver.typeOfHit == MovingObjectPosition.MovingObjectType.ENTITY && objectMouseOver.entityHit.isInstanceOf[EntityShip]) {
-        val hitInfo = ShipWorld.Ship.InteractionHandler.getBlockPlayerIsLookingAt(1.0f)
+        val hitInfo = shipWorld.Ship.InteractionHandler.getBlockPlayerIsLookingAt(1.0f)
         if (hitInfo.isEmpty) {
           resetBlockRemoving(player)
           return
         }
 
         val blockpos: BlockPos = hitInfo.get.getBlockPos
-        if (ShipWorld.getBlockState(blockpos).getBlock.getMaterial != Material.air && onPlayerDamageBlock(player, blockpos, hitInfo.get.sideHit)) {
-          Minecraft.getMinecraft.effectRenderer.addBlockHitEffects(blockpos, hitInfo.get)
+        if (shipWorld.getBlockState(blockpos).getBlock.getMaterial != Material.air && onPlayerDamageBlock(player, blockpos, hitInfo.get.sideHit)) {
+          EffectRendererShip.addBlockHitEffects(shipWorld, blockpos, hitInfo.get)
+
           player.swingItem()
         }
       }
@@ -255,44 +261,45 @@ class ClickSimulator(ShipWorld: ShipWorld) {
     }
   }
 
+  @SideOnly(Side.CLIENT)
   private def onPlayerDamageBlock(player: EntityPlayer, pos: BlockPos, side: EnumFacing): Boolean = {
     //Minecraft.getMinecraft.playerController.syncCurrentPlayItem
     if (this.blockHitDelay > 0) {
       this.blockHitDelay -= 1
       true
     }
-    else if (this.currentGameType.isCreative && ShipWorld.getWorldBorder.contains(pos)) {
+    else if (this.currentGameType.isCreative && shipWorld.getWorldBorder.contains(pos)) {
       this.blockHitDelay = 5
       //this.netClientHandler.addToSendQueue(new C07PacketPlayerDigging(C07PacketPlayerDigging.Action.START_DESTROY_BLOCK, posBlock, directionFacing))
-      ShipWorld.Ship.InteractionHandler.sendBlockDiggingMessage(C07PacketPlayerDigging.Action.START_DESTROY_BLOCK, pos, side)
+      shipWorld.Ship.InteractionHandler.sendBlockDiggingMessage(C07PacketPlayerDigging.Action.START_DESTROY_BLOCK, pos, side)
       clickBlockCreative(player, pos, side)
       true
     }
     else if (this.isHittingPosition(pos)) {
-      val block: Block = ShipWorld.getBlockState(pos).getBlock
+      val block: Block = shipWorld.getBlockState(pos).getBlock
       if (block.getMaterial == Material.air) {
         this.isHittingBlock = false
         return false
       }
 
-      this.curBlockDamageMP += block.getPlayerRelativeBlockHardness(player, ShipWorld, pos)
+      this.curBlockDamageMP += block.getPlayerRelativeBlockHardness(player, shipWorld, pos)
 
       if (this.stepSoundTickCounter % 4.0F == 0.0F) {
-        val worldPos = UnifiedPos.convertToWorld(pos, ShipWorld.Ship.getPosition)
+        val worldPos = UnifiedPos.convertToWorld(pos, shipWorld.Ship.getPosition)
         Minecraft.getMinecraft.getSoundHandler.playSound(new PositionedSoundRecord(new ResourceLocation(block.stepSound.getStepSound), (block.stepSound.getVolume + 1.0F) / 8.0F, block.stepSound.getFrequency * 0.5F, worldPos.getX.toFloat + 0.5F, worldPos.getY.toFloat + 0.5F, worldPos.getZ.toFloat + 0.5F))
       }
 
       this.stepSoundTickCounter += 1
       if (this.curBlockDamageMP >= 1.0F) {
         this.isHittingBlock = false
-        ShipWorld.Ship.InteractionHandler.sendBlockDiggingMessage(C07PacketPlayerDigging.Action.STOP_DESTROY_BLOCK, pos, side)
+        shipWorld.Ship.InteractionHandler.sendBlockDiggingMessage(C07PacketPlayerDigging.Action.STOP_DESTROY_BLOCK, pos, side)
         //this.netClientHandler.addToSendQueue(new C07PacketPlayerDigging(C07PacketPlayerDigging.Action.STOP_DESTROY_BLOCK, posBlock, directionFacing))
         this.onPlayerDestroyBlock(player, pos, side)
         this.curBlockDamageMP = 0.0F
         this.stepSoundTickCounter = 0.0F
         this.blockHitDelay = 5
       }
-      ShipWorld.sendBlockBreakProgress(player.getEntityId, this.currentBlock, (this.curBlockDamageMP * 10.0F).toInt - 1)
+      shipWorld.sendBlockBreakProgress(player.getEntityId, this.currentBlock, (this.curBlockDamageMP * 10.0F).toInt - 1)
       true
 
     }
@@ -300,6 +307,7 @@ class ClickSimulator(ShipWorld: ShipWorld) {
       clickBlock(player, pos, side)
   }
 
+  @SideOnly(Side.CLIENT)
   def clickMouse(player: EntityPlayer): Unit = {
     if (this.leftClickCounter > 0) return
 
@@ -309,14 +317,19 @@ class ClickSimulator(ShipWorld: ShipWorld) {
 
     def objectMouseOver = Minecraft.getMinecraft.objectMouseOver
 
-    if (objectMouseOver.typeOfHit == MovingObjectType.ENTITY && objectMouseOver.entityHit.isEntityEqual(ShipWorld.Ship)) {
-      val hitInfo = ShipWorld.Ship.InteractionHandler.getBlockPlayerIsLookingAt(1.0f)
-      if (hitInfo.isEmpty || hitInfo.get.typeOfHit != MovingObjectType.BLOCK) return
+    if (objectMouseOver.typeOfHit == MovingObjectType.ENTITY && objectMouseOver.entityHit.isEntityEqual(shipWorld.Ship)) {
+      val hitInfo = shipWorld.Ship.InteractionHandler.getBlockPlayerIsLookingAt(1.0f)
+
+      if (hitInfo.isEmpty || hitInfo.get.typeOfHit != MovingObjectType.BLOCK) {
+        if (!currentGameType.isCreative)
+          this.leftClickCounter = 10
+        return
+      }
 
       val blockpos: BlockPos = hitInfo.get.getBlockPos
 
 
-      if (ShipWorld.getBlockState(blockpos).getBlock.getMaterial != Material.air)
+      if (shipWorld.getBlockState(blockpos).getBlock.getMaterial != Material.air)
         clickBlock(player, blockpos, hitInfo.get.sideHit)
 
     }
