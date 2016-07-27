@@ -81,7 +81,7 @@ class FlyingShipEventHandlers {
     if (attackIsDown && !doClick)
     {
       if (Minecraft.getMinecraft.theWorld != null)
-        ShipLocator.getShips(Minecraft.getMinecraft.theWorld).foreach(ship => ship.InteractionHandler.ClickSimulator.clickMouse(Minecraft.getMinecraft.thePlayer))
+        ShipLocator.getShips(Minecraft.getMinecraft.theWorld).foreach(ship => if (ship.Shipworld != null) ship.InteractionHandler.ClickSimulator.clickMouse(Minecraft.getMinecraft.thePlayer))
     }
 
     if (attackIsDown)

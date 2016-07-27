@@ -21,7 +21,7 @@ import net.minecraft.network.PacketBuffer
 import net.minecraft.tileentity.TileEntity
 import net.minecraft.util._
 import net.minecraft.world.chunk.IChunkProvider
-import net.minecraft.world.{IInteractionObject, World, WorldSettings}
+import net.minecraft.world.{World, WorldSettings}
 import net.minecraftforge.fml.relauncher.{Side, SideOnly}
 
 import scala.collection.JavaConversions._
@@ -66,13 +66,13 @@ abstract class ShipWorld(originWorld: World, ship: EntityShip, uUID: UUID) exten
   // The Ship Block
   def ShipBlock = getBlockState(ShipWorld.ShipBlockPos)
 
+  // Todo: Optimize and make it more reliable
   def moveBlocks(blockSet: Set[UnifiedPos]): Unit = {
     def blockIsValid(uPos: UnifiedPos): Boolean = {
       val blockstate = OriginWorld.getBlockState(uPos.WorldPos)
       blockstate != null && blockstate.getBlock != Blocks.air
     }
     def blockIsFullCube(uPos: UnifiedPos) = OriginWorld.getBlockState(uPos.WorldPos).getBlock.isFullCube
-
     // Move blocks onto ship
     // First the solid blocks, then everything else
     // So torches and blocks that depend on other blocks get set correctly
@@ -159,17 +159,26 @@ abstract class ShipWorld(originWorld: World, ship: EntityShip, uUID: UUID) exten
     OriginWorld.spawnEntityInWorld(entity)
   }
 
-  override def setBlockState(pos: BlockPos, newState: IBlockState, flags: Int): Boolean
-
   // Hackish way to get the tile entity the player is interacting with in the onPlayerContainerOpen event
   var wasAccessed = false
-  override def getTileEntity(pos: BlockPos) = {
-    val te = super.getTileEntity(pos)
-    if (ShipWorld.doAccessing) {
-      wasAccessed = te.isInstanceOf[IInteractionObject]
-    }
+
+  private def accessingHack(any: Any): Any = {
+    if (ShipWorld.doAccessing)
+      wasAccessed = any != null
     else
       wasAccessed = false
+  }
+
+  override def setBlockState(pos: BlockPos, newState: IBlockState, flags: Int): Boolean
+
+  override def getBlockState(pos: BlockPos): IBlockState = {
+    val state = super.getBlockState(pos)
+    accessingHack(state)
+    state
+  }
+  override def getTileEntity(pos: BlockPos) = {
+    val te = super.getTileEntity(pos)
+    accessingHack(te)
     te
   }
 

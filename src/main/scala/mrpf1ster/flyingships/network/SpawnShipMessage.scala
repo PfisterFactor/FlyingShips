@@ -132,8 +132,6 @@ class SpawnShipMessageTask(message: SpawnShipMessage, ctx: MessageContext, spawn
 
     val ship = ShipLocator.getShip(player.worldObj, message.ShipID)
 
-
-
     if (ship.isEmpty) {
       // This packet got received before the vanilla entity spawn packet. So we add it to a map and wait for the packet to be received
       if (SpawnQueue.contains(message.ShipID)) {

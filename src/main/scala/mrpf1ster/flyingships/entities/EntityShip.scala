@@ -83,7 +83,7 @@ class EntityShip(pos: BlockPos, world: World, blockSet: Set[BlockPos]) extends E
     tagCompound.setIntArray("BlocksOnShipY", blocksOnShipY)
     tagCompound.setIntArray("BlocksOnShipZ", blocksOnShipZ)
 
-    // The shipworld itself is saved to the world file
+    // The Shipworld itself is saved to the world file
     Shipworld.getChunkProvider.saveChunks(true, null)
   }
 
@@ -139,15 +139,23 @@ class EntityShip(pos: BlockPos, world: World, blockSet: Set[BlockPos]) extends E
   def getRotation: Quat4f = Rotation
 
   override def onUpdate(): Unit = {
-    if (Shipworld == null) return
-    // If the Ship is empty and theres no spawn entry for it, delete it
     val hasSpawnListing = ClientSpawnShipHandler.spawnQueue.contains(getEntityId)
+
+    if (Shipworld == null) {
+      if (hasSpawnListing)
+        ClientSpawnShipHandler.onShipSpawn(getEntityId)
+
+      return
+    }
+
+    // If the Ship is empty and theres no spawn entry for it, delete it
     if (!Shipworld.isValid && !hasSpawnListing) {
       this.setDead()
     }
     else if (hasSpawnListing) {
       ClientSpawnShipHandler.onShipSpawn(getEntityId)
     }
+
     if (Shipworld.isRemote)
       updateRotationFromServer()
     else {
