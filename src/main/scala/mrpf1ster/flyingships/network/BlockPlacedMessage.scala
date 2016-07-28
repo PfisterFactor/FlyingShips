@@ -20,6 +20,8 @@ class BlockPlacedMessage(shipID:Int, pos:BlockPos, side:Int, heldItem:ItemStack,
 
   def this() = this(-1, null, 0, null, null)
 
+  def this(shipID: Int, itemStack: ItemStack) = this(shipID, new BlockPos(-1, -1, -1), 255, itemStack, new Vec3(0, 0, 0))
+
   var BlockPosition = pos
   var PlacedBlockDirection = side
   var HeldItem = heldItem

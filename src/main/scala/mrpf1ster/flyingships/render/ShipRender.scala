@@ -105,9 +105,8 @@ class ShipRender(rm: RenderManager) extends Render[EntityShip](rm) {
 
 
     GL11.glPopMatrix()
-
     if (DebugRender.isDebugMenuShown)
-      doDebugRender(shipWorld.asInstanceOf[ShipWorldClient], x, y, z)
+      doDebugRender(shipWorld, x, y, z)
 
     // Ray-trace across the ship and return it wrapped in an option
     val rayTrace: Option[MovingObjectPosition] = entity.InteractionHandler.getBlockPlayerIsLookingAt(partialTicks)
@@ -226,11 +225,10 @@ class ShipRender(rm: RenderManager) extends Render[EntityShip](rm) {
   def renderBlock(shipWorld: ShipWorld, blockState: IBlockState, pos: BlockPos, worldRenderer: WorldRenderer) = {
     // Get the block renderer
     def blockRendererDispatcher = Minecraft.getMinecraft.getBlockRendererDispatcher
-    // Get the model of the block
-    val bakedModel = blockRendererDispatcher.getModelFromBlockState(blockState, shipWorld, pos)
-    // If our block is a normal block
-    if (blockState.getBlock.getRenderType == 3)
-      blockRendererDispatcher.getBlockModelRenderer.renderModel(shipWorld, bakedModel, blockState, pos, worldRenderer) // Render it
+
+    // Renders blocks based on their render type
+    blockRendererDispatcher.renderBlock(blockState, pos, shipWorld, worldRenderer)
+
   }
 
   private def renderBlackOutline(ship: EntityShip, pos: BlockPos, x: Double, y: Double, z: Double, partialTicks: Float) = {

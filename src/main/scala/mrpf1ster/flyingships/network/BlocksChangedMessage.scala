@@ -117,7 +117,7 @@ class ClientBlocksChangedMessageHandler extends IMessageHandler[BlocksChangedMes
 
 
       for (i <- 0 until Message.NumChangedBlocks) {
-        //Ship.get.ShipWorld.applyBlockChange(Message.ChangedBlocks(i), Message.BlockStates(i), 3)
+        //Ship.get.Shipworld.applyBlockChange(Message.ChangedBlocks(i), Message.BlockStates(i), 3)
         val blockstate = Ship.get.Shipworld.getBlockState(Message.ChangedBlocks(i))
         if (blockstate != Message.BlockStates(i)) {
           Ship.get.Shipworld.applyBlockChange(Message.ChangedBlocks(i), Message.BlockStates(i), 3)

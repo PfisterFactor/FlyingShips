@@ -7,7 +7,6 @@ import mrpf1ster.flyingships.network.ClientSpawnShipHandler
 import mrpf1ster.flyingships.util.{BoundingBox, UnifiedPos}
 import mrpf1ster.flyingships.world.{ShipWorld, ShipWorldClient, ShipWorldServer}
 import net.minecraft.entity.Entity
-import net.minecraft.entity.player.EntityPlayer
 import net.minecraft.init.Blocks
 import net.minecraft.nbt.NBTTagCompound
 import net.minecraft.util._
@@ -47,9 +46,9 @@ class EntityShip(pos: BlockPos, world: World, blockSet: Set[BlockPos]) extends E
 
   private var _boundingBox:BoundingBox = null
 
-  generateBoundingBox()
+  def getBoundingBox = _boundingBox
 
-  def getBoundingBox: BoundingBox = _boundingBox
+  generateBoundingBox()
 
   def generateBoundingBox() = {
     if (Shipworld != null)
@@ -156,7 +155,8 @@ class EntityShip(pos: BlockPos, world: World, blockSet: Set[BlockPos]) extends E
     if (Shipworld.isRemote)
       updateRotationFromServer()
     else {
-      debugDoRotate()
+      //debugDoRotate()
+      setRotation(new Quat4f(0, 0, 0, 1f))
       moveEntity(motionX, motionY, motionZ)
     }
 
@@ -192,12 +192,14 @@ class EntityShip(pos: BlockPos, world: World, blockSet: Set[BlockPos]) extends E
 
   override def setEntityBoundingBox(bb: AxisAlignedBB): Unit = {}
 
+  override def getDistanceSqToEntity(entityIn: Entity): Double = {
+    val clampedX = MathHelper.clamp_double(entityIn.posX, _boundingBox.MinPos.xCoord, _boundingBox.MaxPos.xCoord)
+    val clampedY = MathHelper.clamp_double(entityIn.posY, _boundingBox.MinPos.yCoord, _boundingBox.MaxPos.yCoord)
+    val clampedZ = MathHelper.clamp_double(entityIn.posZ, _boundingBox.MinPos.zCoord, _boundingBox.MaxPos.zCoord)
 
-
-  // Right Click
-  override def interactFirst(player: EntityPlayer): Boolean = if (Shipworld.isRemote) InteractionHandler.onShipRightClick(player) else false
-
-
-
-
+    val d0: Double = clampedX - entityIn.posX
+    val d1: Double = clampedY - entityIn.posY
+    val d2: Double = clampedZ - entityIn.posZ
+    return d0 * d0 + d1 * d1 + d2 * d2
+  }
 }

@@ -3,8 +3,8 @@ package mrpf1ster.flyingships.util
 import java.util.UUID
 
 import mrpf1ster.flyingships.entities.EntityShip
-import net.minecraft.util.MovingObjectPosition
 import net.minecraft.util.MovingObjectPosition.MovingObjectType
+import net.minecraft.util.{AxisAlignedBB, MovingObjectPosition}
 import net.minecraft.world.World
 
 import scala.collection.JavaConversions._
@@ -17,16 +17,17 @@ object ShipLocator {
   def getShips(world:World): Set[EntityShip] = {
     if (world == null) return Set()
     val worldEntities = world.loadedEntityList
-    worldEntities.filter(_.isInstanceOf[EntityShip]).map(_.asInstanceOf[EntityShip]).toSet
+    worldEntities.collect({ case ship: EntityShip => ship }).toSet
   }
 
-  def getShip(world:World, entityID:Int): Option[EntityShip] = {
-    getShips(world).find(_.getEntityId == entityID)
+  def getShips(world: World, aabb: AxisAlignedBB): Set[EntityShip] = {
+    if (world == null) return Set()
+    world.loadedEntityList.collect({ case ship: EntityShip if ship.getEntityBoundingBox.intersectsWith(aabb) => ship }).toSet
   }
 
-  def getShip(world:World, entityUUID:UUID): Option[EntityShip] = {
-    getShips(world).find(_.getPersistentID == entityUUID)
-  }
+  def getShip(world: World, entityID: Int): Option[EntityShip] = getShips(world).find(_.getEntityId == entityID)
+
+  def getShip(world: World, entityUUID: UUID): Option[EntityShip] = getShips(world).find(_.getPersistentID == entityUUID)
 
   def getShip(movingObjectPosition: MovingObjectPosition): Option[EntityShip] = {
     if (movingObjectPosition == null) return None

@@ -30,8 +30,9 @@ import scala.collection.mutable.{Map => mMap, Set => mSet}
   */
 object ShipWorld {
   // The Ship Block's Position, y is 128 to stick with the chunk's height limits
-  // TODO: Make the world un-relative to the ship block
   val ShipBlockPos: BlockPos = new BlockPos(0, 128, 0)
+  var ShipMouseOverID: Int = -1
+  var ShipMouseOver: MovingObjectPosition = new MovingObjectPosition(MovingObjectPosition.MovingObjectType.MISS, new Vec3(0, 0, 0), EnumFacing.UP, new BlockPos(-1, -1, -1))
   val ShipBlockVec: Vec3 = new Vec3(ShipBlockPos)
   var doAccessing = false
 
@@ -215,7 +216,6 @@ abstract class ShipWorld(originWorld: World, ship: EntityShip, uUID: UUID) exten
     // The eye position and ray, rotated by the ship block's center, to the opposite of the ships current rotation
     val rotatedStart = VectorUtils.rotatePointFromShip(relativeStart, Ship)
     val rotatedEnd = VectorUtils.rotatePointFromShip(relativeEnd, Ship)
-
 
     // The result of the ray-trace on the ship world
     return super.rayTraceBlocks(rotatedStart, rotatedEnd)

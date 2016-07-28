@@ -15,82 +15,7 @@ import net.minecraftforge.fml.relauncher.{Side, SideOnly}
 /**
   * Created by EJ on 3/6/2016.
   */
-case class ShipInteractionHandler(ShipWorld: ShipWorld) {
-
-  val ClickSimulator = new ClickSimulator(ShipWorld)
-
-  // Gets the block the mouse is over on the passed ship entity
-  @SideOnly(Side.CLIENT)
-  def getBlockPlayerIsLookingAt(partialTicks: Float): Option[MovingObjectPosition] = {
-
-    // Gets the object our mouse is over
-    val objectMouseOver = Minecraft.getMinecraft.objectMouseOver
-
-    // If the object isn't an entity or its not the ship entity currently being rendered, exit
-    // This doesn't work if you are outside the chunk the entity is stored in
-    // Not very good for large ships...
-    // Todo: Figure out a way around this
-    if (objectMouseOver.typeOfHit != MovingObjectType.ENTITY || !objectMouseOver.entityHit.isEntityEqual(ShipWorld.Ship)) return None
-
-    // The dude
-    def player = Minecraft.getMinecraft.thePlayer
-
-    // Gets the player's reach distance
-    val blockReachDistance = getPlayerReachDistance(player)
-
-
-    // The player's eye position, relative to the ship block's center
-    val eyePos: Vec3 = player.getPositionEyes(partialTicks)
-
-
-    // The player's look vector, i.e. where his camera is pointing
-    val lookVector: Vec3 = player.getLook(partialTicks)
-
-
-    // The ray we use for block ray-tracing, just the relative eye position plus the farthest the player can interact with blocks in a direction
-    val ray: Vec3 = eyePos.addVector(lookVector.xCoord * blockReachDistance, lookVector.yCoord * blockReachDistance, lookVector.zCoord * blockReachDistance)
-
-
-    val mop = ShipWorld.rayTraceBlocks(eyePos, ray)
-
-    if (mop != null && mop.typeOfHit == MovingObjectType.BLOCK)
-      Some(mop)
-    else
-      None
-
-  }
-
-  // Ship Right click is trigger when the entity is interacted with
-  // This executes on client only
-  def onShipRightClick(player: EntityPlayer): Boolean = {
-    val hitInfo = getBlockPlayerIsLookingAt(1.0f)
-
-    if (hitInfo.isEmpty) return false
-
-    def pos = hitInfo.get.getBlockPos
-    def hitVec = hitInfo.get.hitVec
-    def side = hitInfo.get.sideHit
-
-    // Simulates a right click, and sends a packet if anything changed
-    val didRightClick = ClickSimulator.simulateRightClick(player,pos,hitVec,side)
-
-    if (didRightClick)
-      player.swingItem()
-
-    didRightClick
-  }
-
-  @SideOnly(Side.CLIENT)
-  def sendBlockDiggingMessage(status: C07PacketPlayerDigging.Action,pos:BlockPos,side:EnumFacing) = {
-    val message = new BlockDiggingMessage(status,pos,side,ShipWorld.Ship.getEntityId)
-    FlyingShips.flyingShipPacketHandler.INSTANCE.sendToServer(message)
-  }
-
-  @SideOnly(Side.CLIENT)
-  def sendBlockPlacedMessage(pos:BlockPos,side:EnumFacing,heldItem:ItemStack,hitVec:Vec3) = {
-    val message = new BlockPlacedMessage(ShipWorld.Ship.getEntityId,pos,side.getIndex,heldItem, hitVec)
-    FlyingShips.flyingShipPacketHandler.INSTANCE.sendToServer(message)
-  }
+object ShipInteractionHandler {
   // Code adapted from https://bitbucket.org/cuchaz/mod-shared/
   // Gets the reach distance of the player
   def getPlayerReachDistance(player: EntityPlayer): Double = player match {
@@ -98,6 +23,42 @@ case class ShipInteractionHandler(ShipWorld: ShipWorld) {
     case _: AbstractClientPlayer => Minecraft.getMinecraft.playerController.getBlockReachDistance()
     case _ => 0
 
+  }
+}
+
+case class ShipInteractionHandler(Shipworld: ShipWorld) {
+
+  val ClickSimulator = new ClickSimulator(Shipworld)
+
+  // Gets the block the mouse is over on the passed ship entity
+  @SideOnly(Side.CLIENT)
+  def getBlockPlayerIsLookingAt(partialTicks: Float): Option[MovingObjectPosition] = {
+
+    // Gets the ship our mouse is over
+    val shipMouseOver = ShipWorld.ShipMouseOver
+    val shipMouseOverID = ShipWorld.ShipMouseOverID
+
+    if (shipMouseOverID != Shipworld.Ship.getEntityId || shipMouseOver == null || shipMouseOver.typeOfHit != MovingObjectType.BLOCK)
+      None
+    else
+      Some(shipMouseOver)
+  }
+
+  @SideOnly(Side.CLIENT)
+  def sendBlockDiggingMessage(status: C07PacketPlayerDigging.Action,pos:BlockPos,side:EnumFacing) = {
+    val message = new BlockDiggingMessage(status, pos, side, Shipworld.Ship.getEntityId)
+    FlyingShips.flyingShipPacketHandler.INSTANCE.sendToServer(message)
+  }
+
+  @SideOnly(Side.CLIENT)
+  def sendBlockPlacedMessage(pos:BlockPos,side:EnumFacing,heldItem:ItemStack,hitVec:Vec3) = {
+    val message = new BlockPlacedMessage(Shipworld.Ship.getEntityId, pos, side.getIndex, heldItem, hitVec)
+    FlyingShips.flyingShipPacketHandler.INSTANCE.sendToServer(message)
+  }
+
+  def sendBlockPlacedMessage(itemStack: ItemStack) = {
+    val message = new BlockPlacedMessage(Shipworld.Ship.getEntityId(), itemStack)
+    FlyingShips.flyingShipPacketHandler.INSTANCE.sendToServer(message)
   }
 
 
