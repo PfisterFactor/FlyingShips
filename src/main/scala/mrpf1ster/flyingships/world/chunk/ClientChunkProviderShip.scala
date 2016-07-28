@@ -12,7 +12,7 @@ class ClientChunkProviderShip(shipWorld: ShipWorld) extends ChunkProviderShip(sh
 
   override def saveChunkExtraData(chunk: Chunk) = {}
 
-  override def canSave() = false
+  override def canSave = false
 
   override def loadChunk(x: Int, z: Int, runnable: Runnable): Chunk = {
     DroppedChunks.remove(new ChunkCoordIntPair(x, z))

@@ -218,7 +218,7 @@ abstract class ShipWorld(originWorld: World, ship: EntityShip, uUID: UUID) exten
     val rotatedEnd = VectorUtils.rotatePointFromShip(relativeEnd, Ship)
 
     // The result of the ray-trace on the ship world
-    return super.rayTraceBlocks(rotatedStart, rotatedEnd)
+    super.rayTraceBlocks(rotatedStart, rotatedEnd)
   }
 
   def isShipValid = BlocksOnShip.nonEmpty && chunkProvider.asInstanceOf[ChunkProviderShip].ChunkMap.nonEmpty

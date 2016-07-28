@@ -67,7 +67,7 @@ class ClickSimulator(shipWorld: ShipWorld) {
           player.inventory.mainInventory(player.inventory.currentItem) = null
         }
         else if (itemstack.stackSize != i || player.capabilities.isCreativeMode) {
-          Minecraft.getMinecraft.entityRenderer.itemRenderer.resetEquippedProgress
+          Minecraft.getMinecraft.entityRenderer.itemRenderer.resetEquippedProgress()
         }
       }
 
@@ -142,8 +142,8 @@ class ClickSimulator(shipWorld: ShipWorld) {
   }
 
   def sendUseItem(playerIn: EntityPlayer, worldIn: World, itemStackIn: ItemStack): Boolean = {
-    if (this.currentGameType eq WorldSettings.GameType.SPECTATOR) {
-      return false
+    if (this.currentGameType == WorldSettings.GameType.SPECTATOR) {
+      false
     }
     else {
       shipWorld.Ship.InteractionHandler.sendBlockPlacedMessage(playerIn.inventory.getCurrentItem)
@@ -155,10 +155,10 @@ class ClickSimulator(shipWorld: ShipWorld) {
           playerIn.inventory.mainInventory(playerIn.inventory.currentItem) = null
           net.minecraftforge.event.ForgeEventFactory.onPlayerDestroyItem(playerIn, itemstack)
         }
-        return true
+        true
       }
       else {
-        return false
+        false
       }
     }
   }

@@ -95,7 +95,7 @@ class EntityShip(pos: BlockPos, world: World, blockSet: Set[BlockPos]) extends E
 
     val blocksOnShip = (0 until blocksOnShipX.size).map(i => new UnifiedPos(new BlockPos(blocksOnShipX(i), blocksOnShipY(i), blocksOnShipZ(i)), Shipworld.OriginPos, true))
     // Check to make sure blocks aren't air
-    Shipworld.BlocksOnShip = mutable.Set(blocksOnShip.toSeq: _*).filter(pos => Shipworld.getBlockState(pos.RelativePos).getBlock != Blocks.air)
+    Shipworld.BlocksOnShip = mutable.Set(blocksOnShip: _*).filter(pos => Shipworld.getBlockState(pos.RelativePos).getBlock != Blocks.air)
 
   }
   override def entityInit(): Unit = {
@@ -200,6 +200,6 @@ class EntityShip(pos: BlockPos, world: World, blockSet: Set[BlockPos]) extends E
     val d0: Double = clampedX - entityIn.posX
     val d1: Double = clampedY - entityIn.posY
     val d2: Double = clampedZ - entityIn.posZ
-    return d0 * d0 + d1 * d1 + d2 * d2
+    d0 * d0 + d1 * d1 + d2 * d2
   }
 }

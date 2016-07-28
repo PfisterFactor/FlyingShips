@@ -72,7 +72,7 @@ class SpawnShipMessage(ship: EntityShip) extends IMessage {
     ChunkData = Array.fill(ChunkLength)(new S21PacketChunkData.Extracted())
     ChunkData.foreach(data => {
       data.dataSize = buf.readShort() & 65535
-      data.data = new Array[Byte](func_180737_a(Integer.bitCount(data.dataSize), true, true));
+      data.data = new Array[Byte](func_180737_a(Integer.bitCount(data.dataSize), par2 = true, par3 = true))
       buf.readBytes(data.data)
     })
 
@@ -92,7 +92,7 @@ class SpawnShipMessage(ship: EntityShip) extends IMessage {
     else 0
     val l: Int = if (par3) 256
     else 0
-    return i + j + k + l
+    i + j + k + l
   }
 }
 

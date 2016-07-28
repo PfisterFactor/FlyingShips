@@ -57,7 +57,7 @@ case class ShipInteractionHandler(Shipworld: ShipWorld) {
   }
 
   def sendBlockPlacedMessage(itemStack: ItemStack) = {
-    val message = new BlockPlacedMessage(Shipworld.Ship.getEntityId(), itemStack)
+    val message = new BlockPlacedMessage(Shipworld.Ship.getEntityId, itemStack)
     FlyingShips.flyingShipPacketHandler.INSTANCE.sendToServer(message)
   }
 

@@ -196,7 +196,7 @@ class ShipWorldServer(originWorld: World, ship: EntityShip, uUID: UUID) extends 
     val j: Int = i + 16 + 2
     val k: Int = (chunkcoordintpair.chunkZPos << 4) - 2
     val l: Int = k + 16 + 2
-    return this.func_175712_a(new StructureBoundingBox(i, 0, k, j, 256, l), par2)
+    this.func_175712_a(new StructureBoundingBox(i, 0, k, j, 256, l), par2)
   }
 
   override def func_175712_a(structureBB: StructureBoundingBox, par2: Boolean): java.util.List[NextTickListEntry] = {
@@ -215,7 +215,7 @@ class ShipWorldServer(originWorld: World, ship: EntityShip, uUID: UUID) extends 
         if (blockpos.getX >= structureBB.minX && blockpos.getX < structureBB.maxX && blockpos.getZ >= structureBB.minZ && blockpos.getZ < structureBB.maxZ) {
           if (par2) {
             this.pendingTickListEntriesHashSet.remove(nextticklistentry)
-            iterator.remove
+            iterator.remove()
           }
           if (list == null) {
             list = Lists.newArrayList[NextTickListEntry]
@@ -225,7 +225,7 @@ class ShipWorldServer(originWorld: World, ship: EntityShip, uUID: UUID) extends 
       }
       i += 1
     }
-    return list
+    list
   }
 
   override def tickUpdates(par1: Boolean): Boolean = {
@@ -236,7 +236,7 @@ class ShipWorldServer(originWorld: World, ship: EntityShip, uUID: UUID) extends 
 
     //this.theProfiler.startSection("cleaning")
     var j: Int = 0
-    def cleanUp: Unit = while (j < i) {
+    def cleanUp(): Unit = while (j < i) {
       val nextticklistentry: NextTickListEntry = this.pendingTickListEntriesTreeSet.first
       if (!par1 && nextticklistentry.scheduledTime > this.worldInfo.getWorldTotalTime) {
         return
@@ -254,7 +254,7 @@ class ShipWorldServer(originWorld: World, ship: EntityShip, uUID: UUID) extends 
     while (iterator.hasNext) {
 
       val nextticklistentry1: NextTickListEntry = iterator.next
-      iterator.remove
+      iterator.remove()
       val k: Int = 0
       if (this.isAreaLoaded(nextticklistentry1.position.add(-k, -k, -k), nextticklistentry1.position.add(k, k, k))) {
         val iblockstate: IBlockState = this.getBlockState(nextticklistentry1.position)
@@ -263,12 +263,11 @@ class ShipWorldServer(originWorld: World, ship: EntityShip, uUID: UUID) extends 
             iblockstate.getBlock.updateTick(this, nextticklistentry1.position, iblockstate, this.rand)
           }
           catch {
-            case throwable: Throwable => {
+            case throwable: Throwable =>
               val crashreport: CrashReport = CrashReport.makeCrashReport(throwable, "Exception while ticking a block")
               val crashreportcategory: CrashReportCategory = crashreport.makeCategory("Block being ticked")
               CrashReportCategory.addBlockInfo(crashreportcategory, nextticklistentry1.position, iblockstate)
               throw new ReportedException(crashreport)
-            }
           }
         }
       }
@@ -278,13 +277,13 @@ class ShipWorldServer(originWorld: World, ship: EntityShip, uUID: UUID) extends 
 
     }
     //this.theProfiler.endSection
-    this.pendingTickListEntriesThisTick.clear
-    return !this.pendingTickListEntriesTreeSet.isEmpty
+    this.pendingTickListEntriesThisTick.clear()
+    !this.pendingTickListEntriesTreeSet.isEmpty
 
   }
 
   override def updateBlocks(): Unit = {
-    super.updateBlocks
+    super.updateBlocks()
 
     var i: Int = 0
     var j: Int = 0

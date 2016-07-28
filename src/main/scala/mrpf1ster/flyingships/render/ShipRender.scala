@@ -195,12 +195,12 @@ class ShipRender(rm: RenderManager) extends Render[EntityShip](rm) {
   def renderBlockBreaking(shipWorld: ShipWorldClient): Unit = {
     if (shipWorld.ShipRenderGlobal.DamagedBlocks.isEmpty) return
     GlStateManager.tryBlendFuncSeparate(774, 768, 1, 0)
-    GlStateManager.enableBlend
+    GlStateManager.enableBlend()
     GlStateManager.color(1.0F, 1.0F, 1.0F, 0.5F)
     GlStateManager.doPolygonOffset(-3.0F, -3.0F)
-    GlStateManager.enablePolygonOffset
+    GlStateManager.enablePolygonOffset()
     GlStateManager.alphaFunc(516, 0.1F)
-    GlStateManager.enableAlpha
+    GlStateManager.enableAlpha()
 
     val tessellator = Tessellator.getInstance()
     val worldRenderer = tessellator.getWorldRenderer
@@ -209,16 +209,16 @@ class ShipRender(rm: RenderManager) extends Render[EntityShip](rm) {
 
     worldRenderer.begin(7, DefaultVertexFormats.BLOCK)
     worldRenderer.setTranslation(-vec.xCoord, -vec.yCoord, -vec.zCoord)
-    worldRenderer.noColor
+    worldRenderer.noColor()
     shipWorld.ShipRenderGlobal.DamagedBlocks.foreach(pair => renderBlockBreak(pair._2, shipWorld))
     worldRenderer.setTranslation(0.0D, 0.0D, 0.0D)
-    tessellator.draw
+    tessellator.draw()
 
 
-    GlStateManager.disableAlpha
+    GlStateManager.disableAlpha()
     GlStateManager.doPolygonOffset(0.0F, 0.0F)
-    GlStateManager.disablePolygonOffset
-    GlStateManager.enableAlpha
+    GlStateManager.disablePolygonOffset()
+    GlStateManager.enableAlpha()
     GlStateManager.depthMask(true)
   }
 

@@ -74,11 +74,11 @@ class ShipWorldClient(originWorld: World, ship: EntityShip) extends ShipWorld(or
   override def addBlockEvent(pos: BlockPos, block: Block, eventID: Int, eventParam: Int) = block.onBlockEventReceived(this, pos, getBlockState(pos), eventID, eventParam)
 
   override def updateBlocks(): Unit = {
-    super.updateBlocks
+    super.updateBlocks()
     this.previousActiveChunkSet.retainAll(this.activeChunkSet)
 
     if (this.previousActiveChunkSet.size == this.activeChunkSet.size) {
-      this.previousActiveChunkSet.clear
+      this.previousActiveChunkSet.clear()
     }
 
     var i: Int = 0
