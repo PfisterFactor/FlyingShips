@@ -37,6 +37,7 @@ class FlyingShipEventHandlers {
 
   }
 
+  //noinspection AccessorLikeMethodIsEmptyParen
   private def getShipMouseOver(): (Int, MovingObjectPosition) = {
     val renderViewEntity = Minecraft.getMinecraft.getRenderViewEntity.asInstanceOf[EntityPlayer]
     val reachDistance = ShipInteractionHandler.getPlayerReachDistance(renderViewEntity)

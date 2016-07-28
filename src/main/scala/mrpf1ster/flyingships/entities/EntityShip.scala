@@ -108,8 +108,14 @@ class EntityShip(pos: BlockPos, world: World, blockSet: Set[BlockPos]) extends E
 
   override def setDead() = {
     super.setDead()
-    if (Shipworld != null && !Shipworld.isRemote)
+    if (Shipworld != null && !Shipworld.isRemote) {
+      //Todo: Think about backing up shipworlds
+      // Flush everything to the disk...
+      Shipworld.getSaveHandler.flush()
+      // and delete recursively the world path
       Path(Shipworld.getSaveHandler.getWorldDirectory.getPath).deleteRecursively()
+    }
+
   }
 
   private def debugDoRotate() = {

@@ -4,10 +4,11 @@ package mrpf1ster.flyingships
   * Created by MrPf1ster
   */
 
+import mrpf1ster.flyingships.command.DeleteAllShipsCommand
 import mrpf1ster.flyingships.network.FlyingShipsPacketHandler
 import net.minecraftforge.fml.common.Mod
 import net.minecraftforge.fml.common.Mod.EventHandler
-import net.minecraftforge.fml.common.event.{FMLInitializationEvent, FMLPostInitializationEvent, FMLPreInitializationEvent}
+import net.minecraftforge.fml.common.event.{FMLInitializationEvent, FMLPostInitializationEvent, FMLPreInitializationEvent, FMLServerStartingEvent}
 
 
 @Mod(modid = FlyingShips.MOD_ID, name = "Flying Ships", version = FlyingShips.VERSION, modLanguage = "scala")
@@ -47,5 +48,10 @@ object FlyingShips {
     if (event.getSide.isClient) {
       ClientProxy.postInit(event)
     }
+  }
+
+  @EventHandler
+  def registerCommands(event: FMLServerStartingEvent) = {
+    event.registerServerCommand(new DeleteAllShipsCommand())
   }
 }
