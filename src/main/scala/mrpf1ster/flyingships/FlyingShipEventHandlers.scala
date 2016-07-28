@@ -1,7 +1,7 @@
 package mrpf1ster.flyingships
 
 import mrpf1ster.flyingships.entities.EntityShip
-import mrpf1ster.flyingships.network.{ClientSpawnShipHandler, SpawnShipMessage}
+import mrpf1ster.flyingships.network.SpawnShipMessage
 import mrpf1ster.flyingships.util.{ShipLocator, UnifiedPos}
 import mrpf1ster.flyingships.world.chunk.ChunkProviderShip
 import mrpf1ster.flyingships.world.{PlayerRelative, ShipWorld}
@@ -61,7 +61,7 @@ class FlyingShipEventHandlers {
         ship.InteractionHandler.ClickSimulator.leftClickCounter -= 1
 
       ship.InteractionHandler.ClickSimulator.sendClickBlockToController(Minecraft.getMinecraft.thePlayer)
-      if (ship.Shipworld != null && ship.Shipworld.isValid)
+      if (ship.Shipworld != null && ship.Shipworld.isShipValid)
         ship.Shipworld.updateEntities()
 
 
@@ -123,7 +123,6 @@ class FlyingShipEventHandlers {
   @SubscribeEvent
   def onEntitySpawn(event: EntityJoinWorldEvent): Unit = event.entity match {
     case playerMP: EntityPlayerMP => sendAllShipsToClient(playerMP)
-    case ship: EntityShip if ship.worldObj.isRemote => ClientSpawnShipHandler.onShipSpawn(ship.getEntityId)
     case ship: EntityShip if !ship.worldObj.isRemote => sendShipToAllClients(ship)
     case _ =>
   }

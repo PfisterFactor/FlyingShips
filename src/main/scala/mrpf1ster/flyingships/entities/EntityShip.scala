@@ -42,7 +42,7 @@ class EntityShip(pos: BlockPos, world: World, blockSet: Set[BlockPos]) extends E
   var oldRotation: Quat4f = Rotation
 
   // Returns ship direction based on which way the creator block is facing
-  def ShipDirection: EnumFacing = if (Shipworld != null && Shipworld.isValid) Shipworld.ShipBlock.getValue(ShipCreatorBlock.FACING) else null
+  def ShipDirection: EnumFacing = if (Shipworld != null && Shipworld.isShipValid) Shipworld.ShipBlock.getValue(ShipCreatorBlock.FACING) else null
 
 
   private var _boundingBox:BoundingBox = null
@@ -60,7 +60,7 @@ class EntityShip(pos: BlockPos, world: World, blockSet: Set[BlockPos]) extends E
   def ShipBlock = Shipworld.ShipBlock
 
 
-  override def getEntityBoundingBox = if (Shipworld != null && Shipworld.isValid && _boundingBox != null) _boundingBox.AABB else new AxisAlignedBB(0, 0, 0, 0, 0, 0)
+  override def getEntityBoundingBox = if (Shipworld != null && Shipworld.isShipValid && _boundingBox != null) _boundingBox.AABB else new AxisAlignedBB(0, 0, 0, 0, 0, 0)
 
   def createShipWorld() = {
     Shipworld = if (worldObj.isRemote) new ShipWorldClient(worldObj, this) else new ShipWorldServer(worldObj, this, getUniqueID)
@@ -139,21 +139,18 @@ class EntityShip(pos: BlockPos, world: World, blockSet: Set[BlockPos]) extends E
   def getRotation: Quat4f = Rotation
 
   override def onUpdate(): Unit = {
-    val hasSpawnListing = ClientSpawnShipHandler.spawnQueue.contains(getEntityId)
-
+    val hasSpawnListing = ClientSpawnShipHandler.spawnMap.contains(getEntityId)
     if (Shipworld == null) {
-      if (hasSpawnListing)
-        ClientSpawnShipHandler.onShipSpawn(getEntityId)
-
+      if (hasSpawnListing) ClientSpawnShipHandler.requestShipworld(getEntityId)
       return
     }
 
-    // If the Ship is empty and theres no spawn entry for it, delete it
-    if (!Shipworld.isValid && !hasSpawnListing) {
+    // If the Ship is empty and there's no spawn entry for it, delete it
+    if (!Shipworld.isShipValid && !hasSpawnListing) {
       this.setDead()
     }
     else if (hasSpawnListing) {
-      ClientSpawnShipHandler.onShipSpawn(getEntityId)
+      ClientSpawnShipHandler.requestShipworld(getEntityId)
     }
 
     if (Shipworld.isRemote)

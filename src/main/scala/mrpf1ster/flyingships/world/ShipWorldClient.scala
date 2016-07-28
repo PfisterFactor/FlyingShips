@@ -2,6 +2,7 @@ package mrpf1ster.flyingships.world
 
 import java.util.UUID
 
+import com.google.common.collect.Sets
 import mrpf1ster.flyingships.entities.EntityShip
 import mrpf1ster.flyingships.render.ShipRenderGlobal
 import mrpf1ster.flyingships.util.UnifiedPos
@@ -10,8 +11,10 @@ import net.minecraft.block.Block
 import net.minecraft.block.state.IBlockState
 import net.minecraft.init.Blocks
 import net.minecraft.util.BlockPos
-import net.minecraft.world.World
 import net.minecraft.world.chunk.Chunk
+import net.minecraft.world.{ChunkCoordIntPair, World}
+
+import scala.collection.JavaConversions._
 
 /**
   * Created by ej on 7/25/16.
@@ -19,6 +22,8 @@ import net.minecraft.world.chunk.Chunk
 class ShipWorldClient(originWorld: World, ship: EntityShip) extends ShipWorld(originWorld, ship, new UUID(0, 0)) {
   var doRenderUpdate = false
   val ShipRenderGlobal = new ShipRenderGlobal(this)
+  private val previousActiveChunkSet: java.util.Set[ChunkCoordIntPair] = Sets.newHashSet[ChunkCoordIntPair]
+
   addWorldAccess(ShipRenderGlobal)
 
 
@@ -55,14 +60,43 @@ class ShipWorldClient(originWorld: World, ship: EntityShip) extends ShipWorld(or
     true
   }
 
-  override def tick() = {}
+  override def tick() = {
+    chunkProvider.unloadQueuedChunks()
+    updateBlocks()
+  }
 
-  override def setBlockState(pos: BlockPos, newState: IBlockState, flags: Int): Boolean = true
+  override def setBlockState(pos: BlockPos, newState: IBlockState, flags: Int): Boolean = super.setBlockState(pos, newState, flags)
 
   override def onShipMove() = {
     doRenderUpdate = true
   }
 
   override def addBlockEvent(pos: BlockPos, block: Block, eventID: Int, eventParam: Int) = block.onBlockEventReceived(this, pos, getBlockState(pos), eventID, eventParam)
+
+  override def updateBlocks(): Unit = {
+    super.updateBlocks
+    this.previousActiveChunkSet.retainAll(this.activeChunkSet)
+
+    if (this.previousActiveChunkSet.size == this.activeChunkSet.size) {
+      this.previousActiveChunkSet.clear
+    }
+
+    var i: Int = 0
+    for (chunkcoordintpair <- this.activeChunkSet) {
+      if (!this.previousActiveChunkSet.contains(chunkcoordintpair)) {
+        val j: Int = chunkcoordintpair.chunkXPos * 16
+        val k: Int = chunkcoordintpair.chunkZPos * 16
+        //this.theProfiler.startSection("getChunk")
+        val chunk: Chunk = this.getChunkFromChunkCoords(chunkcoordintpair.chunkXPos, chunkcoordintpair.chunkZPos)
+        this.playMoodSoundAndCheckLight(j, k, chunk)
+        //this.theProfiler.endSection
+        this.previousActiveChunkSet.add(chunkcoordintpair)
+        i += 1
+        if (i >= 10) {
+          return
+        }
+      }
+    }
+  }
 
 }

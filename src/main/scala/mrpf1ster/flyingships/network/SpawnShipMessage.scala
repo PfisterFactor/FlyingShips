@@ -2,7 +2,7 @@ package mrpf1ster.flyingships.network
 
 import io.netty.buffer.ByteBuf
 import mrpf1ster.flyingships.entities.EntityShip
-import mrpf1ster.flyingships.network.ClientSpawnShipHandler.SpawnQueue
+import mrpf1ster.flyingships.network.ClientSpawnShipHandler.SpawnMap
 import mrpf1ster.flyingships.util.{ShipLocator, UnifiedPos}
 import mrpf1ster.flyingships.world.ShipWorldClient
 import mrpf1ster.flyingships.world.chunk.ChunkProviderShip
@@ -97,34 +97,32 @@ class SpawnShipMessage(ship: EntityShip) extends IMessage {
 }
 
 object ClientSpawnShipHandler {
-  type SpawnQueue = mutable.Map[Int, SpawnShipMessage]
+  type SpawnMap = mutable.Map[Int, SpawnShipMessage]
 
-  val spawnQueue: SpawnQueue = mutable.Map()
+  val spawnMap: SpawnMap = mutable.Map()
 
   // Called every time a ship is spawned. If we have a message waiting for the entity spawn packet it is handled here.
-  def onShipSpawn(shipID: Int) = {
-    val message = spawnQueue.get(shipID)
+  def requestShipworld(shipID: Int) = {
+    val message = spawnMap.get(shipID)
     if (message.isDefined) {
-      spawnQueue.remove(shipID)
-      Minecraft.getMinecraft.addScheduledTask(new SpawnShipMessageTask(message.get, null, spawnQueue))
+      spawnMap.remove(shipID)
+      Minecraft.getMinecraft.addScheduledTask(new SpawnShipMessageTask(message.get, null, spawnMap))
     }
-
-
   }
 }
 class ClientSpawnShipHandler extends IMessageHandler[SpawnShipMessage, IMessage] {
   override def onMessage(message: SpawnShipMessage, ctx: MessageContext): IMessage = {
     if (message.ShipID == -1) return null
-    Minecraft.getMinecraft.addScheduledTask(new SpawnShipMessageTask(message, ctx, ClientSpawnShipHandler.spawnQueue))
+    Minecraft.getMinecraft.addScheduledTask(new SpawnShipMessageTask(message, ctx, ClientSpawnShipHandler.spawnMap))
     null
   }
 
 }
 
-class SpawnShipMessageTask(message: SpawnShipMessage, ctx: MessageContext, spawnQueue: SpawnQueue) extends Runnable {
+class SpawnShipMessageTask(message: SpawnShipMessage, ctx: MessageContext, spawnMap: SpawnMap) extends Runnable {
   val Message = message
   val Context = ctx
-  val SpawnQueue = spawnQueue
+  val SpawnMap = spawnMap
 
   // On Client
   override def run(): Unit = {
@@ -134,12 +132,12 @@ class SpawnShipMessageTask(message: SpawnShipMessage, ctx: MessageContext, spawn
 
     if (ship.isEmpty) {
       // This packet got received before the vanilla entity spawn packet. So we add it to a map and wait for the packet to be received
-      if (SpawnQueue.contains(message.ShipID)) {
-        println(s"SpawnQueue already contains ShipID: ${message.ShipID}! Aborting spawn!")
-        SpawnQueue.remove(message.ShipID)
+      if (SpawnMap.contains(message.ShipID)) {
+        println(s"SpawnMap already contains ShipID: ${message.ShipID}! Aborting spawn!")
+        SpawnMap.remove(message.ShipID)
       }
       else {
-        SpawnQueue.put(message.ShipID, message)
+        SpawnMap.put(message.ShipID, message)
       }
 
       return

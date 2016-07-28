@@ -1,11 +1,9 @@
 package mrpf1ster.flyingships.world
 
-import java.io.{ByteArrayInputStream, ByteArrayOutputStream, DataInputStream, DataOutputStream}
 import java.util
 import java.util.{Random, UUID}
 
 import com.google.common.base.Predicate
-import io.netty.buffer.Unpooled
 import mrpf1ster.flyingships.entities.EntityShip
 import mrpf1ster.flyingships.util.{ShipLocator, UnifiedPos, UnifiedVec, VectorUtils}
 import mrpf1ster.flyingships.world.chunk.ChunkProviderShip
@@ -17,7 +15,6 @@ import net.minecraft.entity.player.EntityPlayer
 import net.minecraft.init.Blocks
 import net.minecraft.item.ItemStack
 import net.minecraft.nbt.NBTTagCompound
-import net.minecraft.network.PacketBuffer
 import net.minecraft.tileentity.TileEntity
 import net.minecraft.util._
 import net.minecraft.world.chunk.IChunkProvider
@@ -92,7 +89,7 @@ abstract class ShipWorld(originWorld: World, ship: EntityShip, uUID: UUID) exten
       applyBlockChange(uPos.RelativePos, bs, 0)
     })
 
-    if (!this.isValid) return
+    if (!this.isShipValid) return
     // Move tile entities onto ship
     BlocksOnShip
       .map(uPos => (uPos, OriginWorld.getTileEntity(uPos.WorldPos)))
@@ -169,7 +166,8 @@ abstract class ShipWorld(originWorld: World, ship: EntityShip, uUID: UUID) exten
       wasAccessed = false
   }
 
-  override def setBlockState(pos: BlockPos, newState: IBlockState, flags: Int): Boolean
+  override def setBlockState(pos: BlockPos, newState: IBlockState, flags: Int): Boolean = pos != ShipWorld.ShipBlockPos && isValid(pos)
+
 
   override def getBlockState(pos: BlockPos): IBlockState = {
     val state = super.getBlockState(pos)
@@ -222,76 +220,9 @@ abstract class ShipWorld(originWorld: World, ship: EntityShip, uUID: UUID) exten
     return super.rayTraceBlocks(rotatedStart, rotatedEnd)
   }
 
-  def getWorldData: (Array[Byte], Array[Byte]) = {
-    // Block Data
-    val blockByte = new ByteArrayOutputStream()
-    val out = new DataOutputStream(blockByte)
+  def isShipValid = BlocksOnShip.nonEmpty && chunkProvider.asInstanceOf[ChunkProviderShip].ChunkMap.nonEmpty
 
-
-    // Length of map
-    out.writeInt(BlocksOnShip.size)
-
-    // BlockPos
-    BlocksOnShip.foreach(pos => out.writeLong(pos.RelativePos.toLong))
-
-    // BlockStates
-    //noinspection ScalaDeprecation
-    BlocksOnShip.foreach(uPos => out.writeInt(Block.BLOCK_STATE_IDS.get(getBlockState(uPos.RelativePos))))
-
-    out.close()
-
-    val blockData = blockByte.toByteArray
-
-
-    // Tile Entities
-    val buffer = new PacketBuffer(Unpooled.buffer())
-
-    buffer.writeInt(loadedTileEntityList.size)
-    loadedTileEntityList.foreach(te => {
-      val nbt = new NBTTagCompound()
-      te.writeToNBT(nbt)
-      buffer.writeNBTTagCompoundToBuffer(nbt)
-    })
-
-    val tileEntData = buffer.array()
-
-    (blockData, tileEntData)
-  }
-
-  def setWorldData(blockData: Array[Byte], tileEntData: Array[Byte]) = {
-    // Block Data
-    val byteStream = new ByteArrayInputStream(blockData)
-    val in = new DataInputStream(byteStream)
-
-    // Length of map
-    val mapLength = in.readInt()
-
-    // BlockPos
-    val blockpositions = new Array[UnifiedPos](mapLength)
-
-    for (i: Int <- 0 until mapLength)
-      blockpositions(i) = UnifiedPos(BlockPos.fromLong(in.readLong()), OriginPos, IsRelative = true)
-
-    val blockstates: Array[IBlockState] = new Array(mapLength)
-    //noinspection ScalaDeprecation
-    for (i <- 0 until mapLength)
-      blockstates(i) = Block.BLOCK_STATE_IDS.getByValue(in.readInt())
-
-    in.close()
-    (0 until mapLength).foreach(i => applyBlockChange(blockpositions(i).RelativePos, blockstates(i), 3))
-
-    val buffer = new PacketBuffer(Unpooled.copiedBuffer(tileEntData))
-
-    val teSize = buffer.readInt()
-    val tileentities = new Array[TileEntity](teSize)
-    for (i <- 0 until teSize)
-      tileentities(i) = TileEntity.createAndLoadEntity(buffer.readNBTTagCompoundFromBuffer())
-
-    // Load in tile entities
-    tileentities.foreach(loadedTileEntityList.add)
-  }
-
-  def isValid = BlocksOnShip.nonEmpty && chunkProvider.asInstanceOf[ChunkProviderShip].ChunkMap.size != 0
+  protected def isValid(pos: BlockPos) = pos.getX >= -30000000 && pos.getZ >= -30000000 && pos.getX < 30000000 && pos.getZ < 30000000 && pos.getY >= 0 && pos.getY < 256
 
   override def playSoundEffect(x: Double, y: Double, z: Double, soundName: String, volume: Float, pitch: Float) = {
     val newVec = UnifiedVec.convertToWorld(new Vec3(x, y, z), Ship.getPositionVector)
@@ -322,6 +253,7 @@ abstract class ShipWorld(originWorld: World, ship: EntityShip, uUID: UUID) exten
       j += 1
     }
   }
+
 
   override def isSideSolid(pos: BlockPos, side: EnumFacing, default: Boolean) = getBlockState(pos).getBlock.isSideSolid(this, pos, side)
 
