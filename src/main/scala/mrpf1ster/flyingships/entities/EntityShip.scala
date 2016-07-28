@@ -188,6 +188,12 @@ class EntityShip(pos: BlockPos, world: World, blockSet: Set[BlockPos]) extends E
 
   override def canBePushed: Boolean = false
 
+  override def applyEntityCollision(entityIn: Entity): Unit = {}
+
+  override def setEntityBoundingBox(bb: AxisAlignedBB): Unit = {}
+
+
+
   // Right Click
   override def interactFirst(player: EntityPlayer): Boolean = if (Shipworld.isRemote) InteractionHandler.onShipRightClick(player) else false
 

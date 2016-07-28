@@ -1,6 +1,9 @@
 package mrpf1ster.flyingships.network
 
-import net.minecraftforge.fml.common.FMLCommonHandler
+import mrpf1ster.flyingships.FlyingShips
+import mrpf1ster.flyingships.entities.EntityShip
+import mrpf1ster.flyingships.util.ShipLocator
+import net.minecraft.entity.player.EntityPlayerMP
 import net.minecraftforge.fml.common.network.NetworkRegistry
 import net.minecraftforge.fml.common.network.simpleimpl.SimpleNetworkWrapper
 import net.minecraftforge.fml.relauncher.Side
@@ -10,8 +13,6 @@ import net.minecraftforge.fml.relauncher.Side
   */
 class FlyingShipsPacketHandler {
   val INSTANCE: SimpleNetworkWrapper = NetworkRegistry.INSTANCE.newSimpleChannel("flyingships")
-
-  def side = FMLCommonHandler.instance().getEffectiveSide
 
   INSTANCE.registerMessage(classOf[ClientBlocksChangedMessageHandler], classOf[BlocksChangedMessage], 0, Side.CLIENT)
   INSTANCE.registerMessage(classOf[ClientSpawnShipHandler], classOf[SpawnShipMessage],1,Side.CLIENT)
@@ -27,5 +28,20 @@ class FlyingShipsPacketHandler {
   def registerServerSide() = {
 
   }
+
+  def sendAllShipsToClient(playerMP: EntityPlayerMP): Boolean = {
+    if (playerMP.worldObj == null || playerMP.worldObj.isRemote) return false
+    def sendShipToClient(ship: EntityShip) = FlyingShips.flyingShipPacketHandler.INSTANCE.sendTo(new SpawnShipMessage(ship), playerMP)
+    ShipLocator.getShips(playerMP.worldObj).foreach(sendShipToClient)
+    true
+  }
+
+  def sendShipToAllClients(ship: EntityShip): Boolean = {
+    if (ship == null || ship.Shipworld == null || ship.Shipworld.isRemote) return false
+
+    FlyingShips.flyingShipPacketHandler.INSTANCE.sendToAll(new SpawnShipMessage(ship))
+    true
+  }
+
 
 }

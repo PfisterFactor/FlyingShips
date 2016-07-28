@@ -1,7 +1,6 @@
 package mrpf1ster.flyingships
 
 import mrpf1ster.flyingships.entities.EntityShip
-import mrpf1ster.flyingships.network.SpawnShipMessage
 import mrpf1ster.flyingships.util.{ShipLocator, UnifiedPos}
 import mrpf1ster.flyingships.world.chunk.ChunkProviderShip
 import mrpf1ster.flyingships.world.{PlayerRelative, ShipWorld}
@@ -59,11 +58,11 @@ class FlyingShipEventHandlers {
 
       if (ship.InteractionHandler.ClickSimulator.leftClickCounter > 0)
         ship.InteractionHandler.ClickSimulator.leftClickCounter -= 1
-
-      ship.InteractionHandler.ClickSimulator.sendClickBlockToController(Minecraft.getMinecraft.thePlayer)
-      if (ship.Shipworld != null && ship.Shipworld.isShipValid)
-        ship.Shipworld.updateEntities()
-
+      if (ship.Shipworld != null) {
+        ship.InteractionHandler.ClickSimulator.sendClickBlockToController(Minecraft.getMinecraft.thePlayer)
+        if (ship.Shipworld.isShipValid)
+          ship.Shipworld.updateEntities()
+      }
 
     })
 
@@ -109,22 +108,12 @@ class FlyingShipEventHandlers {
       event.setResult(Result.DEFAULT)
   }
 
-  private def sendAllShipsToClient(playerMP: EntityPlayerMP) = {
-    def sendShipToClient(ship: EntityShip) = FlyingShips.flyingShipPacketHandler.INSTANCE.sendTo(new SpawnShipMessage(ship), playerMP)
-
-    ShipLocator.getShips(playerMP.worldObj).foreach(sendShipToClient)
-  }
-
-  private def sendShipToAllClients(ship: EntityShip) = {
-    val message = new SpawnShipMessage(ship)
-    FlyingShips.flyingShipPacketHandler.INSTANCE.sendToAll(message)
-  }
-
   @SubscribeEvent
   def onEntitySpawn(event: EntityJoinWorldEvent): Unit = event.entity match {
-    case playerMP: EntityPlayerMP => sendAllShipsToClient(playerMP)
-    case ship: EntityShip if !ship.worldObj.isRemote => sendShipToAllClients(ship)
+    case playerMP: EntityPlayerMP => FlyingShips.flyingShipPacketHandler.sendAllShipsToClient(playerMP) // Todo: Fix this so it's within the range of the player
+    case ship: EntityShip if !ship.worldObj.isRemote => FlyingShips.flyingShipPacketHandler.sendShipToAllClients(ship)
     case _ =>
   }
+
 
 }

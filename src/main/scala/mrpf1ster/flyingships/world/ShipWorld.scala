@@ -63,6 +63,7 @@ abstract class ShipWorld(originWorld: World, ship: EntityShip, uUID: UUID) exten
   // The Ship Block
   def ShipBlock = getBlockState(ShipWorld.ShipBlockPos)
 
+
   // Todo: Optimize and make it more reliable
   def moveBlocks(blockSet: Set[UnifiedPos]): Unit = {
     def blockIsValid(uPos: UnifiedPos): Boolean = {

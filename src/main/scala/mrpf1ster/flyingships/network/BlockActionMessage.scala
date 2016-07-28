@@ -67,8 +67,8 @@ class ClientBlockActionMessageHandler extends IMessageHandler[BlockActionMessage
     override def run(): Unit = {
       val ship = ShipLocator.getShip(Minecraft.getMinecraft.theWorld, message.ShipID)
 
-      if (ship.isEmpty) {
-        println(s"Empty ship in block action message task, ID: ${message.ShipID}!")
+      if (ship.isEmpty || ship.get.Shipworld == null) {
+        println(s"Empty or null ship in block action message task, ID: ${message.ShipID}!")
         return
       }
       ship.get.Shipworld.addBlockEvent(message.BlockPosition, message.BlockOf, message.Data1, message.Data2)
