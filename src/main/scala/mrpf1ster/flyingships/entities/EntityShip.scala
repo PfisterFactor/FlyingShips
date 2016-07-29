@@ -190,6 +190,7 @@ class EntityShip(pos: BlockPos, world: World, blockSet: Set[BlockPos]) extends E
   override def moveEntity(x: Double, y:Double, z:Double) = {
     setPosition(posX + x,posY + y,posZ + z)
   }
+
   override def canBeCollidedWith: Boolean = true
 
   override def canBePushed: Boolean = false
@@ -198,7 +199,11 @@ class EntityShip(pos: BlockPos, world: World, blockSet: Set[BlockPos]) extends E
 
   override def setEntityBoundingBox(bb: AxisAlignedBB): Unit = {}
 
-  override def getDistanceSqToEntity(entityIn: Entity): Double = {
+  override def shouldRenderInPass(pass: Int) = false
+
+  def shouldRenderInPassOverride(pass: Int) = pass == 0
+
+  def getDistanceSqToShipClamped(entityIn: Entity): Double = {
     val clampedX = MathHelper.clamp_double(entityIn.posX, _boundingBox.MinPos.xCoord, _boundingBox.MaxPos.xCoord)
     val clampedY = MathHelper.clamp_double(entityIn.posY, _boundingBox.MinPos.yCoord, _boundingBox.MaxPos.yCoord)
     val clampedZ = MathHelper.clamp_double(entityIn.posZ, _boundingBox.MinPos.zCoord, _boundingBox.MaxPos.zCoord)

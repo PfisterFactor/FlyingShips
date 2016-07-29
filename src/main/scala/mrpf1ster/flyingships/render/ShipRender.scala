@@ -4,13 +4,14 @@ import java.nio.FloatBuffer
 import javax.vecmath.{Matrix4f, Quat4f}
 
 import mrpf1ster.flyingships.entities.EntityShip
-import mrpf1ster.flyingships.util.{RenderUtils, RotatedBB, UnifiedPos}
+import mrpf1ster.flyingships.util.{RenderUtils, RotatedBB, ShipLocator, UnifiedPos}
 import mrpf1ster.flyingships.world.{ShipWorld, ShipWorldClient}
 import net.minecraft.block._
 import net.minecraft.block.material.Material
 import net.minecraft.block.state.IBlockState
 import net.minecraft.client.Minecraft
 import net.minecraft.client.renderer._
+import net.minecraft.client.renderer.culling.ICamera
 import net.minecraft.client.renderer.entity.{Render, RenderManager}
 import net.minecraft.client.renderer.texture.{TextureAtlasSprite, TextureMap}
 import net.minecraft.client.renderer.tileentity.TileEntityRendererDispatcher
@@ -33,6 +34,23 @@ import scala.collection.mutable.{Map => mMap}
 object ShipRender {
   private val texturemap = Minecraft.getMinecraft.getTextureMapBlocks
   val destroyBlockIcons: Array[TextureAtlasSprite] = Array.range(0, 10).map(i => texturemap.getAtlasSprite(s"minecraft:blocks/destroy_stage_$i"))
+
+  // We render ships here to get rid of the reliance on the chunk the entity is in
+  // Called from our coremod, which hooks into RenderGlobal renderEntities right before every other entity is rendered
+  def onRender(partialTicks: Float, camera: ICamera, x: Double, y: Double, z: Double): Unit = {
+    if (Minecraft.getMinecraft.theWorld == null) return
+    val renderViewEntity = Minecraft.getMinecraft.getRenderViewEntity
+    val pass = net.minecraftforge.client.MinecraftForgeClient.getRenderPass
+
+
+    val shipsToRender = ShipLocator.getShips(Minecraft.getMinecraft.theWorld).filter(ship => {
+      val shipRender = Minecraft.getMinecraft.getRenderManager.getEntityRenderObject(ship).asInstanceOf[ShipRender]
+      if (shipRender != null)
+        ship.shouldRenderInPassOverride(pass) && shipRender.shouldRender(ship, camera, x, y, z)
+      else
+        false
+    }).foreach(ship => Minecraft.getMinecraft.getRenderManager.renderEntitySimple(ship, partialTicks))
+  }
 }
 
 @SideOnly(Side.CLIENT)

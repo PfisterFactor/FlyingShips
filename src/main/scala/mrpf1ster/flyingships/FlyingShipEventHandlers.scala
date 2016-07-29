@@ -49,7 +49,7 @@ class FlyingShipEventHandlers {
     val shipsInRange = ShipLocator.getShips(Minecraft.getMinecraft.theWorld, aabb)
     // Gets all the ships in range, then sorts by the ships that are closest, then raytraces over all of them, and returns the first raytrace that isn't a miss or null
     val mop = shipsInRange.toList
-      .sortBy(ship => ship.getDistanceSqToEntity(Minecraft.getMinecraft.thePlayer))
+      .sortBy(ship => ship.getDistanceSqToShipClamped(Minecraft.getMinecraft.thePlayer))
       .map(ship => (ship.getEntityId, ship.Shipworld.rayTraceBlocks(eyePos, ray)))
       .find(pair => pair._2 != null && pair._2.typeOfHit != MovingObjectType.MISS)
     if (mop.isEmpty)
