@@ -5,7 +5,7 @@ import java.util.UUID
 import com.google.common.collect.{Lists, Sets}
 import mrpf1ster.flyingships.FlyingShips
 import mrpf1ster.flyingships.entities.EntityShip
-import mrpf1ster.flyingships.network.{BlockActionMessage, BlocksChangedMessage}
+import mrpf1ster.flyingships.network.{BlockActionMessage, BlockChangedMessage}
 import mrpf1ster.flyingships.util.UnifiedPos
 import mrpf1ster.flyingships.world.chunk.ChunkProviderShip
 import net.minecraft.block.material.Material
@@ -32,8 +32,6 @@ class ShipWorldServer(originWorld: World, ship: EntityShip, uUID: UUID) extends 
 
   private val ServerBlockEventList = mutable.Set[BlockEventData]()
 
-  private val ChangedBlocks: mSet[UnifiedPos] = mSet()
-
   // Stuff for compatibility with WorldServer
   private val pendingTickListEntriesHashSet: java.util.Set[NextTickListEntry] = Sets.newHashSet[NextTickListEntry]
   private val pendingTickListEntriesTreeSet: java.util.TreeSet[NextTickListEntry] = new java.util.TreeSet[NextTickListEntry]
@@ -55,17 +53,14 @@ class ShipWorldServer(originWorld: World, ship: EntityShip, uUID: UUID) extends 
     sendQueuedBlockEvents()
   }
 
-  // TODO: (Potentially?) fix this for large ships, maybe individual blocks at a time
-  def pushBlockChangesToClient(): Unit = {
+  // Todo: Fix this so all clients don't get spammed with useless packets
+  def sendBlockChangeToClient(blockPos: BlockPos): Unit = {
     if (!isShipValid) return
     if (Ship == null) return
-    if (ChangedBlocks.isEmpty) return
 
-    val message = new BlocksChangedMessage(Ship, ChangedBlocks.map(pos => pos.RelativePos).toArray)
-    val targetPoint = new TargetPoint(OriginWorld.provider.getDimensionId, Ship.getPosition.getX, Ship.getPosition.getY, Ship.getPosition.getZ, 64)
-    FlyingShips.flyingShipPacketHandler.INSTANCE.sendToAllAround(message, targetPoint)
+    val message = new BlockChangedMessage(Ship, blockPos)
+    FlyingShips.flyingShipPacketHandler.INSTANCE.sendToDimension(message, OriginWorld.provider.getDimensionId)
 
-    ChangedBlocks.clear()
   }
 
   override def setBlockState(pos: BlockPos, newState: IBlockState, flags: Int): Boolean = {
@@ -98,17 +93,14 @@ class ShipWorldServer(originWorld: World, ship: EntityShip, uUID: UUID) extends 
 
     this.markAndNotifyBlock(pos, chunk, iblockstate, newState, flags)
 
-    if ((flags & 2) != 0) {
-      ChangedBlocks.add(new UnifiedPos(pos, Ship.getPosition, true))
-      pushBlockChangesToClient()
-    }
+    if ((flags & 2) != 0)
+      sendBlockChangeToClient(pos)
+
     true
   }
 
-  override def markBlockForUpdate(pos: BlockPos) = {
-    ChangedBlocks.add(UnifiedPos(pos, OriginPos, IsRelative = true))
-    pushBlockChangesToClient()
-  }
+  override def markBlockForUpdate(pos: BlockPos) = sendBlockChangeToClient(pos)
+
 
   override def addBlockEvent(pos: BlockPos, block: Block, eventID: Int, eventParam: Int) = ServerBlockEventList.add(new BlockEventData(pos, block, eventID, eventParam))
 

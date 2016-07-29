@@ -21,6 +21,26 @@ class FlyingShipsASMTransformer extends IClassTransformer {
     returnClass
   }
 
+  // This method transforms Minecraft's RenderGlobal class and adds a hook method, shown like as...
+  /*
+  ...
+
+  this.theWorld.theProfiler.endStartSection("entities")
+  mrpf1ster.flyingships.render.ShipRender.onRender(partialTicks,camera,d0,d1,d2)
+  label738:
+
+  for (RenderGlobal.ContainerLocalRenderInformation renderglobal$containerlocalrenderinformation : this.renderInfos)
+  {
+    Chunk chunk = this.theWorld.getChunkFromBlockCoords(renderglobal$containerlocalrenderinformation.renderChunk.getPosition());
+
+  ...
+  */
+  // We do this by first being passed the RenderGlobal class by our transform function
+  // Then establishing if we're obfuscated and changing our method variables accordingly (MCP Mappings: mcp_stable-22-1.8.9)
+  // Then iterating through each method in the class until we find: "this.theWorld.theProfiler.endStartSection("entities")"
+  // Then we create a Instruction list of our method intermediary in bytecode
+  // Then we insert that list after the method we found
+  // Finally we write it all back to bytes and return it
   def renderGlobalTransformer(classBytes: Array[Byte], obfusucated: Boolean): Array[Byte] = {
     println("Transforming RenderGlobal")
     val classNode = new ClassNode()
@@ -35,13 +55,11 @@ class FlyingShipsASMTransformer extends IClassTransformer {
     var mv: MethodNode = null
     var targetNode: MethodInsnNode = null
     var writeClass: Boolean = false
-    def workAround: Unit = classNode.methods.foreach(method => {
-      if (method.name == targetMethod && method.desc == targetDesc) {
-
+    def workAround: Unit = classNode.methods
+      .filter(method => method.name == targetMethod && method.desc == targetDesc)
+      .foreach(method => {
         val iter = method.instructions.iterator()
-        var index = -1
         while (iter.hasNext) {
-          index += 1
           val node = iter.next()
           if (node.getOpcode == Opcodes.INVOKEVIRTUAL) {
             val castedNode = node.asInstanceOf[MethodInsnNode]
@@ -50,7 +68,6 @@ class FlyingShipsASMTransformer extends IClassTransformer {
             if (castedNode.name == profilerMethodName && previousOpcode != null && ldcNode.cst.isInstanceOf[String] && ldcNode.cst.asInstanceOf[String] == "entities") {
               // Ahh! Long if-statements are scary!
               targetNode = castedNode
-              invokevirtualindex = index
               mv = method
             }
           }
@@ -69,7 +86,7 @@ class FlyingShipsASMTransformer extends IClassTransformer {
         insnList.add(new VarInsnNode(Opcodes.DLOAD, 5))
         // Loads y onto the stack
         insnList.add(new VarInsnNode(Opcodes.DLOAD, 7))
-        // Loads z onth the stack
+        // Loads z onto the stack
         insnList.add(new VarInsnNode(Opcodes.DLOAD, 9))
         // Calls our method in our ShipRender object -- onRender
         insnList.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "mrpf1ster/flyingships/render/ShipRender", "onRender", insertedInstructionParams))
@@ -78,8 +95,8 @@ class FlyingShipsASMTransformer extends IClassTransformer {
         println("RenderGlobal patched")
         writeClass = true
         return
-      }
-    })
+      })
+
     workAround
     if (writeClass) {
       val classWriter = new ClassWriter(ClassWriter.COMPUTE_MAXS | ClassWriter.COMPUTE_FRAMES)
@@ -89,4 +106,5 @@ class FlyingShipsASMTransformer extends IClassTransformer {
     else
       classBytes
   }
+
 }

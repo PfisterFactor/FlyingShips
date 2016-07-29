@@ -22,7 +22,7 @@ object ShipLocator {
 
   def getShips(world: World, aabb: AxisAlignedBB): Set[EntityShip] = {
     if (world == null) return Set()
-    world.loadedEntityList.collect({ case ship: EntityShip if ship.getEntityBoundingBox.intersectsWith(aabb) => ship }).toSet
+    getShips(world).filter(ship => ship.getEntityBoundingBox.intersectsWith(aabb))
   }
 
   def getShip(world: World, entityID: Int): Option[EntityShip] = getShips(world).find(_.getEntityId == entityID)

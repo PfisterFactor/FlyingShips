@@ -14,7 +14,7 @@ import net.minecraftforge.fml.relauncher.Side
 class FlyingShipsPacketHandler {
   val INSTANCE: SimpleNetworkWrapper = NetworkRegistry.INSTANCE.newSimpleChannel("flyingships")
 
-  INSTANCE.registerMessage(classOf[ClientBlocksChangedMessageHandler], classOf[BlocksChangedMessage], 0, Side.CLIENT)
+  INSTANCE.registerMessage(classOf[ClientBlockChangedMessageHandler], classOf[BlockChangedMessage], 0, Side.CLIENT)
   INSTANCE.registerMessage(classOf[ClientSpawnShipHandler], classOf[SpawnShipMessage],1,Side.CLIENT)
   INSTANCE.registerMessage(classOf[ClientBlockActionMessageHandler], classOf[BlockActionMessage], 4, Side.CLIENT)
 
@@ -36,10 +36,10 @@ class FlyingShipsPacketHandler {
     true
   }
 
-  def sendShipToAllClients(ship: EntityShip): Boolean = {
+  def sendShipToAllClientsInDimension(ship: EntityShip, dim: Int): Boolean = {
     if (ship == null || ship.Shipworld == null || ship.Shipworld.isRemote) return false
 
-    FlyingShips.flyingShipPacketHandler.INSTANCE.sendToAll(new SpawnShipMessage(ship))
+    FlyingShips.flyingShipPacketHandler.INSTANCE.sendToDimension(new SpawnShipMessage(ship), dim)
     true
   }
 

@@ -88,8 +88,11 @@ class FlyingShipEventHandlers {
           if (Minecraft.getMinecraft.gameSettings.keyBindUseItem.isKeyDown && ClickSimulator.rightClickDelayTimer == 0 && !Minecraft.getMinecraft.thePlayer.isUsingItem)
             ship.InteractionHandler.ClickSimulator.rightClickMouse()
 
-          if (ship.Shipworld.isShipValid)
+          if (ship.Shipworld.isShipValid) {
+            ship.Shipworld.tick()
             ship.Shipworld.updateEntities()
+          }
+
         }
       })
       return
@@ -151,7 +154,7 @@ class FlyingShipEventHandlers {
   @SubscribeEvent
   def onEntitySpawn(event: EntityJoinWorldEvent): Unit = event.entity match {
     case playerMP: EntityPlayerMP => FlyingShips.flyingShipPacketHandler.sendAllShipsToClient(playerMP) // Todo: Fix this so it's within the range of the player
-    case ship: EntityShip if !ship.worldObj.isRemote => FlyingShips.flyingShipPacketHandler.sendShipToAllClients(ship)
+    case ship: EntityShip if !ship.worldObj.isRemote => FlyingShips.flyingShipPacketHandler.sendShipToAllClientsInDimension(ship, ship.worldObj.provider.getDimensionId)
     case _ =>
   }
 
