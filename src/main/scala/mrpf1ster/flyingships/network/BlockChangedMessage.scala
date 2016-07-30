@@ -77,9 +77,8 @@ class ClientBlockChangedMessageHandler extends IMessageHandler[BlockChangedMessa
 
   @Override
   override def onMessage(message: BlockChangedMessage, ctx: MessageContext): IMessage = {
-    if (message.ShipID == -1) return null
-
-    Minecraft.getMinecraft.addScheduledTask(new BlocksChangedMessageTask(message, ctx))
+    if (message.ShipID != -1)
+      Minecraft.getMinecraft.addScheduledTask(new BlocksChangedMessageTask(message, ctx))
     null
   }
 

@@ -12,9 +12,12 @@ import net.minecraftforge.fml.relauncher.Side
   * Created by EJ on 2/21/2016.
   */
 object CommonProxy {
-  var shipCreatorBlock: ShipCreatorBlock = null
+  var ShipCreatorBlock: ShipCreatorBlock = null
+  // Tracking Range and frequency
+  val ShipTracking = (256, 5)
+
   def preInit(event:FMLPreInitializationEvent) = {
-    shipCreatorBlock = new ShipCreatorBlock()
+    ShipCreatorBlock = new ShipCreatorBlock()
     MinecraftForge.EVENT_BUS.register(FlyingShips.flyingShipEventHandlers) // Register our events
 
     if (event.getSide == Side.SERVER)
@@ -23,7 +26,7 @@ object CommonProxy {
     BlockUtils.loadInClasses // So game doesn't hang when implementing the Scala predefined library
   }
   def init(event: FMLInitializationEvent) = {
-    EntityRegistry.registerModEntity(classOf[EntityShip], "Ship Entity", 0, FlyingShips, 256, 20, true)
+    EntityRegistry.registerModEntity(classOf[EntityShip], "Ship Entity", 0, FlyingShips, ShipTracking._1, ShipTracking._2, true)
 
   }
   def postInit(event: FMLPostInitializationEvent) = {

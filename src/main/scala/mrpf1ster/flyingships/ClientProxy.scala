@@ -22,7 +22,7 @@ object ClientProxy {
 
     def modelMesher = Minecraft.getMinecraft.getRenderItem.getItemModelMesher
     // Blocks
-    modelMesher.register(Item.getItemFromBlock(CommonProxy.shipCreatorBlock), 0, new ModelResourceLocation(FlyingShips.MOD_ID + ":" + CommonProxy.shipCreatorBlock.name, "inventory"))
+    modelMesher.register(Item.getItemFromBlock(CommonProxy.ShipCreatorBlock), 0, new ModelResourceLocation(FlyingShips.MOD_ID + ":" + CommonProxy.ShipCreatorBlock.name, "inventory"))
 
 
 

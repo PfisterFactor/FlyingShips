@@ -1,9 +1,8 @@
 package mrpf1ster.flyingships.network
 
 import io.netty.buffer.ByteBuf
-import mrpf1ster.flyingships.entities.EntityShip
-import mrpf1ster.flyingships.network.ClientSpawnShipHandler.SpawnMap
-import mrpf1ster.flyingships.util.{ShipLocator, UnifiedPos}
+import mrpf1ster.flyingships.entities.{EntityShip, EntityShipTracker}
+import mrpf1ster.flyingships.util.UnifiedPos
 import mrpf1ster.flyingships.world.ShipWorldClient
 import mrpf1ster.flyingships.world.chunk.ChunkProviderShip
 import net.minecraft.client.Minecraft
@@ -20,7 +19,10 @@ import scala.collection.mutable
   */
 class SpawnShipMessage(ship: EntityShip) extends IMessage {
 
-  var ShipID = if (ship != null) ship.getEntityId else -1
+  var ShipID = if (ship != null) ship.ShipID else -1
+  var X: Double = if (ship != null) ship.posX else -1
+  var Y: Double = if (ship != null) ship.posY else -1
+  var Z: Double = if (ship != null) ship.posZ else -1
 
   private val chunksToSave: mutable.Map[ChunkCoordIntPair, S21PacketChunkData.Extracted] = if (ship != null) ship.Shipworld.getChunkProvider.asInstanceOf[ChunkProviderShip].ChunkMap.map(pair => (pair._1, S21PacketChunkData.func_179756_a(pair._2, true, true, 65535))).filter(p => p._2.dataSize > 0) else mutable.Map()
   var ChunkLength: Int = chunksToSave.size
@@ -35,6 +37,15 @@ class SpawnShipMessage(ship: EntityShip) extends IMessage {
   override def toBytes(buf: ByteBuf): Unit = {
     // ShipID
     buf.writeInt(ShipID)
+
+    // X
+    buf.writeDouble(X)
+
+    // Y
+    buf.writeDouble(Y)
+
+    // Z
+    buf.writeDouble(Z)
 
     // Chunk Length
     buf.writeInt(ChunkLength)
@@ -62,6 +73,15 @@ class SpawnShipMessage(ship: EntityShip) extends IMessage {
     // Ship ID
     ShipID = buf.readInt()
 
+    // X
+    X = buf.readDouble()
+
+    // Y
+    Y = buf.readDouble()
+
+    // Z
+    Z = buf.readDouble()
+
     // Chunk Length
     ChunkLength = buf.readInt()
 
@@ -79,7 +99,7 @@ class SpawnShipMessage(ship: EntityShip) extends IMessage {
     // BlockPosLength
     BlockPosLength = buf.readInt()
 
-    // BlockPos
+    // Blockpos
     Blockpos = (0 until BlockPosLength).map(i => BlockPos.fromLong(buf.readLong())).toSet
 
 
@@ -96,60 +116,36 @@ class SpawnShipMessage(ship: EntityShip) extends IMessage {
   }
 }
 
-object ClientSpawnShipHandler {
-  type SpawnMap = mutable.Map[Int, SpawnShipMessage]
-
-  val spawnMap: SpawnMap = mutable.Map()
-
-  // Called every time a ship is spawned. If we have a message waiting for the entity spawn packet it is handled here.
-  def requestShipworld(shipID: Int) = {
-    val message = spawnMap.get(shipID)
-    if (message.isDefined) {
-      spawnMap.remove(shipID)
-      Minecraft.getMinecraft.addScheduledTask(new SpawnShipMessageTask(message.get, null, spawnMap))
-    }
-  }
-}
-class ClientSpawnShipHandler extends IMessageHandler[SpawnShipMessage, IMessage] {
-  override def onMessage(message: SpawnShipMessage, ctx: MessageContext): IMessage = {
-    if (message.ShipID == -1) return null
-    Minecraft.getMinecraft.addScheduledTask(new SpawnShipMessageTask(message, ctx, ClientSpawnShipHandler.spawnMap))
+class ClientSpawnShipMessageHandler extends IMessageHandler[SpawnShipMessage, IMessage] {
+  override def onMessage(Message: SpawnShipMessage, ctx: MessageContext): IMessage = {
+    if (Message.ShipID != -1)
+      Minecraft.getMinecraft.addScheduledTask(new SpawnShipMessageTask(Message, ctx))
     null
   }
 
 }
 
-class SpawnShipMessageTask(message: SpawnShipMessage, ctx: MessageContext, spawnMap: SpawnMap) extends Runnable {
-  val Message = message
-  val Context = ctx
-  val SpawnMap = spawnMap
+case class SpawnShipMessageTask(Message: SpawnShipMessage, Ctx: MessageContext) extends Runnable {
 
   // On Client
   override def run(): Unit = {
     def player = Minecraft.getMinecraft.thePlayer
 
-    val ship = ShipLocator.getShip(player.worldObj, message.ShipID)
+    val ship = new EntityShip(new BlockPos(Message.X, Message.Y, Message.Z), player.worldObj, Set())
+    ship.setShipID(Message.ShipID)
+    ship.setPosition(Message.X, Message.Y, Message.Z)
+    ship.serverPosX = Message.X.toInt
+    ship.serverPosY = Message.Y.toInt
+    ship.serverPosZ = Message.Z.toInt
+    ship.createShipWorld()
 
-    if (ship.isEmpty) {
-      // This packet got received before the vanilla entity spawn packet. So we add it to a map and wait for the packet to be received
-      if (SpawnMap.contains(message.ShipID)) {
-        println(s"SpawnMap already contains ShipID: ${message.ShipID}! Aborting spawn!")
-        SpawnMap.remove(message.ShipID)
-      }
-      else {
-        SpawnMap.put(message.ShipID, message)
-      }
 
-      return
-    }
-    ship.get.createShipWorld()
+    val shipWorld = ship.Shipworld.asInstanceOf[ShipWorldClient]
 
-    val shipWorld = ship.get.Shipworld.asInstanceOf[ShipWorldClient]
+    val chunks: Array[Chunk] = Message.ChunkCoords.map(coord => shipWorld.getChunkFromChunkCoords(coord.chunkXPos, coord.chunkZPos))
+    chunks.zip(Message.ChunkData).foreach(pair => pair._1.fillChunk(pair._2.data, pair._2.dataSize, true))
 
-    val chunks: Array[Chunk] = message.ChunkCoords.map(coord => shipWorld.getChunkFromChunkCoords(coord.chunkXPos, coord.chunkZPos))
-    chunks.zip(message.ChunkData).foreach(pair => pair._1.fillChunk(pair._2.data, pair._2.dataSize, true))
-
-    shipWorld.BlocksOnShip = mutable.Set(message.Blockpos.map(UnifiedPos(_, shipWorld.OriginPos, IsRelative = true)).toSeq: _*)
+    shipWorld.BlocksOnShip = mutable.Set(Message.Blockpos.map(UnifiedPos(_, shipWorld.OriginPos, IsRelative = true)).toSeq: _*)
 
     shipWorld.BlocksOnShip.foreach(pos => {
       val te = shipWorld.getTileEntity(pos.RelativePos)
@@ -157,9 +153,8 @@ class SpawnShipMessageTask(message: SpawnShipMessage, ctx: MessageContext, spawn
         shipWorld.loadedTileEntityList.add(te)
     })
 
-    ship.get.generateBoundingBox()
-
-    player.worldObj.spawnEntityInWorld(ship.get)
+    ship.generateBoundingBox()
+    EntityShipTracker.addShipClientSide(ship)
 
   }
 }

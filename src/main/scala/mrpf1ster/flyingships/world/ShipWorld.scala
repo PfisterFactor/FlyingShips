@@ -149,7 +149,6 @@ abstract class ShipWorld(originWorld: World, ship: EntityShip, uUID: UUID) exten
 
   override def tick(): Unit
 
-
   override def spawnEntityInWorld(entity: Entity): Boolean = {
     val worldPos = UnifiedVec.convertToWorld(VectorUtils.rotatePointToShip(entity.getPositionVector, Ship), Ship.getPositionVector)
     entity.setPosition(worldPos.xCoord, worldPos.yCoord, worldPos.zCoord)
@@ -185,6 +184,10 @@ abstract class ShipWorld(originWorld: World, ship: EntityShip, uUID: UUID) exten
   def applyBlockChange(pos: BlockPos, newState: IBlockState, flags: Int): Boolean
 
   def onShipMove(): Unit
+
+  def getClosestBlockPosToPlayer(entityPlayer: EntityPlayer): BlockPos = BlocksOnShip.minBy(upos => entityPlayer.getDistanceSq(upos.WorldPos)).WorldPos
+
+  def getClosestBlockPosToPlayerXZ(entityPlayer: EntityPlayer): BlockPos = BlocksOnShip.minBy(upos => Math.pow(upos.WorldPosX - entityPlayer.posX, 2) + Math.pow(upos.WorldPosZ - entityPlayer.posZ, 2)).WorldPos
 
   // Assumes coordinates are relative to the ship
   override def getClosestPlayer(x: Double, y: Double, z: Double, distance: Double): EntityPlayer = {

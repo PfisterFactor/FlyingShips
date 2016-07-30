@@ -3,7 +3,6 @@ package mrpf1ster.flyingships.entities
 import javax.vecmath.Quat4f
 
 import mrpf1ster.flyingships.blocks.ShipCreatorBlock
-import mrpf1ster.flyingships.network.ClientSpawnShipHandler
 import mrpf1ster.flyingships.util.{BoundingBox, UnifiedPos}
 import mrpf1ster.flyingships.world.{ShipWorld, ShipWorldClient, ShipWorldServer}
 import net.minecraft.entity.Entity
@@ -18,15 +17,35 @@ import scala.reflect.io.Path
 /**
   * Created by EJ on 2/21/2016.
   */
+object EntityShip {
+  private var nextShipID = 0
+
+  def getShipID(): Int = {
+    nextShipID += 1
+    nextShipID - 1
+  }
+
+  def addShipToWorld(entityShip: EntityShip): Boolean = {
+    if (entityShip == null || entityShip.Shipworld == null || entityShip.Shipworld.OriginWorld.isRemote) return false
+    EntityShipTracker.trackShip(entityShip)
+    true
+  }
+}
 class EntityShip(pos: BlockPos, world: World, blockSet: Set[BlockPos]) extends Entity(world) {
 
-  // Temp constructor because I haven't implemented entity saving yet
   def this(world: World) = this(new BlockPos(0, 0, 0), world, Set[BlockPos]())
   // Set position
   posX = pos.getX
   posY = pos.getY
   posZ = pos.getZ
   setPosition(posX,posY,posZ)
+
+  // Our ShipID, independent from EntityID
+  private var shipID = -1
+
+  def ShipID = shipID
+
+  def setShipID(id: Int) = shipID = id
 
   // Fake world that holds all the blocks on the ship
   var Shipworld: ShipWorld = null
@@ -66,8 +85,10 @@ class EntityShip(pos: BlockPos, world: World, blockSet: Set[BlockPos]) extends E
     InteractionHandler = new ShipInteractionHandler(Shipworld)
   }
   override def writeEntityToNBT(tagCompound: NBTTagCompound): Unit = {
+    // ShipID
+    tagCompound.setInteger("ShipID", shipID)
+
     // Quaternion Rotation
-    updateRotationFromServer()
     tagCompound.setFloat("RotX", Rotation.getX)
     tagCompound.setFloat("RotY", Rotation.getY)
     tagCompound.setFloat("RotZ", Rotation.getZ)
@@ -87,7 +108,13 @@ class EntityShip(pos: BlockPos, world: World, blockSet: Set[BlockPos]) extends E
   }
 
   override def readEntityFromNBT(tagCompound: NBTTagCompound): Unit = {
+    // ShipID
+    shipID = tagCompound.getInteger("ShipID")
+
+    // Quaternion Rotation
     Rotation = new Quat4f(tagCompound.getFloat("RotX"), tagCompound.getFloat("RotY"), tagCompound.getFloat("RotZ"), tagCompound.getFloat("RotW"))
+
+    // BlocksOnShip
     createShipWorld()
     val blocksOnShipX = tagCompound.getIntArray("BlocksOnShipX")
     val blocksOnShipY = tagCompound.getIntArray("BlocksOnShipY")
@@ -97,12 +124,7 @@ class EntityShip(pos: BlockPos, world: World, blockSet: Set[BlockPos]) extends E
     // Check to make sure blocks aren't air
     Shipworld.BlocksOnShip = mutable.Set(blocksOnShip: _*).filter(pos => Shipworld.getBlockState(pos.RelativePos).getBlock != Blocks.air)
 
-  }
-  override def entityInit(): Unit = {
-    dataWatcher.addObject[Float](5, 0.0f)
-    dataWatcher.addObject[Float](6, 0.0f)
-    dataWatcher.addObject[Float](7, 0.0f)
-    dataWatcher.addObject[Float](8, 1.0f)
+    // The shipworld is loaded by our savehandler and chunk provider
 
   }
 
@@ -126,43 +148,24 @@ class EntityShip(pos: BlockPos, world: World, blockSet: Set[BlockPos]) extends E
     setRotation(newRot)
   }
 
-  def updateRotationFromServer(): Unit = {
-    oldRotation = Rotation
-    Rotation = new Quat4f(dataWatcher.getWatchableObjectFloat(5), dataWatcher.getWatchableObjectFloat(6), dataWatcher.getWatchableObjectFloat(7), dataWatcher.getWatchableObjectFloat(8))
-  }
 
   def setRotation(newRotation: Quat4f): Unit = {
-    if (Shipworld.isRemote) return
     oldRotation = Rotation
     Rotation = newRotation
-    dataWatcher.updateObject(5, newRotation.getX)
-    dataWatcher.updateObject(6, newRotation.getY)
-    dataWatcher.updateObject(7, newRotation.getZ)
-    dataWatcher.updateObject(8, newRotation.getW)
   }
 
   def getRotation: Quat4f = Rotation
 
   override def onUpdate(): Unit = {
-    val hasSpawnListing = ClientSpawnShipHandler.spawnMap.contains(getEntityId)
-    if (Shipworld == null) {
-      if (hasSpawnListing) ClientSpawnShipHandler.requestShipworld(getEntityId)
-      return
-    }
 
     // If the Ship is empty and there's no spawn entry for it, delete it
-    if (!Shipworld.isShipValid && !hasSpawnListing) {
+    if (Shipworld == null || !Shipworld.isShipValid) {
       this.setDead()
     }
-    else if (hasSpawnListing) {
-      ClientSpawnShipHandler.requestShipworld(getEntityId)
-    }
 
-    if (Shipworld.isRemote)
-      updateRotationFromServer()
-    else {
-      //debugDoRotate()
-      setRotation(new Quat4f(0, 0, 0, 1f))
+    if (!Shipworld.isRemote) {
+      debugDoRotate()
+      //setRotation(new Quat4f(0, 0, 0, 1f))
       moveEntity(motionX, motionY, motionZ)
     }
 
@@ -204,13 +207,20 @@ class EntityShip(pos: BlockPos, world: World, blockSet: Set[BlockPos]) extends E
   def shouldRenderInPassOverride(pass: Int) = pass == 0
 
   def getDistanceSqToShipClamped(entityIn: Entity): Double = {
-    val clampedX = MathHelper.clamp_double(entityIn.posX, _boundingBox.MinPos.xCoord, _boundingBox.MaxPos.xCoord)
-    val clampedY = MathHelper.clamp_double(entityIn.posY, _boundingBox.MinPos.yCoord, _boundingBox.MaxPos.yCoord)
-    val clampedZ = MathHelper.clamp_double(entityIn.posZ, _boundingBox.MinPos.zCoord, _boundingBox.MaxPos.zCoord)
 
-    val d0: Double = clampedX - entityIn.posX
-    val d1: Double = clampedY - entityIn.posY
-    val d2: Double = clampedZ - entityIn.posZ
+    val closest = getClosestPoint(entityIn.getPositionVector)
+    val d0: Double = closest.xCoord - entityIn.posX
+    val d1: Double = closest.yCoord - entityIn.posY
+    val d2: Double = closest.zCoord - entityIn.posZ
     d0 * d0 + d1 * d1 + d2 * d2
   }
+
+  def getClosestPoint(vec: Vec3): Vec3 = {
+    val clampedX = MathHelper.clamp_double(vec.xCoord, _boundingBox.MinPos.xCoord, _boundingBox.MaxPos.xCoord)
+    val clampedY = MathHelper.clamp_double(vec.yCoord, _boundingBox.MinPos.yCoord, _boundingBox.MaxPos.yCoord)
+    val clampedZ = MathHelper.clamp_double(vec.zCoord, _boundingBox.MinPos.zCoord, _boundingBox.MaxPos.zCoord)
+    new Vec3(clampedX, clampedY, clampedZ)
+  }
+
+  override def entityInit(): Unit = {}
 }

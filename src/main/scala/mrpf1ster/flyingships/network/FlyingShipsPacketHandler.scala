@@ -15,8 +15,16 @@ class FlyingShipsPacketHandler {
   val INSTANCE: SimpleNetworkWrapper = NetworkRegistry.INSTANCE.newSimpleChannel("flyingships")
 
   INSTANCE.registerMessage(classOf[ClientBlockChangedMessageHandler], classOf[BlockChangedMessage], 0, Side.CLIENT)
-  INSTANCE.registerMessage(classOf[ClientSpawnShipHandler], classOf[SpawnShipMessage],1,Side.CLIENT)
+  INSTANCE.registerMessage(classOf[ClientSpawnShipMessageHandler], classOf[SpawnShipMessage], 1, Side.CLIENT)
   INSTANCE.registerMessage(classOf[ClientBlockActionMessageHandler], classOf[BlockActionMessage], 4, Side.CLIENT)
+  INSTANCE.registerMessage(classOf[ClientChunkDataMessageHandler], classOf[ChunkDataMessage], 5, Side.CLIENT)
+  INSTANCE.registerMessage(classOf[ClientMultipleBlocksChangedMessageHandler], classOf[MultipleBlocksChangedMessage], 6, Side.CLIENT)
+  INSTANCE.registerMessage(classOf[ClientUpdateTileEntityMessageHandler], classOf[UpdateTileEntityMessage], 7, Side.CLIENT)
+  INSTANCE.registerMessage(classOf[ClientShipVelocityMessageHandler], classOf[ShipVelocityMessage], 8, Side.CLIENT)
+  INSTANCE.registerMessage(classOf[ClientShipRelMoveMessageHandler], classOf[ShipRelMoveMessage], 9, Side.CLIENT)
+  INSTANCE.registerMessage(classOf[ClientShipRotMessageHandler], classOf[ShipRotMessage], 10, Side.CLIENT)
+  INSTANCE.registerMessage(classOf[ClientShipMoveRotMessageHandler], classOf[ShipMoveRotMessage], 11, Side.CLIENT)
+  INSTANCE.registerMessage(classOf[ClientDeleteShipMessageHandler], classOf[DeleteShipMessage], 12, Side.CLIENT)
 
   INSTANCE.registerMessage(classOf[ServerBlockPlacedMessageHandler], classOf[BlockPlacedMessage],2,Side.SERVER)
   INSTANCE.registerMessage(classOf[ServerBlockDiggingMessageHandler], classOf[BlockDiggingMessage],3,Side.SERVER)
@@ -40,6 +48,18 @@ class FlyingShipsPacketHandler {
     if (ship == null || ship.Shipworld == null || ship.Shipworld.isRemote) return false
 
     FlyingShips.flyingShipPacketHandler.INSTANCE.sendToDimension(new SpawnShipMessage(ship), dim)
+    true
+  }
+
+  def nullCheck(ship: Option[EntityShip], caller: String, shipID: Int): Boolean = {
+    if (ship.isEmpty) {
+      println(s"$caller: Ship ID ${shipID} was not located! Aborting!")
+      return false
+    }
+    if (ship.get.Shipworld == null) {
+      println(s"$caller: Ship ID ${shipID}'s Shipworld was null! Aborting!")
+      return false
+    }
     true
   }
 

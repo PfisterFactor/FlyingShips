@@ -1,9 +1,9 @@
 package mrpf1ster.flyingships
 
-import mrpf1ster.flyingships.entities.{ClickSimulator, EntityShip, ShipInteractionHandler}
+import mrpf1ster.flyingships.entities.{ClickSimulator, EntityShip, EntityShipTracker, ShipInteractionHandler}
 import mrpf1ster.flyingships.util.{ShipLocator, UnifiedPos}
 import mrpf1ster.flyingships.world.chunk.ChunkProviderShip
-import mrpf1ster.flyingships.world.{PlayerRelative, ShipWorld}
+import mrpf1ster.flyingships.world.{PlayerRelative, ShipWorld, ShipWorldServer}
 import net.minecraft.client.Minecraft
 import net.minecraft.entity.player.{EntityPlayer, EntityPlayerMP}
 import net.minecraft.util.MovingObjectPosition.MovingObjectType
@@ -13,9 +13,12 @@ import net.minecraftforge.event.entity.player.PlayerOpenContainerEvent
 import net.minecraftforge.fml.common.eventhandler.Event.Result
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent
 import net.minecraftforge.fml.common.gameevent.InputEvent.MouseInputEvent
-import net.minecraftforge.fml.common.gameevent.TickEvent
-import net.minecraftforge.fml.common.gameevent.TickEvent.Phase
+import net.minecraftforge.fml.common.gameevent.PlayerEvent.PlayerRespawnEvent
+import net.minecraftforge.fml.common.gameevent.{PlayerEvent, TickEvent}
+import net.minecraftforge.fml.common.network.FMLNetworkEvent
 import net.minecraftforge.fml.relauncher.{Side, SideOnly}
+
+import scala.collection.JavaConversions._
 
 /**
   * Created by EJ on 3/9/2016.
@@ -23,19 +26,28 @@ import net.minecraftforge.fml.relauncher.{Side, SideOnly}
 class FlyingShipEventHandlers {
 
   @SubscribeEvent
-  def onServerTick(event: TickEvent.WorldTickEvent): Unit = {
-    if (event.phase != Phase.START) return
-    ChunkProviderShip.ShipChunkIO.tick()
-    val ships = ShipLocator.getShips(event.world)
-    if (ships.isEmpty) return
-    ships.foreach(ship => {
-      if (ship.Shipworld != null) {
-        ship.Shipworld.tick()
-        ship.Shipworld.updateEntities()
-      }
-    })
-
+  def onServerTick(event: TickEvent.WorldTickEvent): Unit = event.phase match {
+    case TickEvent.Phase.START =>
+      ChunkProviderShip.ShipChunkIO.tick()
+      val ships = ShipLocator.getShips(event.world)
+      if (ships.isEmpty) return
+      ships.foreach(ship => {
+        if (!ship.isDead) {
+          ship.onUpdate()
+          if (ship.Shipworld != null) {
+            ship.Shipworld.tick()
+            ship.Shipworld.updateEntities()
+          }
+        }
+        else {
+          EntityShipTracker.untrackShip(ship)
+        }
+      })
+    case TickEvent.Phase.END =>
+      event.world.playerEntities.foreach(player => EntityShipTracker.onPlayerUpdate(player.asInstanceOf[EntityPlayerMP]))
+      EntityShipTracker.updateTrackedShips()
   }
+
 
   //noinspection AccessorLikeMethodIsEmptyParen
   private def getShipMouseOver(): (Int, MovingObjectPosition) = {
@@ -151,12 +163,45 @@ class FlyingShipEventHandlers {
       event.setResult(Result.DEFAULT)
   }
 
+  def addPlayerToShipPlayerManager(playerMP: EntityPlayerMP) = {
+    val ships = ShipLocator.getShips
+    ships.foreach(ship => {
+      if (ship.Shipworld != null && !ship.Shipworld.isRemote) {
+        ship.Shipworld.asInstanceOf[ShipWorldServer].PlayerManager.removePlayer(playerMP)
+        if (playerMP.worldObj == ship.Shipworld.OriginWorld)
+          ship.Shipworld.asInstanceOf[ShipWorldServer].PlayerManager.addPlayer(playerMP)
+      }
+    })
+  }
+
+  def removePlayerFromShipManager(playerMP: EntityPlayerMP) = {
+    val ships = ShipLocator.getShips(playerMP.worldObj)
+    ships.foreach(ship => if (ship.Shipworld != null) ship.Shipworld.asInstanceOf[ShipWorldServer].PlayerManager.removePlayer(playerMP))
+  }
+
   @SubscribeEvent
   def onEntitySpawn(event: EntityJoinWorldEvent): Unit = event.entity match {
-    case playerMP: EntityPlayerMP => FlyingShips.flyingShipPacketHandler.sendAllShipsToClient(playerMP) // Todo: Fix this so it's within the range of the player
+    case playerMP: EntityPlayerMP =>
+      addPlayerToShipPlayerManager(playerMP)
+      FlyingShips.flyingShipPacketHandler.sendAllShipsToClient(playerMP) // Todo: Fix this so it's within the range of the player
     case ship: EntityShip if !ship.worldObj.isRemote => FlyingShips.flyingShipPacketHandler.sendShipToAllClientsInDimension(ship, ship.worldObj.provider.getDimensionId)
     case _ =>
   }
 
+  @SubscribeEvent
+  def onPlayerRespawn(event: PlayerRespawnEvent): Unit = {
+    if (event.player.worldObj.isRemote) return
 
+    addPlayerToShipPlayerManager(event.player.asInstanceOf[EntityPlayerMP])
+  }
+
+  @SubscribeEvent
+  def onPlayerLogOut(event: PlayerEvent.PlayerLoggedOutEvent): Unit = {
+    removePlayerFromShipManager(event.player.asInstanceOf[EntityPlayerMP])
+  }
+
+  @SubscribeEvent
+  def onPlayerDisconnect(event: FMLNetworkEvent.ClientDisconnectionFromServerEvent) = {
+    EntityShipTracker.ClientSideShips.keys.foreach(EntityShipTracker.ClientSideShips.remove)
+  }
 }

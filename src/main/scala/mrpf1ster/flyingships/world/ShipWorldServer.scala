@@ -13,6 +13,7 @@ import net.minecraft.block.state.IBlockState
 import net.minecraft.block.{Block, BlockEventData}
 import net.minecraft.crash.{CrashReport, CrashReportCategory}
 import net.minecraft.init.Blocks
+import net.minecraft.tileentity.TileEntity
 import net.minecraft.util.{BlockPos, ReportedException}
 import net.minecraft.world.chunk.storage.AnvilChunkLoader
 import net.minecraft.world.chunk.{Chunk, IChunkProvider}
@@ -32,7 +33,11 @@ class ShipWorldServer(originWorld: World, ship: EntityShip, uUID: UUID) extends 
 
   private val ServerBlockEventList = mutable.Set[BlockEventData]()
 
-  // Stuff for compatibility with WorldServer
+  val PlayerManager = new PlayerManagerShip(this)
+  val WorldManager = new ShipWorldManager(this)
+  addWorldAccess(WorldManager)
+
+  // Stuff for compatibility with WorldServer methods
   private val pendingTickListEntriesHashSet: java.util.Set[NextTickListEntry] = Sets.newHashSet[NextTickListEntry]
   private val pendingTickListEntriesTreeSet: java.util.TreeSet[NextTickListEntry] = new java.util.TreeSet[NextTickListEntry]
   private val pendingTickListEntriesThisTick: java.util.List[NextTickListEntry] = Lists.newArrayList[NextTickListEntry]
@@ -43,12 +48,16 @@ class ShipWorldServer(originWorld: World, ship: EntityShip, uUID: UUID) extends 
     new ChunkProviderShip(this, anvilLoader)
   }
 
+  def getChunkProviderServer: ChunkProviderShip = chunkProvider.asInstanceOf[ChunkProviderShip]
+
   override def tick(): Unit = {
     tickUpdates(false)
     updateBlocks()
     //worldTeleporter.removeStalePortalLocations(this.getTotalWorldTime)
     //customTeleporters.foreach(tele => tele.removeStalePortalLocations(getTotalWorldTime))
     this.chunkProvider.unloadQueuedChunks()
+    this.worldInfo.setWorldTotalTime(OriginWorld.getTotalWorldTime)
+    PlayerManager.updatePlayerInstances()
 
     sendQueuedBlockEvents()
   }
@@ -129,6 +138,32 @@ class ShipWorldServer(originWorld: World, ship: EntityShip, uUID: UUID) extends 
 
   override def onShipMove(): Unit = {
 
+  }
+
+  def getTileEntitiesIn(minX: Int, minY: Int, minZ: Int, maxX: Int, maxY: Int, maxZ: Int): java.util.List[TileEntity] = {
+    val list: java.util.List[TileEntity] = Lists.newArrayList[TileEntity]
+    var x: Int = minX & ~0x0F
+    while (x < maxX) {
+      var z: Int = minZ & ~0x0F
+      while (z < maxZ) {
+        if (this.isChunkLoaded(x >> 4, z >> 4, true)) {
+          val chunk: Chunk = this.getChunkFromChunkCoords(x >> 4, z >> 4)
+          if (chunk != null && !chunk.isEmpty) {
+            for (entity <- chunk.getTileEntityMap.values) {
+              if (!entity.isInvalid) {
+                val pos: BlockPos = entity.getPos
+                if (pos.getX >= minX && pos.getY >= minY && pos.getZ >= minZ && pos.getX < maxX && pos.getY < maxY && pos.getZ < maxZ) {
+                  list.add(entity)
+                }
+              }
+            }
+          }
+        }
+        z += 16
+      }
+      x += 16
+    }
+    return list
   }
 
   override def isBlockTickPending(blockPos: BlockPos, block: Block): Boolean = pendingTickListEntriesThisTick.contains(new NextTickListEntry(blockPos, block))
@@ -295,8 +330,8 @@ class ShipWorldServer(originWorld: World, ship: EntityShip, uUID: UUID) extends 
       if (this.provider.canDoRainSnowIce(chunk) && this.rand.nextInt(16) == 0) {
         this.updateLCG = this.updateLCG * 3 + 1013904223
         val k2: Int = this.updateLCG >> 2
-        val blockpos2: BlockPos = this.getPrecipitationHeight(new BlockPos(k + (k2 & 15), 0, l + (k2 >> 8 & 15)))
-        val blockpos1: BlockPos = blockpos2.down
+        val blockpos2: Blockpos = this.getPrecipitationHeight(new Blockpos(k + (k2 & 15), 0, l + (k2 >> 8 & 15)))
+        val blockpos1: Blockpos = blockpos2.down
         if (this.canBlockFreezeNoWater(blockpos1)) {
           this.setBlockState(blockpos1, Blocks.ice.getDefaultState)
         }
@@ -337,7 +372,7 @@ class ShipWorldServer(originWorld: World, ship: EntityShip, uUID: UUID) extends 
 
   private def adjustPosToNearbyEntity(pos: BlockPos): BlockPos = {
     val blockpos: BlockPos = this.getPrecipitationHeight(pos)
-    //val axisalignedbb: AxisAlignedBB = new AxisAlignedBB(blockpos, new BlockPos(blockpos.getX, this.getHeight, blockpos.getZ)).expand(3.0D, 3.0D, 3.0D)
+    //val axisalignedbb: AxisAlignedBB = new AxisAlignedBB(blockpos, new Blockpos(blockpos.getX, this.getHeight, blockpos.getZ)).expand(3.0D, 3.0D, 3.0D)
     /*
     val list = this.getEntitiesWithinAABB(classOf[EntityLivingBase], axisalignedbb, new Predicate[EntityLivingBase]() {
       def apply(p_apply_1_:

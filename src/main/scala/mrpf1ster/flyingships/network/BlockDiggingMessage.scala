@@ -32,7 +32,7 @@ class BlockDiggingMessage(status: C07PacketPlayerDigging.Action, pos: BlockPos, 
     // Status
     buf.writeInt(Status.ordinal())
 
-    // BlockPos
+    // Blockpos
     buf.writeLong(BlockPosition.toLong)
 
     // Side
@@ -46,7 +46,7 @@ class BlockDiggingMessage(status: C07PacketPlayerDigging.Action, pos: BlockPos, 
     // Status
     Status = C07PacketPlayerDigging.Action.values()(buf.readInt())
 
-    // BlockPos
+    // Blockpos
     BlockPosition = BlockPos.fromLong(buf.readLong())
 
     // Side
@@ -164,7 +164,7 @@ private object ItemInWorldManagerFaker {
 
     // World PlayAuxSFXAtEntity manual
     shipWorld.playAuxSFXAtEntity(player, 2001, pos, Block.getStateId(iblockstate))
-    //EffectRendererShip.addBlockDestroyEffects(shipWorld, pos, block.getStateFromMeta(par4 >> 12 & 255))
+    //EffectRendererShip.addBlockDestroyEffects(Shipworld, pos, block.getStateFromMeta(par4 >> 12 & 255))
     // End of manual
 
     var blockWasRemoved: Boolean = false
@@ -229,7 +229,7 @@ private object ItemInWorldManagerFaker {
       }
       if (event.useItem == net.minecraftforge.fml.common.eventhandler.Event.Result.DENY) {
         if (f >= 1.0F) {
-          //player.playerNetServerHandler.sendPacket(new S23PacketBlockChange(shipWorld, pos))
+          //player.playerNetServerHandler.sendPacket(new S23PacketBlockChange(Shipworld, pos))
         }
         return
       }

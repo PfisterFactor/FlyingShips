@@ -176,9 +176,9 @@ class ShipRender(rm: RenderManager) extends Render[EntityShip](rm) {
       renderBlock(shipWorld, blockState, uPos.RelativePos, worldRenderer)
     })
     /*
-    shipWorld.BlockSet.foreach(uPos => {
-      val blockState = shipWorld.getBlockState(uPos.RelativePos)
-      renderBlock(shipWorld, blockState, uPos.RelativePos, worldRenderer)
+    Shipworld.BlockSet.foreach(uPos => {
+      val blockState = Shipworld.getBlockState(uPos.RelativePos)
+      renderBlock(Shipworld, blockState, uPos.RelativePos, worldRenderer)
     })
     */
 
