@@ -4,7 +4,6 @@ import mrpf1ster.flyingships.CommonProxy
 import mrpf1ster.flyingships.network.DeleteShipMessage
 import net.minecraft.entity.player.EntityPlayerMP
 import net.minecraftforge.fml.common.network.simpleimpl.IMessage
-import net.minecraftforge.fml.relauncher.{Side, SideOnly}
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable
@@ -21,12 +20,10 @@ object EntityShipTracker {
   private val TrackingFrequency = CommonProxy.ShipTracking._2
   val ClientSideShips: mutable.Map[Int, EntityShip] = mutable.Map()
 
-  @SideOnly(Side.CLIENT)
   def addShipClientSide(entityShip: EntityShip): Unit = {
     ClientSideShips.put(entityShip.ShipID, entityShip)
   }
 
-  @SideOnly(Side.CLIENT)
   def removeShipClientSide(entityShip: EntityShip): Unit = {
     ClientSideShips.remove(entityShip.ShipID)
   }

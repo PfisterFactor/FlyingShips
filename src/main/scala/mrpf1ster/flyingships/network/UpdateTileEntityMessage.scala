@@ -1,6 +1,7 @@
 package mrpf1ster.flyingships.network
 
 import io.netty.buffer.ByteBuf
+import mrpf1ster.flyingships.FlyingShips
 import mrpf1ster.flyingships.util.ShipLocator
 import net.minecraft.client.Minecraft
 import net.minecraft.nbt.NBTTagCompound
@@ -63,7 +64,9 @@ class ClientUpdateTileEntityMessageHandler extends IMessageHandler[UpdateTileEnt
 
   case class UpdateTileEntityMessageTask(Message: UpdateTileEntityMessage, Ctx: MessageContext) extends Runnable {
     override def run(): Unit = {
-      val ship = ShipLocator.getShip(Message.ShipID)
+      val ship = ShipLocator.getClientShip(Message.ShipID)
+
+      if (!FlyingShips.flyingShipPacketHandler.nullCheck(ship, "UpdateTileEntityMessageTask", Message.ShipID)) return
 
       def shipWorld = ship.get.Shipworld
 

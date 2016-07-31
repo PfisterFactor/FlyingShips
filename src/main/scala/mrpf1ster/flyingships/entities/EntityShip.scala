@@ -77,7 +77,10 @@ class EntityShip(pos: BlockPos, world: World, blockSet: Set[BlockPos]) extends E
   // Returns ship creator block for the ship
   def ShipBlock = Shipworld.ShipBlock
 
-
+  override def getEntityId = {
+    println("Don't use entity id! Use shipID instead!")
+    throw new IllegalAccessException()
+  }
   override def getEntityBoundingBox = if (Shipworld != null && Shipworld.isShipValid && _boundingBox != null) _boundingBox.AABB else new AxisAlignedBB(0, 0, 0, 0, 0, 0)
 
   def createShipWorld() = {
@@ -102,9 +105,6 @@ class EntityShip(pos: BlockPos, world: World, blockSet: Set[BlockPos]) extends E
     tagCompound.setIntArray("BlocksOnShipX", blocksOnShipX)
     tagCompound.setIntArray("BlocksOnShipY", blocksOnShipY)
     tagCompound.setIntArray("BlocksOnShipZ", blocksOnShipZ)
-
-    // The Shipworld itself is saved to the world file
-    Shipworld.getChunkProvider.saveChunks(true, null)
   }
 
   override def readEntityFromNBT(tagCompound: NBTTagCompound): Unit = {
@@ -123,8 +123,6 @@ class EntityShip(pos: BlockPos, world: World, blockSet: Set[BlockPos]) extends E
     val blocksOnShip = (0 until blocksOnShipX.size).map(i => new UnifiedPos(new BlockPos(blocksOnShipX(i), blocksOnShipY(i), blocksOnShipZ(i)), Shipworld.OriginPos, true))
     // Check to make sure blocks aren't air
     Shipworld.BlocksOnShip = mutable.Set(blocksOnShip: _*).filter(pos => Shipworld.getBlockState(pos.RelativePos).getBlock != Blocks.air)
-
-    // The shipworld is loaded by our savehandler and chunk provider
 
   }
 
@@ -164,8 +162,8 @@ class EntityShip(pos: BlockPos, world: World, blockSet: Set[BlockPos]) extends E
     }
 
     if (!Shipworld.isRemote) {
-      debugDoRotate()
-      //setRotation(new Quat4f(0, 0, 0, 1f))
+      //debugDoRotate()
+      setRotation(new Quat4f(0, 0, 0, 1f))
       moveEntity(motionX, motionY, motionZ)
     }
 

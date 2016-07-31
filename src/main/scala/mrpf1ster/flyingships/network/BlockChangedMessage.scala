@@ -1,6 +1,7 @@
 package mrpf1ster.flyingships.network
 
 import io.netty.buffer.ByteBuf
+import mrpf1ster.flyingships.FlyingShips
 import mrpf1ster.flyingships.entities.EntityShip
 import mrpf1ster.flyingships.util.ShipLocator
 import net.minecraft.block.Block
@@ -19,7 +20,7 @@ import net.minecraftforge.fml.common.network.simpleimpl.{IMessage, IMessageHandl
 class BlockChangedMessage(ship: EntityShip, changedBlock: BlockPos) extends IMessage {
   def this() = this(null, new BlockPos(-1, -1, -1))
 
-  var ShipID = if (ship != null) ship.getEntityId else -1
+  var ShipID = if (ship != null) ship.ShipID else -1
   var ChangedBlock = changedBlock
   var Blockstate: IBlockState = if (ship != null) ship.Shipworld.getBlockState(changedBlock) else Blocks.air.getDefaultState
   var ChangedTileEntityNBT: NBTTagCompound = if (ship != null && ship.Shipworld.getTileEntity(ChangedBlock) != null) {
@@ -78,11 +79,11 @@ class ClientBlockChangedMessageHandler extends IMessageHandler[BlockChangedMessa
   @Override
   override def onMessage(message: BlockChangedMessage, ctx: MessageContext): IMessage = {
     if (message.ShipID != -1)
-      Minecraft.getMinecraft.addScheduledTask(new BlocksChangedMessageTask(message, ctx))
+      Minecraft.getMinecraft.addScheduledTask(new BlockChangedMessageTask(message, ctx))
     null
   }
 
-  class BlocksChangedMessageTask(message: BlockChangedMessage, ctx: MessageContext) extends Runnable {
+  class BlockChangedMessageTask(message: BlockChangedMessage, ctx: MessageContext) extends Runnable {
     val Message = message
     val Context = ctx
 
@@ -94,11 +95,9 @@ class ClientBlockChangedMessageHandler extends IMessageHandler[BlockChangedMessa
 
       val Ship = ShipLocator.getShip(player.worldObj, message.ShipID)
 
-      if (Ship.isEmpty)
-        return
+      if (!FlyingShips.flyingShipPacketHandler.nullCheck(Ship, "BlockChangedMessageTask", message.ShipID)) return
 
-
-      Ship.get.Shipworld.applyBlockChange(message.ChangedBlock, message.Blockstate, 3)
+      Ship.get.Shipworld.setBlockState(message.ChangedBlock, message.Blockstate, 3)
 
       if (message.HasTileEntity && message.ChangedTileEntityNBT != null) {
         val teOnShip = Ship.get.Shipworld.getTileEntity(message.ChangedBlock)

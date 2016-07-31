@@ -71,10 +71,10 @@ class ClientMultipleBlocksChangedMessageHandler extends IMessageHandler[Multiple
 
   case class MultipleBlocksChangedMessageTask(Message: MultipleBlocksChangedMessage, Ctx: MessageContext) extends Runnable {
     override def run(): Unit = {
-      val ship = ShipLocator.getShip(Message.ShipID)
+      val ship = ShipLocator.getClientShip(Message.ShipID)
       if (!FlyingShips.flyingShipPacketHandler.nullCheck(ship, "MultipleBlocksChangedMessageTask", Message.ShipID)) return
 
-      Message.ChangedBlocks.foreach(block => ship.get.Shipworld.applyBlockChange(Message.getPos(block.func_180089_b), block.getBlockState, 3))
+      Message.ChangedBlocks.foreach(block => ship.get.Shipworld.setBlockState(Message.getPos(block.func_180089_b), block.getBlockState, 3))
     }
   }
 

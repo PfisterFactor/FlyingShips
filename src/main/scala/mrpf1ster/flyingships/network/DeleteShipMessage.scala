@@ -34,7 +34,7 @@ class ClientDeleteShipMessageHandler extends IMessageHandler[DeleteShipMessage, 
 
   case class DeleteShipMessageTask(Message: DeleteShipMessage, Ctx: MessageContext) extends Runnable {
     override def run(): Unit = {
-      val ship = ShipLocator.getShip(Message.ShipID)
+      val ship = ShipLocator.getClientShip(Message.ShipID)
       if (ship.isEmpty)
         println(s"DeleteShipMessageTask: Could not find Ship ID ${Message.ShipID}, cannot delete it!")
       else

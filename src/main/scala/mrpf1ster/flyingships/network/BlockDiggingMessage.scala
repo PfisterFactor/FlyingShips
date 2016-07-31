@@ -1,6 +1,7 @@
 package mrpf1ster.flyingships.network
 
 import io.netty.buffer.ByteBuf
+import mrpf1ster.flyingships.FlyingShips
 import mrpf1ster.flyingships.util.ShipLocator
 import mrpf1ster.flyingships.world.ShipWorld
 import net.minecraft.block.Block
@@ -63,7 +64,6 @@ class ServerBlockDiggingMessageHandler extends IMessageHandler[BlockDiggingMessa
   @Override
   override def onMessage(message: BlockDiggingMessage, ctx: MessageContext): IMessage = {
     if (message.ShipID == -1) return null
-    if (message.BlockPosition == new BlockPos(0, 0, 0)) return null
 
     FMLCommonHandler.instance.getMinecraftServerInstance.addScheduledTask(new BlockDiggingMessageTask(message, ctx))
     null
@@ -76,13 +76,10 @@ class ServerBlockDiggingMessageHandler extends IMessageHandler[BlockDiggingMessa
     // On Server
     override def run(): Unit = {
 
-
       def player = ctx.getServerHandler.playerEntity
+      val Ship = ShipLocator.getServerShip(message.ShipID)
 
-      val Ship = ShipLocator.getShip(player.worldObj, message.ShipID)
-
-      if (Ship.isEmpty)
-        return
+      if (!FlyingShips.flyingShipPacketHandler.nullCheck(Ship, "BlockDiggingMessageTask", message.ShipID)) return
 
       processPacket(ctx.getServerHandler, Ship.get.Shipworld)
     }
@@ -113,8 +110,8 @@ class ServerBlockDiggingMessageHandler extends IMessageHandler[BlockDiggingMessa
             ItemInWorldManagerFaker.onBlockClicked(player, blockpos, message.Side, shipWorld)
           }
           else {
-            // Handled by Shipworld
-            //player.playerNetServerHandler.sendPacket(new S23PacketBlockChange(worldserver, blockpos))
+            val message = new BlockChangedMessage(shipWorld.Ship, blockpos)
+            FlyingShips.flyingShipPacketHandler.INSTANCE.sendTo(message, player)
           }
         }
         else {
@@ -125,8 +122,8 @@ class ServerBlockDiggingMessageHandler extends IMessageHandler[BlockDiggingMessa
             shipWorld.sendBlockBreakProgress(player.getEntityId,blockpos,-1)
           }
           if (shipWorld.getBlockState(blockpos).getBlock.getMaterial != Material.air) {
-            // Handled by Shipworld
-            //player.playerNetServerHandler.sendPacket(new S23PacketBlockChange(worldserver, blockpos))
+            val message = new BlockChangedMessage(shipWorld.Ship, blockpos)
+            FlyingShips.flyingShipPacketHandler.INSTANCE.sendTo(message, player)
           }
         }
       }
@@ -223,13 +220,15 @@ private object ItemInWorldManagerFaker {
           shipWorld.extinguishFire(null.asInstanceOf[EntityPlayer], pos, side)
         }
         else {
-          //player.playerNetServerHandler.sendPacket(new S23PacketBlockChange(theWorld, pos))
+          val message = new BlockChangedMessage(shipWorld.Ship, pos)
+          FlyingShips.flyingShipPacketHandler.INSTANCE.sendTo(message, player)
         }
         f = block.getPlayerRelativeBlockHardness(player, shipWorld, pos)
       }
       if (event.useItem == net.minecraftforge.fml.common.eventhandler.Event.Result.DENY) {
         if (f >= 1.0F) {
-          //player.playerNetServerHandler.sendPacket(new S23PacketBlockChange(Shipworld, pos))
+          val message = new BlockChangedMessage(shipWorld.Ship, pos)
+          FlyingShips.flyingShipPacketHandler.INSTANCE.sendTo(message, player)
         }
         return
       }

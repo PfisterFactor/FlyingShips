@@ -1,6 +1,7 @@
 package mrpf1ster.flyingships.network
 
 import io.netty.buffer.ByteBuf
+import mrpf1ster.flyingships.FlyingShips
 import mrpf1ster.flyingships.util.ShipLocator
 import net.minecraft.block.Block
 import net.minecraft.client.Minecraft
@@ -67,10 +68,8 @@ class ClientBlockActionMessageHandler extends IMessageHandler[BlockActionMessage
     override def run(): Unit = {
       val ship = ShipLocator.getShip(Minecraft.getMinecraft.theWorld, message.ShipID)
 
-      if (ship.isEmpty || ship.get.Shipworld == null) {
-        println(s"Empty or null ship in block action message task, ID: ${message.ShipID}!")
-        return
-      }
+      if (!FlyingShips.flyingShipPacketHandler.nullCheck(ship, "BlockActionMessageTask", message.ShipID)) return
+
       ship.get.Shipworld.addBlockEvent(message.BlockPosition, message.BlockOf, message.Data1, message.Data2)
     }
   }

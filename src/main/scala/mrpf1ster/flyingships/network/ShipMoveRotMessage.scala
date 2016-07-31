@@ -75,7 +75,7 @@ class ClientShipMoveRotMessageHandler extends IMessageHandler[ShipMoveRotMessage
 
   case class ShipMoveRotMessageTask(message: ShipMoveRotMessage, ctx: MessageContext) extends Runnable {
     override def run(): Unit = {
-      val Ship = ShipLocator.getShip(message.ShipID)
+      val Ship = ShipLocator.getClientShip(message.ShipID)
       if (!FlyingShips.flyingShipPacketHandler.nullCheck(Ship, "ShipMoveRotMessageTask", message.ShipID)) return
 
       if (message.DoTeleport) {

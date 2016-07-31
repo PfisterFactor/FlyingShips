@@ -47,7 +47,7 @@ class ClientShipRotMessageHandler extends IMessageHandler[ShipRotMessage, IMessa
 
   case class ShipRotMessageTask(message: ShipRotMessage, ctx: MessageContext) extends Runnable {
     override def run(): Unit = {
-      val Ship = ShipLocator.getShip(message.ShipID)
+      val Ship = ShipLocator.getClientShip(message.ShipID)
       if (!FlyingShips.flyingShipPacketHandler.nullCheck(Ship, "ShipRotMessageTask", message.ShipID)) return
       Ship.get.setRotation(message.Rotation)
     }

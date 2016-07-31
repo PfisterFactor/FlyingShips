@@ -5,14 +5,13 @@ import java.util.UUID
 import com.google.common.collect.{Lists, Sets}
 import mrpf1ster.flyingships.FlyingShips
 import mrpf1ster.flyingships.entities.EntityShip
-import mrpf1ster.flyingships.network.{BlockActionMessage, BlockChangedMessage}
+import mrpf1ster.flyingships.network.BlockActionMessage
 import mrpf1ster.flyingships.util.UnifiedPos
 import mrpf1ster.flyingships.world.chunk.ChunkProviderShip
 import net.minecraft.block.material.Material
 import net.minecraft.block.state.IBlockState
 import net.minecraft.block.{Block, BlockEventData}
 import net.minecraft.crash.{CrashReport, CrashReportCategory}
-import net.minecraft.init.Blocks
 import net.minecraft.tileentity.TileEntity
 import net.minecraft.util.{BlockPos, ReportedException}
 import net.minecraft.world.chunk.storage.AnvilChunkLoader
@@ -62,61 +61,12 @@ class ShipWorldServer(originWorld: World, ship: EntityShip, uUID: UUID) extends 
     sendQueuedBlockEvents()
   }
 
-  // Todo: Fix this so all clients don't get spammed with useless packets
-  def sendBlockChangeToClient(blockPos: BlockPos): Unit = {
-    if (!isShipValid) return
-    if (Ship == null) return
-
-    val message = new BlockChangedMessage(Ship, blockPos)
-    FlyingShips.flyingShipPacketHandler.INSTANCE.sendToDimension(message, OriginWorld.provider.getDimensionId)
-
-  }
-
-  override def setBlockState(pos: BlockPos, newState: IBlockState, flags: Int): Boolean = {
-    super.setBlockState(pos, newState, flags) && applyBlockChange(pos, newState, flags)
-  }
-
-  override def applyBlockChange(pos: BlockPos, newState: IBlockState, flags: Int): Boolean = {
-    val uPos = UnifiedPos(pos, OriginPos, IsRelative = true)
-    val contains = BlocksOnShip.contains(uPos)
-    BlocksOnShip.add(uPos)
-    if (!contains && newState.getBlock != Blocks.air) {
-      Ship.generateBoundingBox()
-    }
-    else if (newState.getBlock == Blocks.air) {
-      BlocksOnShip.remove(uPos)
-      Ship.generateBoundingBox()
-    }
-
-    val chunk: Chunk = this.getChunkFromBlockCoords(pos)
-    val block: Block = newState.getBlock
-    val oldBlock: Block = getBlockState(pos).getBlock
-    val oldLight: Int = oldBlock.getLightValue(this, pos)
-    val oldOpacity: Int = oldBlock.getLightOpacity(this, pos)
-    val iblockstate: IBlockState = chunk.setBlockState(pos, newState)
-
-    if (iblockstate == null) return false
-    if (block.getLightOpacity(this, pos) != oldOpacity || block.getLightValue(this, pos) != oldLight)
-      this.checkLight(pos)
-
-
-    this.markAndNotifyBlock(pos, chunk, iblockstate, newState, flags)
-
-    if ((flags & 2) != 0)
-      sendBlockChangeToClient(pos)
-
-    true
-  }
-
-  override def markBlockForUpdate(pos: BlockPos) = sendBlockChangeToClient(pos)
-
-
   override def addBlockEvent(pos: BlockPos, block: Block, eventID: Int, eventParam: Int) = ServerBlockEventList.add(new BlockEventData(pos, block, eventID, eventParam))
 
   private def sendQueuedBlockEvents() = {
     ServerBlockEventList.foreach(event => {
       if (fireBlockEvent(event)) {
-        val message = new BlockActionMessage(event.getPosition, event.getBlock, event.getEventID, event.getEventParameter, Ship.getEntityId)
+        val message = new BlockActionMessage(event.getPosition, event.getBlock, event.getEventID, event.getEventParameter, Ship.ShipID)
         val blockPos = UnifiedPos.convertToWorld(event.getPosition, OriginPos())
         val targetPoint = new TargetPoint(OriginWorld.provider.getDimensionId, blockPos.getX, blockPos.getY, blockPos.getZ, 64)
         FlyingShips.flyingShipPacketHandler.INSTANCE.sendToAllAround(message, targetPoint)
@@ -134,6 +84,15 @@ class ShipWorldServer(originWorld: World, ship: EntityShip, uUID: UUID) extends 
       iblockstate.getBlock.onBlockEventReceived(this, event.getPosition, iblockstate, event.getEventID, event.getEventParameter)
     else
       false
+  }
+
+  def saveAllChunks(extraData: Boolean): Unit = {
+    if (!chunkProvider.canSave) return
+    chunkProvider.saveChunks(extraData, null)
+    chunkProvider.asInstanceOf[ChunkProviderShip].LoadedChunks.foreach(chunk => {
+      if (!PlayerManager.hasPlayerInstance(chunk.xPosition, chunk.zPosition))
+        chunkProvider.asInstanceOf[ChunkProviderShip].dropChunk(chunk.xPosition, chunk.zPosition)
+    })
   }
 
   override def onShipMove(): Unit = {

@@ -172,8 +172,10 @@ class ShipRender(rm: RenderManager) extends Render[EntityShip](rm) {
     worldRenderer.begin(GL11.GL_QUADS, DefaultVertexFormats.BLOCK)
 
     shipWorld.BlocksOnShip.foreach(uPos => {
-      val blockState = shipWorld.getBlockState(uPos.RelativePos)
-      renderBlock(shipWorld, blockState, uPos.RelativePos, worldRenderer)
+      if (shipWorld.isBlockLoaded(uPos.RelativePos, true)) {
+        val blockState = shipWorld.getBlockState(uPos.RelativePos)
+        renderBlock(shipWorld, blockState, uPos.RelativePos, worldRenderer)
+      }
     })
     /*
     Shipworld.BlockSet.foreach(uPos => {

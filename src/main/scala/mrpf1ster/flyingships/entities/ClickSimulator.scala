@@ -46,7 +46,6 @@ class ClickSimulator(shipWorld: ShipWorld) {
       val mop = shipWorld.Ship.InteractionHandler.getBlockPlayerIsLookingAt(1.0f)
 
       if (mop.isEmpty) return
-
       ClickSimulator.rightClickDelayTimer = 4
       val blockpos: BlockPos = mop.get.getBlockPos
 
@@ -292,6 +291,7 @@ class ClickSimulator(shipWorld: ShipWorld) {
   @SideOnly(Side.CLIENT)
   private def resetBlockRemoving(player: EntityPlayer): Unit = {
     if (shipWorld == null) return
+    if (!isHittingBlock) return
     shipWorld.Ship.InteractionHandler.sendBlockDiggingMessage(C07PacketPlayerDigging.Action.ABORT_DESTROY_BLOCK, this.currentBlock, EnumFacing.DOWN)
     this.isHittingBlock = false
     this.curBlockDamageMP = 0.0F
@@ -304,8 +304,10 @@ class ClickSimulator(shipWorld: ShipWorld) {
     def leftClick = Minecraft.getMinecraft.currentScreen == null && Minecraft.getMinecraft.gameSettings.keyBindAttack.isKeyDown && Minecraft.getMinecraft.inGameHasFocus
     def shipMouseOver = shipWorld.Ship.InteractionHandler.getBlockPlayerIsLookingAt(1.0f)
 
-    if (!leftClick)
+    if (!leftClick) {
       ClickSimulator.leftClickCounter = 0
+    }
+
 
 
     if (ClickSimulator.leftClickCounter <= 0 && !player.isUsingItem) {
@@ -316,10 +318,9 @@ class ClickSimulator(shipWorld: ShipWorld) {
           player.swingItem()
         }
       }
-      else {
-        resetBlockRemoving(player)
-      }
     }
+    else
+      resetBlockRemoving(player)
   }
 
   @SideOnly(Side.CLIENT)

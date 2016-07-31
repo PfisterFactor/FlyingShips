@@ -9,6 +9,7 @@ import mrpf1ster.flyingships.network.FlyingShipsPacketHandler
 import net.minecraftforge.fml.common.Mod
 import net.minecraftforge.fml.common.Mod.EventHandler
 import net.minecraftforge.fml.common.event.{FMLInitializationEvent, FMLPostInitializationEvent, FMLPreInitializationEvent, FMLServerStartingEvent}
+import org.apache.logging.log4j.LogManager
 
 
 @Mod(modid = FlyingShips.MOD_ID, name = "Flying Ships", version = FlyingShips.VERSION, modLanguage = "scala")
@@ -16,6 +17,8 @@ object FlyingShips {
 
   final val MOD_ID = "flyingships"
   final val VERSION = "0.01"
+  val logger = LogManager.getLogger("Flying Ships")
+
   val flyingShipEventHandlers = new FlyingShipEventHandlers
   val flyingShipPacketHandler = new FlyingShipsPacketHandler
 
@@ -33,7 +36,7 @@ object FlyingShips {
 
   @EventHandler
   def init(event: FMLInitializationEvent) = {
-    System.out.println("Flying Ships are taking off!")
+    logger.info("Flying Ships are taking off!")
     CommonProxy.init(event)
     if (event.getSide.isClient) {
       ClientProxy.init(event)

@@ -1,6 +1,7 @@
 package mrpf1ster.flyingships.network
 
 import io.netty.buffer.ByteBuf
+import mrpf1ster.flyingships.FlyingShips
 import mrpf1ster.flyingships.util.ShipLocator
 import net.minecraft.client.Minecraft
 import net.minecraft.network.play.server.S21PacketChunkData
@@ -77,15 +78,8 @@ class ClientChunkDataMessageHandler extends IMessageHandler[ChunkDataMessage, IM
 
     // On Client
     override def run(): Unit = {
-      val ship = ShipLocator.getShip(message.ShipID)
-      if (ship.isEmpty) {
-        println(s"ChunkDataMessageTask: Ship ID ${message.ShipID} was not located! Aborting chunk send!")
-        return
-      }
-      if (ship.get.Shipworld == null) {
-        println(s"ChunkDataMessageTask: Ship ID ${message.ShipID} has a null Shipworld! Aborting chunk send!")
-        return
-      }
+      val ship = ShipLocator.getClientShip(message.ShipID)
+      if (!FlyingShips.flyingShipPacketHandler.nullCheck(ship, "ChunkDataMessageTask", message.ShipID)) return
 
       val chunk = ship.get.Shipworld.getChunkFromChunkCoords(message.ChunkX, message.ChunkZ)
       chunk.fillChunk(message.ChunkData.data, message.ChunkData.dataSize, message.Par2)

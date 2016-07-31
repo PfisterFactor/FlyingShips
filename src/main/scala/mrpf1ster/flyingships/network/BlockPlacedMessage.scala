@@ -1,6 +1,7 @@
 package mrpf1ster.flyingships.network
 
 import io.netty.buffer.ByteBuf
+import mrpf1ster.flyingships.FlyingShips
 import mrpf1ster.flyingships.util.ShipLocator
 import mrpf1ster.flyingships.world.ShipWorld
 import net.minecraft.inventory.Slot
@@ -91,12 +92,18 @@ class ServerBlockPlacedMessageHandler extends IMessageHandler[BlockPlacedMessage
 
       val ship = ShipLocator.getShip(player.worldObj,message.ShipID)
 
+      if (!FlyingShips.flyingShipPacketHandler.nullCheck(ship, "BlockPlacedMessageTask", message.ShipID)) return
 
-      if (ship.isEmpty)
-        return
+      def time[R](block: => R): R = {
+        val t0 = System.currentTimeMillis()
+        val result = block // call-by-name
+        val t1 = System.currentTimeMillis()
+        println("Elapsed time: " + (t1 - t0) + "ms")
+        result
+      }
 
 
-      processPacket(ctx.getServerHandler, ship.get.Shipworld)
+      time(processPacket(ctx.getServerHandler, ship.get.Shipworld))
 
     }
 
@@ -130,13 +137,13 @@ class ServerBlockPlacedMessageHandler extends IMessageHandler[BlockPlacedMessage
       }
 
 
-      // Shipworld handles updating the client
-      /*
       if (flag) {
-        this.playerEntity.playerNetServerHandler.sendPacket(new S23PacketBlockChange(worldserver, blockpos))
-        this.playerEntity.playerNetServerHandler.sendPacket(new S23PacketBlockChange(worldserver, blockpos.offset(enumfacing)))
+        val message = new BlockChangedMessage(shipWorld.Ship, blockpos)
+        val message2 = new BlockChangedMessage(shipWorld.Ship, blockpos.offset(enumfacing))
+
+        FlyingShips.flyingShipPacketHandler.INSTANCE.sendTo(message, player)
+        FlyingShips.flyingShipPacketHandler.INSTANCE.sendTo(message2, player)
       }
-      */
 
       itemstack = player.inventory.getCurrentItem
 

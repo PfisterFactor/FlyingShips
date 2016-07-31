@@ -57,7 +57,7 @@ class ClientShipRelMoveMessageHandler extends IMessageHandler[ShipRelMoveMessage
 
   case class ShipRelMoveMessageTask(Message: ShipRelMoveMessage, Ctx: MessageContext) extends Runnable {
     override def run(): Unit = {
-      val Ship = ShipLocator.getShip(Message.ShipID)
+      val Ship = ShipLocator.getClientShip(Message.ShipID)
       if (!FlyingShips.flyingShipPacketHandler.nullCheck(Ship, "ShipRelMoveMessageTask", Message.ShipID)) return
 
       Ship.get.serverPosX += Message.PosX.toInt

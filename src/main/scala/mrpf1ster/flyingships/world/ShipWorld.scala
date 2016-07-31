@@ -17,7 +17,7 @@ import net.minecraft.item.ItemStack
 import net.minecraft.nbt.NBTTagCompound
 import net.minecraft.tileentity.TileEntity
 import net.minecraft.util._
-import net.minecraft.world.chunk.IChunkProvider
+import net.minecraft.world.chunk.{Chunk, IChunkProvider}
 import net.minecraft.world.{World, WorldSettings}
 import net.minecraftforge.fml.relauncher.{Side, SideOnly}
 
@@ -32,9 +32,11 @@ object ShipWorld {
   // The Ship Block's Position, y is 128 to stick with the chunk's height limits
   val ShipBlockPos: BlockPos = new BlockPos(0, 128, 0)
   var ShipMouseOverID: Int = -1
-  var ShipMouseOver: MovingObjectPosition = new MovingObjectPosition(MovingObjectPosition.MovingObjectType.MISS, new Vec3(0, 0, 0), EnumFacing.UP, new BlockPos(-1, -1, -1))
+  val DEFUALTMOUSEOVER: MovingObjectPosition = new MovingObjectPosition(MovingObjectPosition.MovingObjectType.MISS, new Vec3(0, 0, 0), EnumFacing.UP, new BlockPos(-1, -1, -1))
+  var ShipMouseOver: MovingObjectPosition = DEFUALTMOUSEOVER
   val ShipBlockVec: Vec3 = new Vec3(ShipBlockPos)
   var doAccessing = false
+
 
   def startAccessing(): Unit = {
     doAccessing = true
@@ -83,12 +85,12 @@ abstract class ShipWorld(originWorld: World, ship: EntityShip, uUID: UUID) exten
     firstBlocks.foreach(uPos => {
       val bs = OriginWorld.getBlockState(uPos.WorldPos)
       BlocksOnShip.add(uPos)
-      applyBlockChange(uPos.RelativePos, bs, 0)
+      setBlockState(uPos.RelativePos, bs, 0)
     })
     everythingElse.foreach(uPos => {
       val bs = OriginWorld.getBlockState(uPos.WorldPos)
       BlocksOnShip.add(uPos)
-      applyBlockChange(uPos.RelativePos, bs, 0)
+      setBlockState(uPos.RelativePos, bs, 0)
     })
 
     if (!this.isShipValid) return
@@ -167,8 +169,49 @@ abstract class ShipWorld(originWorld: World, ship: EntityShip, uUID: UUID) exten
       wasAccessed = false
   }
 
-  override def setBlockState(pos: BlockPos, newState: IBlockState, flags: Int): Boolean = pos != ShipWorld.ShipBlockPos && isValid(pos)
 
+  override def setBlockState(pos: BlockPos, newState: IBlockState, flags: Int): Boolean = {
+    if (!isValid(pos)) return false
+
+    val uPos = UnifiedPos(pos, OriginPos, IsRelative = true)
+    val contains = BlocksOnShip.contains(uPos)
+    BlocksOnShip.add(uPos)
+    if (!contains && newState.getBlock != Blocks.air) {
+      Ship.generateBoundingBox()
+    }
+    else if (newState.getBlock == Blocks.air) {
+      BlocksOnShip.remove(uPos)
+      Ship.generateBoundingBox()
+    }
+
+    val chunk: Chunk = this.getChunkFromBlockCoords(pos)
+    val block: Block = newState.getBlock
+    val oldBlock: Block = getBlockState(pos).getBlock
+    val oldLight: Int = oldBlock.getLightValue(this, pos)
+    val oldOpacity: Int = oldBlock.getLightOpacity(this, pos)
+    val iblockstate: IBlockState = chunk.setBlockState(pos, newState)
+
+    if (iblockstate == null) return false
+
+    if (block.getLightOpacity(this, pos) != oldOpacity || block.getLightValue(this, pos) != oldLight)
+      this.checkLight(pos)
+
+    this.markAndNotifyBlock(pos, chunk, iblockstate, newState, flags)
+    true
+  }
+
+  override def markAndNotifyBlock(pos: BlockPos, chunk: Chunk, iblockstate: IBlockState, newState: IBlockState, flags: Int) = {
+    if ((flags & 2) != 0 && (!this.isRemote || (flags & 4) == 0)) {
+      this.markBlockForUpdate(pos)
+    }
+    if (!this.isRemote && (flags & 1) != 0) {
+      this.notifyNeighborsRespectDebug(pos, newState.getBlock)
+      if (newState.getBlock.hasComparatorInputOverride) {
+        this.updateComparatorOutputLevel(pos, newState.getBlock)
+      }
+    }
+
+  }
 
   override def getBlockState(pos: BlockPos): IBlockState = {
     val state = super.getBlockState(pos)
@@ -181,13 +224,11 @@ abstract class ShipWorld(originWorld: World, ship: EntityShip, uUID: UUID) exten
     te
   }
 
-  def applyBlockChange(pos: BlockPos, newState: IBlockState, flags: Int): Boolean
-
   def onShipMove(): Unit
 
   def getClosestBlockPosToPlayer(entityPlayer: EntityPlayer): BlockPos = BlocksOnShip.minBy(upos => entityPlayer.getDistanceSq(upos.WorldPos)).WorldPos
 
-  def getClosestBlockPosToPlayerXZ(entityPlayer: EntityPlayer): BlockPos = BlocksOnShip.minBy(upos => Math.pow(upos.WorldPosX - entityPlayer.posX, 2) + Math.pow(upos.WorldPosZ - entityPlayer.posZ, 2)).WorldPos
+  def getClosestBlockPosToPlayerXZ(entityPlayer: EntityPlayer): BlockPos = BlocksOnShip.minBy(upos => Math.pow(upos.WorldPosX - entityPlayer.posX, 2) + Math.pow(upos.WorldPosZ - entityPlayer.posZ, 2)).RelativePos
 
   // Assumes coordinates are relative to the ship
   override def getClosestPlayer(x: Double, y: Double, z: Double, distance: Double): EntityPlayer = {

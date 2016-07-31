@@ -38,7 +38,7 @@ case class ShipInteractionHandler(Shipworld: ShipWorld) {
     val shipMouseOver = ShipWorld.ShipMouseOver
     val shipMouseOverID = ShipWorld.ShipMouseOverID
 
-    if (shipMouseOverID != Shipworld.Ship.getEntityId || shipMouseOver == null || shipMouseOver.typeOfHit != MovingObjectType.BLOCK)
+    if (shipMouseOverID != Shipworld.Ship.ShipID || shipMouseOver == null || shipMouseOver.typeOfHit != MovingObjectType.BLOCK)
       None
     else
       Some(shipMouseOver)
@@ -46,18 +46,18 @@ case class ShipInteractionHandler(Shipworld: ShipWorld) {
 
   @SideOnly(Side.CLIENT)
   def sendBlockDiggingMessage(status: C07PacketPlayerDigging.Action,pos:BlockPos,side:EnumFacing) = {
-    val message = new BlockDiggingMessage(status, pos, side, Shipworld.Ship.getEntityId)
+    val message = new BlockDiggingMessage(status, pos, side, Shipworld.Ship.ShipID)
     FlyingShips.flyingShipPacketHandler.INSTANCE.sendToServer(message)
   }
 
   @SideOnly(Side.CLIENT)
   def sendBlockPlacedMessage(pos:BlockPos,side:EnumFacing,heldItem:ItemStack,hitVec:Vec3) = {
-    val message = new BlockPlacedMessage(Shipworld.Ship.getEntityId, pos, side.getIndex, heldItem, hitVec)
+    val message = new BlockPlacedMessage(Shipworld.Ship.ShipID, pos, side.getIndex, heldItem, hitVec)
     FlyingShips.flyingShipPacketHandler.INSTANCE.sendToServer(message)
   }
 
   def sendBlockPlacedMessage(itemStack: ItemStack) = {
-    val message = new BlockPlacedMessage(Shipworld.Ship.getEntityId, itemStack)
+    val message = new BlockPlacedMessage(Shipworld.Ship.ShipID, itemStack)
     FlyingShips.flyingShipPacketHandler.INSTANCE.sendToServer(message)
   }
 

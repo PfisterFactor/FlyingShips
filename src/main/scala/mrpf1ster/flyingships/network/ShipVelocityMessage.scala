@@ -59,7 +59,7 @@ class ClientShipVelocityMessageHandler extends IMessageHandler[ShipVelocityMessa
   case class ShipVelocityMessageTask(Message: ShipVelocityMessage, Ctx: MessageContext) extends Runnable {
     // On Client
     override def run(): Unit = {
-      val Ship = ShipLocator.getShip(Message.ShipID)
+      val Ship = ShipLocator.getClientShip(Message.ShipID)
       if (!FlyingShips.flyingShipPacketHandler.nullCheck(Ship, "ShipVelocityMessageTask", Message.ShipID)) return
       Ship.get.setVelocity(Message.MotionX, Message.MotionY, Message.MotionZ)
     }

@@ -1,30 +1,48 @@
 package mrpf1ster.flyingships
 
 import mrpf1ster.flyingships.entities.{ClickSimulator, EntityShip, EntityShipTracker, ShipInteractionHandler}
-import mrpf1ster.flyingships.util.{ShipLocator, UnifiedPos}
+import mrpf1ster.flyingships.util.{ShipLocator, UnifiedPos, UnifiedVec}
 import mrpf1ster.flyingships.world.chunk.ChunkProviderShip
 import mrpf1ster.flyingships.world.{PlayerRelative, ShipWorld, ShipWorldServer}
 import net.minecraft.client.Minecraft
 import net.minecraft.entity.player.{EntityPlayer, EntityPlayerMP}
+import net.minecraft.server.MinecraftServer
 import net.minecraft.util.MovingObjectPosition.MovingObjectType
 import net.minecraft.util.{BlockPos, EnumFacing, MovingObjectPosition, Vec3}
 import net.minecraftforge.event.entity.EntityJoinWorldEvent
 import net.minecraftforge.event.entity.player.PlayerOpenContainerEvent
+import net.minecraftforge.event.world.WorldEvent
 import net.minecraftforge.fml.common.eventhandler.Event.Result
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent
 import net.minecraftforge.fml.common.gameevent.InputEvent.MouseInputEvent
 import net.minecraftforge.fml.common.gameevent.PlayerEvent.PlayerRespawnEvent
+import net.minecraftforge.fml.common.gameevent.TickEvent.PlayerTickEvent
 import net.minecraftforge.fml.common.gameevent.{PlayerEvent, TickEvent}
 import net.minecraftforge.fml.common.network.FMLNetworkEvent
 import net.minecraftforge.fml.relauncher.{Side, SideOnly}
 
-import scala.collection.JavaConversions._
-
 /**
   * Created by EJ on 3/9/2016.
   */
-class FlyingShipEventHandlers {
+object FlyingShipEventHandlers {
+  // Our coremod hooks into onShipMouseOver, here we can change the result of it depending on our ship raytrace
+  def getMouseOverHook = {
+    val mouseOver = Minecraft.getMinecraft.objectMouseOver
 
+    val player = Minecraft.getMinecraft.thePlayer
+    if (mouseOver.typeOfHit != MovingObjectPosition.MovingObjectType.MISS && ShipWorld.ShipMouseOver.typeOfHit != MovingObjectPosition.MovingObjectType.MISS) {
+      // Find the closest one
+      val shipMouseOverVec = UnifiedVec.convertToWorld(ShipWorld.ShipMouseOver.hitVec, ShipLocator.getClientShip(ShipWorld.ShipMouseOverID).get.Shipworld.OriginVec())
+
+      if (player.getDistanceSq(mouseOver.hitVec.xCoord, mouseOver.hitVec.yCoord, mouseOver.hitVec.zCoord) < player.getDistanceSq(shipMouseOverVec.xCoord, shipMouseOverVec.yCoord, shipMouseOverVec.zCoord)) {
+        ShipWorld.ShipMouseOver = ShipWorld.DEFUALTMOUSEOVER
+      }
+      else
+        Minecraft.getMinecraft.objectMouseOver = ShipWorld.DEFUALTMOUSEOVER
+    }
+  }
+}
+class FlyingShipEventHandlers {
   @SubscribeEvent
   def onServerTick(event: TickEvent.WorldTickEvent): Unit = event.phase match {
     case TickEvent.Phase.START =>
@@ -33,6 +51,9 @@ class FlyingShipEventHandlers {
       if (ships.isEmpty) return
       ships.foreach(ship => {
         if (!ship.isDead) {
+          if (MinecraftServer.getServer.getTickCounter % 900 == 0)
+            ship.Shipworld.asInstanceOf[ShipWorldServer].saveAllChunks(true)
+
           ship.onUpdate()
           if (ship.Shipworld != null) {
             ship.Shipworld.tick()
@@ -44,8 +65,13 @@ class FlyingShipEventHandlers {
         }
       })
     case TickEvent.Phase.END =>
-      event.world.playerEntities.foreach(player => EntityShipTracker.onPlayerUpdate(player.asInstanceOf[EntityPlayerMP]))
       EntityShipTracker.updateTrackedShips()
+  }
+
+  @SubscribeEvent
+  def onPlayerUpdate(event: PlayerTickEvent) = {
+    if (!event.player.worldObj.isRemote && event.phase == TickEvent.Phase.END)
+      EntityShipTracker.onPlayerUpdate(event.player.asInstanceOf[EntityPlayerMP])
   }
 
 
@@ -62,7 +88,7 @@ class FlyingShipEventHandlers {
     // Gets all the ships in range, then sorts by the ships that are closest, then raytraces over all of them, and returns the first raytrace that isn't a miss or null
     val mop = shipsInRange.toList
       .sortBy(ship => ship.getDistanceSqToShipClamped(Minecraft.getMinecraft.thePlayer))
-      .map(ship => (ship.getEntityId, ship.Shipworld.rayTraceBlocks(eyePos, ray)))
+      .map(ship => (ship.ShipID, ship.Shipworld.rayTraceBlocks(eyePos, ray)))
       .find(pair => pair._2 != null && pair._2.typeOfHit != MovingObjectType.MISS)
     if (mop.isEmpty)
       (-1, new MovingObjectPosition(MovingObjectPosition.MovingObjectType.MISS, new Vec3(0, 0, 0), EnumFacing.UP, new BlockPos(-1, -1, -1)))
@@ -93,24 +119,25 @@ class FlyingShipEventHandlers {
       val playerPos = Minecraft.getMinecraft.thePlayer.getPosition
       ships.foreach(ship => {
         if (ship.Shipworld != null) {
-          val relPlayerPos = UnifiedPos.convertToRelative(playerPos, ship.getPosition)
-          ship.Shipworld.doRandomDisplayTick(relPlayerPos.getX, relPlayerPos.getY, relPlayerPos.getZ)
+          if (!ship.isDead) {
+            ship.onUpdate()
+            val relPlayerPos = UnifiedPos.convertToRelative(playerPos, ship.getPosition)
+            ship.Shipworld.doRandomDisplayTick(relPlayerPos.getX, relPlayerPos.getY, relPlayerPos.getZ)
 
-          ship.InteractionHandler.ClickSimulator.sendClickBlockToController(Minecraft.getMinecraft.thePlayer)
-          if (Minecraft.getMinecraft.gameSettings.keyBindUseItem.isKeyDown && ClickSimulator.rightClickDelayTimer == 0 && !Minecraft.getMinecraft.thePlayer.isUsingItem)
-            ship.InteractionHandler.ClickSimulator.rightClickMouse()
+            ship.InteractionHandler.ClickSimulator.sendClickBlockToController(Minecraft.getMinecraft.thePlayer)
+            if (Minecraft.getMinecraft.gameSettings.keyBindUseItem.isKeyDown && ClickSimulator.rightClickDelayTimer == 0 && !Minecraft.getMinecraft.thePlayer.isUsingItem)
+              ship.InteractionHandler.ClickSimulator.rightClickMouse()
 
-          if (ship.Shipworld.isShipValid) {
-            ship.Shipworld.tick()
-            ship.Shipworld.updateEntities()
+            if (ship.Shipworld.isShipValid) {
+              ship.Shipworld.tick()
+              ship.Shipworld.updateEntities()
+            }
           }
-
+          else
+            EntityShipTracker.ClientSideShips.remove(ship.ShipID)
         }
       })
-      return
     }
-
-
   }
 
   var doLeftClick = false
@@ -164,7 +191,7 @@ class FlyingShipEventHandlers {
   }
 
   def addPlayerToShipPlayerManager(playerMP: EntityPlayerMP) = {
-    val ships = ShipLocator.getShips
+    val ships = ShipLocator.getServerShips
     ships.foreach(ship => {
       if (ship.Shipworld != null && !ship.Shipworld.isRemote) {
         ship.Shipworld.asInstanceOf[ShipWorldServer].PlayerManager.removePlayer(playerMP)
@@ -203,5 +230,12 @@ class FlyingShipEventHandlers {
   @SubscribeEvent
   def onPlayerDisconnect(event: FMLNetworkEvent.ClientDisconnectionFromServerEvent) = {
     EntityShipTracker.ClientSideShips.keys.foreach(EntityShipTracker.ClientSideShips.remove)
+  }
+
+  @SubscribeEvent
+  def onWorldUnload(event: WorldEvent.Unload): Unit = {
+    if (event.world.isRemote) return
+    val ships = ShipLocator.getShips(event.world)
+    ships.foreach(ship => ship.Shipworld.asInstanceOf[ShipWorldServer].saveAllChunks(true))
   }
 }
