@@ -32,7 +32,7 @@ class ShipWorldServer(originWorld: World, ship: EntityShip, uUID: UUID) extends 
 
   private val ServerBlockEventList = mutable.Set[BlockEventData]()
 
-  val PlayerManager = new PlayerManagerShip(this)
+  var PlayerManager: PlayerManagerShip = null
   val WorldManager = new ShipWorldManager(this)
   addWorldAccess(WorldManager)
 
@@ -41,7 +41,10 @@ class ShipWorldServer(originWorld: World, ship: EntityShip, uUID: UUID) extends 
   private val pendingTickListEntriesTreeSet: java.util.TreeSet[NextTickListEntry] = new java.util.TreeSet[NextTickListEntry]
   private val pendingTickListEntriesThisTick: java.util.List[NextTickListEntry] = Lists.newArrayList[NextTickListEntry]
 
-
+  // Defer the creation until blocks are loaded onto the ship
+  def createPlayerManager() = {
+    PlayerManager = new PlayerManagerShip(this)
+  }
   override def createChunkProvider(): IChunkProvider = {
     val anvilLoader = new AnvilChunkLoader(saveHandler.getWorldDirectory)
     new ChunkProviderShip(this, anvilLoader)

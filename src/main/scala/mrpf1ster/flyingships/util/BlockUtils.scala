@@ -1,7 +1,7 @@
 package mrpf1ster.flyingships.util
 
 import net.minecraft.util.{BlockPos, EnumFacing}
-import net.minecraft.world.World
+import net.minecraft.world.{ChunkCoordIntPair, World}
 
 import scala.collection.mutable.{Queue => mQueue, Set => mSet}
 
@@ -58,5 +58,21 @@ object BlockUtils {
     // Return our blocks as a set
     blockSet.toSet
   }
+
+  def getWorldChunkFromRelative(chunkX: Int, chunkZ: Int, origin: BlockPos): ChunkCoordIntPair = {
+    val relPos = new BlockPos(chunkX * 16, 0, chunkZ * 16)
+    val worldPos = UnifiedPos.convertToWorld(relPos, origin)
+    new ChunkCoordIntPair(worldPos.getX >> 4, worldPos.getZ >> 4)
+  }
+
+  def getWorldChunkFromRelative(chunkCoord: ChunkCoordIntPair, origin: BlockPos): ChunkCoordIntPair = getWorldChunkFromRelative(chunkCoord.chunkXPos, chunkCoord.chunkZPos, origin)
+
+  def getRelativeChunkFromWorld(chunkX: Int, chunkZ: Int, origin: BlockPos): ChunkCoordIntPair = {
+    val worldPos = new BlockPos(chunkX * 16, 0, chunkZ * 16)
+    val relPos = UnifiedPos.convertToRelative(worldPos, origin)
+    new ChunkCoordIntPair(relPos.getX >> 4, relPos.getZ >> 4)
+  }
+
+  def getRelativeChunkFromWorld(chunkCoord: ChunkCoordIntPair, origin: BlockPos): ChunkCoordIntPair = getRelativeChunkFromWorld(chunkCoord.chunkXPos, chunkCoord.chunkZPos, origin)
 
 }

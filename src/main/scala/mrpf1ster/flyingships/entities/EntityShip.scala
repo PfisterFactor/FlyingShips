@@ -31,9 +31,10 @@ object EntityShip {
     true
   }
 }
-class EntityShip(pos: BlockPos, world: World, blockSet: Set[BlockPos]) extends Entity(world) {
 
-  def this(world: World) = this(new BlockPos(0, 0, 0), world, Set[BlockPos]())
+class EntityShip(pos: BlockPos, world: World) extends Entity(world) {
+
+  def this(world: World) = this(new BlockPos(0, 0, 0), world)
   // Set position
   posX = pos.getX
   posY = pos.getY

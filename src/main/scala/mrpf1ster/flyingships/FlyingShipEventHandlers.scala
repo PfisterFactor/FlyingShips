@@ -2,7 +2,7 @@ package mrpf1ster.flyingships
 
 import mrpf1ster.flyingships.entities.{ClickSimulator, EntityShip, EntityShipTracker, ShipInteractionHandler}
 import mrpf1ster.flyingships.util.{ShipLocator, UnifiedPos, UnifiedVec}
-import mrpf1ster.flyingships.world.chunk.ChunkProviderShip
+import mrpf1ster.flyingships.world.chunk.{ChunkProviderShip, ClientChunkProviderShip}
 import mrpf1ster.flyingships.world.{PlayerRelative, ShipWorld, ShipWorldServer}
 import net.minecraft.client.Minecraft
 import net.minecraft.entity.player.{EntityPlayer, EntityPlayerMP}
@@ -11,13 +11,12 @@ import net.minecraft.util.MovingObjectPosition.MovingObjectType
 import net.minecraft.util.{BlockPos, EnumFacing, MovingObjectPosition, Vec3}
 import net.minecraftforge.event.entity.EntityJoinWorldEvent
 import net.minecraftforge.event.entity.player.PlayerOpenContainerEvent
-import net.minecraftforge.event.world.WorldEvent
+import net.minecraftforge.event.world.{ChunkEvent, WorldEvent}
 import net.minecraftforge.fml.common.eventhandler.Event.Result
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent
 import net.minecraftforge.fml.common.gameevent.InputEvent.MouseInputEvent
-import net.minecraftforge.fml.common.gameevent.PlayerEvent.PlayerRespawnEvent
+import net.minecraftforge.fml.common.gameevent.TickEvent
 import net.minecraftforge.fml.common.gameevent.TickEvent.PlayerTickEvent
-import net.minecraftforge.fml.common.gameevent.{PlayerEvent, TickEvent}
 import net.minecraftforge.fml.common.network.FMLNetworkEvent
 import net.minecraftforge.fml.relauncher.{Side, SideOnly}
 
@@ -190,41 +189,13 @@ class FlyingShipEventHandlers {
       event.setResult(Result.DEFAULT)
   }
 
-  def addPlayerToShipPlayerManager(playerMP: EntityPlayerMP) = {
-    val ships = ShipLocator.getServerShips
-    ships.foreach(ship => {
-      if (ship.Shipworld != null && !ship.Shipworld.isRemote) {
-        ship.Shipworld.asInstanceOf[ShipWorldServer].PlayerManager.removePlayer(playerMP)
-        if (playerMP.worldObj == ship.Shipworld.OriginWorld)
-          ship.Shipworld.asInstanceOf[ShipWorldServer].PlayerManager.addPlayer(playerMP)
-      }
-    })
-  }
-
-  def removePlayerFromShipManager(playerMP: EntityPlayerMP) = {
-    val ships = ShipLocator.getShips(playerMP.worldObj)
-    ships.foreach(ship => if (ship.Shipworld != null) ship.Shipworld.asInstanceOf[ShipWorldServer].PlayerManager.removePlayer(playerMP))
-  }
 
   @SubscribeEvent
   def onEntitySpawn(event: EntityJoinWorldEvent): Unit = event.entity match {
     case playerMP: EntityPlayerMP =>
-      addPlayerToShipPlayerManager(playerMP)
       FlyingShips.flyingShipPacketHandler.sendAllShipsToClient(playerMP) // Todo: Fix this so it's within the range of the player
     case ship: EntityShip if !ship.worldObj.isRemote => FlyingShips.flyingShipPacketHandler.sendShipToAllClientsInDimension(ship, ship.worldObj.provider.getDimensionId)
     case _ =>
-  }
-
-  @SubscribeEvent
-  def onPlayerRespawn(event: PlayerRespawnEvent): Unit = {
-    if (event.player.worldObj.isRemote) return
-
-    addPlayerToShipPlayerManager(event.player.asInstanceOf[EntityPlayerMP])
-  }
-
-  @SubscribeEvent
-  def onPlayerLogOut(event: PlayerEvent.PlayerLoggedOutEvent): Unit = {
-    removePlayerFromShipManager(event.player.asInstanceOf[EntityPlayerMP])
   }
 
   @SubscribeEvent
@@ -237,5 +208,27 @@ class FlyingShipEventHandlers {
     if (event.world.isRemote) return
     val ships = ShipLocator.getShips(event.world)
     ships.foreach(ship => ship.Shipworld.asInstanceOf[ShipWorldServer].saveAllChunks(true))
+  }
+
+  // Todo: Abstract these method calls into Shipworld class
+  @SubscribeEvent
+  def onChunkUnload(event: ChunkEvent.Unload): Unit = event.world.isRemote match {
+    case true =>
+      val ships = ShipLocator.getShips(event.world)
+      ships.foreach(ship => ship.Shipworld.getChunkProvider.asInstanceOf[ClientChunkProviderShip].onWorldChunkUnload(event.getChunk.xPosition, event.getChunk.zPosition))
+    case false =>
+      val ships = ShipLocator.getShips(event.world)
+      ships.foreach(ship => ship.Shipworld.asInstanceOf[ShipWorldServer].PlayerManager.onWorldChunkUnload(event.getChunk.xPosition, event.getChunk.zPosition))
+  }
+
+  // Todo: Abstract these method calls into Shipworld class
+  @SubscribeEvent
+  def onChunkLoad(event: ChunkEvent.Load): Unit = event.world.isRemote match {
+    case true =>
+      val ships = ShipLocator.getShips(event.world)
+      ships.foreach(ship => ship.Shipworld.getChunkProvider.asInstanceOf[ClientChunkProviderShip].onWorldChunkLoad(event.getChunk.xPosition, event.getChunk.zPosition))
+    case false =>
+      val ships = ShipLocator.getShips(event.world)
+      ships.foreach(ship => ship.Shipworld.asInstanceOf[ShipWorldServer].PlayerManager.onWorldChunkLoad(event.getChunk.xPosition, event.getChunk.zPosition))
   }
 }

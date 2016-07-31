@@ -150,7 +150,7 @@ case class ShipTrackerEntry(ShipEntity: EntityShip, TrackingRange: Int, Tracking
     }
     if (TrackingPlayers.contains(playerMP)) return
     TrackingPlayers.add(playerMP)
-    val message = new SpawnShipMessage(ShipEntity)
+    val message = new SpawnShipMessage(ShipEntity, playerMP)
     FlyingShips.flyingShipPacketHandler.INSTANCE.sendTo(message, playerMP)
 
     lastTrackedEntityMotionX = ShipEntity.motionX
@@ -164,6 +164,6 @@ case class ShipTrackerEntry(ShipEntity: EntityShip, TrackingRange: Int, Tracking
 
   def withinTrackingDistance(playerMP: EntityPlayerMP): Boolean = {
     val closestPos = ShipEntity.Shipworld.getClosestBlockPosToPlayerXZ(playerMP)
-    ShipEntity.Shipworld.asInstanceOf[ShipWorldServer].PlayerManager.isPlayerWatchingChunk(playerMP, closestPos.getX >> 4, closestPos.getZ >> 4)
+    ShipEntity.Shipworld.asInstanceOf[ShipWorldServer].PlayerManager.isPlayerWatchingPos(playerMP, closestPos)
   }
 }

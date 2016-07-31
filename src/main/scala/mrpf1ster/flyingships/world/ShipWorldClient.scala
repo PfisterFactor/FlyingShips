@@ -7,11 +7,14 @@ import mrpf1ster.flyingships.entities.EntityShip
 import mrpf1ster.flyingships.render.ShipRenderGlobal
 import mrpf1ster.flyingships.world.chunk.ClientChunkProviderShip
 import net.minecraft.block.Block
+import net.minecraft.block.state.IBlockState
+import net.minecraft.init.Blocks
 import net.minecraft.util.BlockPos
 import net.minecraft.world.chunk.Chunk
 import net.minecraft.world.{ChunkCoordIntPair, World}
 
 import scala.collection.JavaConversions._
+import scala.collection.mutable
 
 /**
   * Created by ej on 7/25/16.
@@ -19,6 +22,7 @@ import scala.collection.JavaConversions._
 class ShipWorldClient(originWorld: World, ship: EntityShip) extends ShipWorld(originWorld, ship, new UUID(0, 0)) {
   var doRenderUpdate = false
   val ShipRenderGlobal = new ShipRenderGlobal(this)
+  val ChunksToRender: mutable.HashSet[ChunkCoordIntPair] = mutable.HashSet()
   private val previousActiveChunkSet: java.util.Set[ChunkCoordIntPair] = Sets.newHashSet[ChunkCoordIntPair]
 
   addWorldAccess(ShipRenderGlobal)
@@ -28,6 +32,9 @@ class ShipWorldClient(originWorld: World, ship: EntityShip) extends ShipWorld(or
     new ClientChunkProviderShip(this)
   }
 
+  override def isBlockLoaded(pos: BlockPos, allowEmpty: Boolean) = {
+    isValid(pos) && ChunksToRender.contains(new ChunkCoordIntPair(pos.getX >> 4, pos.getZ >> 4))
+  }
   override def tick() = {
     chunkProvider.unloadQueuedChunks()
     updateBlocks()
@@ -39,6 +46,15 @@ class ShipWorldClient(originWorld: World, ship: EntityShip) extends ShipWorld(or
 
   override def addBlockEvent(pos: BlockPos, block: Block, eventID: Int, eventParam: Int) = block.onBlockEventReceived(this, pos, getBlockState(pos), eventID, eventParam)
 
+  override def setBlockState(pos: BlockPos, newState: IBlockState, flags: Int) = {
+    val result = super.setBlockState(pos, newState, flags)
+    if (result && newState != Blocks.air.getDefaultState) {
+      ChunksToRender.add(new ChunkCoordIntPair(pos.getX >> 4, pos.getZ >> 4))
+    }
+    doRenderUpdate = true
+
+    result
+  }
   override def updateBlocks(): Unit = {
     super.updateBlocks()
     this.previousActiveChunkSet.retainAll(this.activeChunkSet)

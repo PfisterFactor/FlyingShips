@@ -4,9 +4,12 @@ import mrpf1ster.flyingships.FlyingShips
 import mrpf1ster.flyingships.entities.EntityShip
 import mrpf1ster.flyingships.util.ShipLocator
 import net.minecraft.entity.player.EntityPlayerMP
+import net.minecraftforge.common.DimensionManager
 import net.minecraftforge.fml.common.network.NetworkRegistry
 import net.minecraftforge.fml.common.network.simpleimpl.SimpleNetworkWrapper
 import net.minecraftforge.fml.relauncher.Side
+
+import scala.collection.JavaConversions._
 
 /**
   * Created by EJ on 3/12/2016.
@@ -39,25 +42,27 @@ class FlyingShipsPacketHandler {
 
   def sendAllShipsToClient(playerMP: EntityPlayerMP): Boolean = {
     if (playerMP.worldObj == null || playerMP.worldObj.isRemote) return false
-    def sendShipToClient(ship: EntityShip) = FlyingShips.flyingShipPacketHandler.INSTANCE.sendTo(new SpawnShipMessage(ship), playerMP)
+    def sendShipToClient(ship: EntityShip) = FlyingShips.flyingShipPacketHandler.INSTANCE.sendTo(new SpawnShipMessage(ship, playerMP), playerMP)
     ShipLocator.getShips(playerMP.worldObj).foreach(sendShipToClient)
     true
   }
 
   def sendShipToAllClientsInDimension(ship: EntityShip, dim: Int): Boolean = {
     if (ship == null || ship.Shipworld == null || ship.Shipworld.isRemote) return false
+    DimensionManager.getWorld(dim).playerEntities.foreach(player => {
+      FlyingShips.flyingShipPacketHandler.INSTANCE.sendTo(new SpawnShipMessage(ship, player.asInstanceOf[EntityPlayerMP]), player.asInstanceOf[EntityPlayerMP])
+    })
 
-    FlyingShips.flyingShipPacketHandler.INSTANCE.sendToDimension(new SpawnShipMessage(ship), dim)
     true
   }
 
   def nullCheck(ship: Option[EntityShip], caller: String, shipID: Int): Boolean = {
     if (ship.isEmpty) {
-      println(s"$caller: Ship ID ${shipID} was not located! Aborting!")
+      FlyingShips.logger.warn(s"$caller: Ship ID ${shipID} was not located! Aborting!")
       return false
     }
     if (ship.get.Shipworld == null) {
-      println(s"$caller: Ship ID ${shipID}'s Shipworld was null! Aborting!")
+      FlyingShips.logger.warn(s"$caller: Ship ID ${shipID}'s Shipworld was null! Aborting!")
       return false
     }
     true

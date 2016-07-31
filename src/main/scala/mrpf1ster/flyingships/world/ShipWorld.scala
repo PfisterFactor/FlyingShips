@@ -18,7 +18,7 @@ import net.minecraft.nbt.NBTTagCompound
 import net.minecraft.tileentity.TileEntity
 import net.minecraft.util._
 import net.minecraft.world.chunk.{Chunk, IChunkProvider}
-import net.minecraft.world.{World, WorldSettings}
+import net.minecraft.world.{ChunkCoordIntPair, World, WorldSettings}
 import net.minecraftforge.fml.relauncher.{Side, SideOnly}
 
 import scala.collection.JavaConversions._
@@ -59,6 +59,7 @@ abstract class ShipWorld(originWorld: World, ship: EntityShip, uUID: UUID) exten
   chunkProvider = createChunkProvider()
 
   var BlocksOnShip: mSet[UnifiedPos] = mSet()
+  var ChunksOnShip: mSet[ChunkCoordIntPair] = mSet()
 
   // TODO: Change this to be the biome directly under the ship
   val BiomeID = OriginWorld.getBiomeGenForCoords(OriginPos()).biomeID
@@ -66,7 +67,15 @@ abstract class ShipWorld(originWorld: World, ship: EntityShip, uUID: UUID) exten
   // The Ship Block
   def ShipBlock = getBlockState(ShipWorld.ShipBlockPos)
 
+  def addBlockToShip(pos: BlockPos) = {
+    BlocksOnShip.add(UnifiedPos(pos, OriginPos, IsRelative = true))
+    ChunksOnShip.add(new ChunkCoordIntPair(pos.getX >> 4, pos.getZ >> 4))
+  }
 
+  def removeBlockFromShip(pos: BlockPos) = {
+    BlocksOnShip.remove(UnifiedPos(pos, OriginPos, IsRelative = true))
+    ChunksOnShip.remove(new ChunkCoordIntPair(pos.getX >> 4, pos.getZ >> 4))
+  }
   // Todo: Optimize and make it more reliable
   def moveBlocks(blockSet: Set[UnifiedPos]): Unit = {
     def blockIsValid(uPos: UnifiedPos): Boolean = {
@@ -84,12 +93,12 @@ abstract class ShipWorld(originWorld: World, ship: EntityShip, uUID: UUID) exten
 
     firstBlocks.foreach(uPos => {
       val bs = OriginWorld.getBlockState(uPos.WorldPos)
-      BlocksOnShip.add(uPos)
+      addBlockToShip(uPos.RelativePos)
       setBlockState(uPos.RelativePos, bs, 0)
     })
     everythingElse.foreach(uPos => {
       val bs = OriginWorld.getBlockState(uPos.WorldPos)
-      BlocksOnShip.add(uPos)
+      addBlockToShip(uPos.RelativePos)
       setBlockState(uPos.RelativePos, bs, 0)
     })
 
@@ -123,6 +132,8 @@ abstract class ShipWorld(originWorld: World, ship: EntityShip, uUID: UUID) exten
           case ex: Exception => println(s"There was an error moving TileEntity ${pair._2.getClass.getName} at ${pair._1.WorldPos}\n$ex") // Error reporting
         }
       })
+    if (!isRemote)
+      this.asInstanceOf[ShipWorldServer].createPlayerManager()
   }
 
   override def createChunkProvider(): IChunkProvider
@@ -175,12 +186,12 @@ abstract class ShipWorld(originWorld: World, ship: EntityShip, uUID: UUID) exten
 
     val uPos = UnifiedPos(pos, OriginPos, IsRelative = true)
     val contains = BlocksOnShip.contains(uPos)
-    BlocksOnShip.add(uPos)
+    addBlockToShip(uPos.RelativePos)
     if (!contains && newState.getBlock != Blocks.air) {
       Ship.generateBoundingBox()
     }
     else if (newState.getBlock == Blocks.air) {
-      BlocksOnShip.remove(uPos)
+      removeBlockFromShip(uPos.RelativePos)
       Ship.generateBoundingBox()
     }
 
