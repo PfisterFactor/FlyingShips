@@ -1,7 +1,7 @@
 package mrpf1ster.flyingships
 
 import mrpf1ster.flyingships.entities.EntityShip
-import mrpf1ster.flyingships.render.ShipRender
+import mrpf1ster.flyingships.render.RenderShip
 import net.minecraft.client.Minecraft
 import net.minecraft.client.resources.model.ModelResourceLocation
 import net.minecraft.item.Item
@@ -29,7 +29,7 @@ object ClientProxy {
 
     // Entities
     def rm = Minecraft.getMinecraft.getRenderManager
-    val shipRender = new ShipRender(rm)
+    val shipRender = new RenderShip(rm)
     //noinspection ScalaDeprecation
     RenderingRegistry.registerEntityRenderingHandler(classOf[EntityShip],shipRender)
   }

@@ -29,7 +29,7 @@ class FlyingShipsASMTransformer extends IClassTransformer {
   ...
 
   this.theWorld.theProfiler.endStartSection("entities")
-  mrpf1ster.flyingships.render.ShipRender.onRender(partialTicks,camera,d0,d1,d2)
+  mrpf1ster.flyingships.render.RenderShip.onRender(partialTicks,camera,d0,d1,d2)
   label738:
 
   for (RenderGlobal.ContainerLocalRenderInformation renderglobal$containerlocalrenderinformation : this.renderInfos)
@@ -96,8 +96,8 @@ class FlyingShipsASMTransformer extends IClassTransformer {
       insnList.add(new VarInsnNode(Opcodes.DLOAD, 7))
       // Loads z onto the stack
       insnList.add(new VarInsnNode(Opcodes.DLOAD, 9))
-      // Calls our method in our ShipRender object -- onRender
-      insnList.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "mrpf1ster/flyingships/render/ShipRender", "onRender", insertedInstructionParams))
+      // Calls our method in our RenderShip object -- onRender
+      insnList.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "mrpf1ster/flyingships/render/RenderShip", "onRender", insertedInstructionParams))
       methodNode.instructions.insert(targetNode, insnList)
 
       FlyingShips.logger.info("RenderGlobal patched.")

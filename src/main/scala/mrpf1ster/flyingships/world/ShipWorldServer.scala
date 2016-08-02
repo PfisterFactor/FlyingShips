@@ -98,10 +98,6 @@ class ShipWorldServer(originWorld: World, ship: EntityShip, uUID: UUID) extends 
     })
   }
 
-  override def onShipMove(): Unit = {
-
-  }
-
   def getTileEntitiesIn(minX: Int, minY: Int, minZ: Int, maxX: Int, maxY: Int, maxZ: Int): java.util.List[TileEntity] = {
     val list: java.util.List[TileEntity] = Lists.newArrayList[TileEntity]
     var x: Int = minX & ~0x0F

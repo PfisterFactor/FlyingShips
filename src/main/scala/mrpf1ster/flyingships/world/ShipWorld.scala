@@ -235,8 +235,6 @@ abstract class ShipWorld(originWorld: World, ship: EntityShip, uUID: UUID) exten
     te
   }
 
-  def onShipMove(): Unit
-
   def getClosestBlockPosToPlayer(entityPlayer: EntityPlayer): BlockPos = BlocksOnShip.minBy(upos => entityPlayer.getDistanceSq(upos.WorldPos)).WorldPos
 
   def getClosestBlockPosToPlayerXZ(entityPlayer: EntityPlayer): BlockPos = BlocksOnShip.minBy(upos => Math.pow(upos.WorldPosX - entityPlayer.posX, 2) + Math.pow(upos.WorldPosZ - entityPlayer.posZ, 2)).RelativePos

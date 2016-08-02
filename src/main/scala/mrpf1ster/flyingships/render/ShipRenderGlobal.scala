@@ -22,7 +22,7 @@ import scala.collection.mutable
 case class ShipRenderGlobal(Shipworld: ShipWorldClient) extends IWorldAccess {
   val DamagedBlocks: mutable.Map[Int, DestroyBlockProgress] = mutable.Map()
 
-  // ShipRender handles this
+  // RenderShip handles this
   override def markBlockForUpdate(pos: BlockPos): Unit = {}
 
   // Pass this on to the Origin world

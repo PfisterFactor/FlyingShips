@@ -1,6 +1,7 @@
 package mrpf1ster.flyingships
 
 import mrpf1ster.flyingships.entities.{ClickSimulator, EntityShip, EntityShipTracker, ShipInteractionHandler}
+import mrpf1ster.flyingships.render.RenderShip
 import mrpf1ster.flyingships.util.{ShipLocator, UnifiedPos, UnifiedVec}
 import mrpf1ster.flyingships.world.chunk.{ChunkProviderShip, ClientChunkProviderShip}
 import mrpf1ster.flyingships.world.{PlayerRelative, ShipWorld, ShipWorldServer}
@@ -193,7 +194,10 @@ class FlyingShipEventHandlers {
 
   @SubscribeEvent
   def onPlayerDisconnect(event: FMLNetworkEvent.ClientDisconnectionFromServerEvent) = {
-    EntityShipTracker.ClientSideShips.keys.foreach(EntityShipTracker.ClientSideShips.remove)
+    EntityShipTracker.ClientSideShips.keys.foreach(shipID => {
+      EntityShipTracker.ClientSideShips.remove(shipID)
+      RenderShip.DisplayListIDs.remove(shipID)
+    })
   }
 
   @SubscribeEvent

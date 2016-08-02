@@ -62,7 +62,7 @@ class EntityShip(pos: BlockPos, world: World) extends Entity(world) {
   // Rotation of the ship in Quaternions
   private var Rotation: Quat4f = new Quat4f(0, 0, 0, 1f)
 
-  var oldRotation: Quat4f = Rotation
+  var interpolatedRotation: Quat4f = Rotation
 
   // Returns ship direction based on which way the creator block is facing
   def ShipDirection: EnumFacing = if (Shipworld != null && Shipworld.isShipValid) Shipworld.ShipBlock.getValue(ShipCreatorBlock.FACING) else null
@@ -148,17 +148,23 @@ class EntityShip(pos: BlockPos, world: World) extends Entity(world) {
     val deg15 = new Quat4f(0, 0, 0.94f, 0.94f)
     deg15.mul(Rotation, deg15)
     val newRot = Rotation.clone().asInstanceOf[Quat4f]
-    newRot.interpolate(deg15, 0.01f)
+    newRot.interpolate(deg15, 0.1f)
     setRotation(newRot)
   }
 
 
   def setRotation(newRotation: Quat4f): Unit = {
-    oldRotation = Rotation
+    interpolatedRotation = Rotation
     Rotation = newRotation
   }
 
   def getRotation: Quat4f = Rotation
+
+  def getInverseRotation: Quat4f = {
+    val result = new Quat4f(0, 0, 0, 1f)
+    result.inverse(Rotation)
+    result
+  }
 
   var updateCounter = 0
   override def onUpdate(): Unit = {
@@ -169,11 +175,11 @@ class EntityShip(pos: BlockPos, world: World) extends Entity(world) {
     }
 
     if (!Shipworld.isRemote) {
-      //debugDoRotate()
-      setRotation(new Quat4f(0, 0, 0, 1f))
-      setVelocity(0.1f, 0, 0)
+      debugDoRotate()
+      //setRotation(new Quat4f(0, 0, 0, 1f))
+      setVelocity(0f, 0f, 0f)
     }
-    moveEntity(motionX, motionY, motionZ)
+    //moveEntity(motionX, motionY, motionZ)
 
 
     if (_boundingBox != null)
@@ -199,8 +205,6 @@ class EntityShip(pos: BlockPos, world: World) extends Entity(world) {
     posX = x
     posY = y
     posZ = z
-    if (Shipworld != null)
-      Shipworld.onShipMove()
 
   }
 
@@ -209,15 +213,13 @@ class EntityShip(pos: BlockPos, world: World) extends Entity(world) {
     setPosition(posX + x,posY + y,posZ + z)
   }
 
-  override def canBeCollidedWith: Boolean = true
+  override def canBeCollidedWith: Boolean = false
 
   override def canBePushed: Boolean = false
 
   override def applyEntityCollision(entityIn: Entity): Unit = {}
 
   override def setEntityBoundingBox(bb: AxisAlignedBB): Unit = {}
-
-  override def shouldRenderInPass(pass: Int) = false
 
   def shouldRenderInPassOverride(pass: Int) = pass == 0
 

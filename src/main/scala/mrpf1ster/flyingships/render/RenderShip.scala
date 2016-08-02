@@ -31,9 +31,11 @@ import scala.collection.mutable.{Map => mMap}
   * Created by EJ on 2/21/2016.
   */
 @SideOnly(Side.CLIENT)
-object ShipRender {
-  private val texturemap = Minecraft.getMinecraft.getTextureMapBlocks
-  val destroyBlockIcons: Array[TextureAtlasSprite] = Array.range(0, 10).map(i => texturemap.getAtlasSprite(s"minecraft:blocks/destroy_stage_$i"))
+object RenderShip {
+  private def texturemap = Minecraft.getMinecraft.getTextureMapBlocks
+
+  val DestroyBlockIcons: Array[TextureAtlasSprite] = Array.range(0, 10).map(i => texturemap.getAtlasSprite(s"minecraft:blocks/destroy_stage_$i"))
+  val DisplayListIDs: mMap[Int, Int] = mMap()
 
   // We render ships here to get rid of the reliance on the chunk the entity is in
   // Called from our coremod, which hooks into RenderGlobal renderEntities right before every other entity is rendered
@@ -42,9 +44,8 @@ object ShipRender {
     val renderViewEntity = Minecraft.getMinecraft.getRenderViewEntity
     val pass = net.minecraftforge.client.MinecraftForgeClient.getRenderPass
 
-
     val shipsToRender = ShipLocator.getShips(Minecraft.getMinecraft.theWorld).filter(ship => {
-      val shipRender = Minecraft.getMinecraft.getRenderManager.getEntityRenderObject(ship).asInstanceOf[ShipRender]
+      val shipRender = Minecraft.getMinecraft.getRenderManager.getEntityRenderObject(ship).asInstanceOf[RenderShip]
       if (shipRender != null)
         ship.shouldRenderInPassOverride(pass) && shipRender.shouldRender(ship, camera, x, y, z)
       else
@@ -54,21 +55,19 @@ object ShipRender {
 }
 
 @SideOnly(Side.CLIENT)
-class ShipRender(rm: RenderManager) extends Render[EntityShip](rm) {
-  var displayListIDs: mMap[ShipWorld, Int] = mMap()
+class RenderShip(rm: RenderManager) extends Render[EntityShip](rm) {
+
 
   // Ships are dynamic, and thus don't have a texture
   override def getEntityTexture(entity: EntityShip): ResourceLocation = null
 
-  // No shadow rendering
+  // No shadow rendering (yet!)
   override def doRenderShadowAndFire(entity: Entity, x: Double, y: Double, z: Double, yaw: Float, partialTickTime: Float) = {}
 
 
   override def doRender(entity: EntityShip, x: Double, y: Double, z: Double, entityYaw: Float, partialTicks: Float) = {
 
-    def shipWorld = entity.Shipworld.asInstanceOf[ShipWorldClient]
-
-
+    val shipWorld = entity.Shipworld.asInstanceOf[ShipWorldClient]
 
     GL11.glPushMatrix()
 
@@ -79,9 +78,10 @@ class ShipRender(rm: RenderManager) extends Render[EntityShip](rm) {
     // Translate into the center of the ship block for rotation
     GL11.glTranslated(0.5, 0.5, 0.5)
 
+    entity.interpolatedRotation.interpolate(entity.getRotation, partialTicks)
 
     // Turn a quaternion into a matrix, then into a FloatBuffer
-    val rotationBuffer = matrixToFloatBuffer(quaternionToMatrix4f(entity.getRotation)) //entity.renderMatrix)
+    val rotationBuffer = matrixToFloatBuffer(quaternionToMatrix4f(entity.interpolatedRotation)) //entity.renderMatrix)
 
 
     // Multiply current matrix by FloatBuffer
@@ -100,7 +100,6 @@ class ShipRender(rm: RenderManager) extends Render[EntityShip](rm) {
     rm.worldObj = shipWorld
     rm.renderEngine.bindTexture(TextureMap.locationBlocksTexture)
 
-
     // Render normal blocks and non-special tile entities
     GL11.glCallList(getDisplayList(shipWorld))
 
@@ -114,12 +113,7 @@ class ShipRender(rm: RenderManager) extends Render[EntityShip](rm) {
       })
 
     // Block breaking textures
-    renderBlockBreaking(shipWorld, x, y, z)
-
-
-
-    if (DebugRender.isDebugMenuShown)
-      doDebugRender(shipWorld, x, y, z)
+    renderBlockBreaking(shipWorld)
 
     // Ray-trace across the ship and return it wrapped in an option
     val rayTrace: Option[MovingObjectPosition] = entity.InteractionHandler.getBlockPlayerIsLookingAt(partialTicks)
@@ -127,27 +121,34 @@ class ShipRender(rm: RenderManager) extends Render[EntityShip](rm) {
     if (rayTrace.isDefined) {
       //println(hoveredBlockOnShip.get)
       def block = rayTrace.get.getBlockPos
-      renderBlackOutline(entity, block, x, y, z, partialTicks)
+      renderSelectionBox(entity, block)
     }
+
+    // Render stuff that's helpful to visualize the ships collision boxes
+    if (DebugRender.isDebugMenuShown)
+      doDebugRender(shipWorld)
 
     RenderHelper.enableStandardItemLighting()
 
     GL11.glPopMatrix()
   }
 
+  // Gets our ship OpenGL display list
+  // Not entirely sure how this works
+  // I think it just stores the render in memory and then calls upon it for re-render instead of regenerating it
+  // Useful for not destroying frames per sec
   private def getDisplayList(shipWorld: ShipWorldClient): Int = {
-    var id = displayListIDs.get(shipWorld)
+    var id = RenderShip.DisplayListIDs.get(shipWorld.Ship.ShipID)
     if (id.isDefined && shipWorld.doRenderUpdate) {
       GL11.glDeleteLists(id.get, 1)
       id = None
       shipWorld.doRenderUpdate = false
     }
     if (id.isEmpty) {
-      // create a new list
+      // Create a new list
       id = Option[Int](GLAllocation.generateDisplayLists(1))
-      displayListIDs.put(shipWorld, id.get)
-
-      // build the list
+      RenderShip.DisplayListIDs.put(shipWorld.Ship.ShipID, id.get)
+      // Build the list
       GL11.glNewList(id.get, GL11.GL_COMPILE)
       renderShip(shipWorld)
       GL11.glEndList()
@@ -155,6 +156,8 @@ class ShipRender(rm: RenderManager) extends Render[EntityShip](rm) {
     id.get
   }
 
+  // This function renders the blocks and liquids on the ship
+  // It does not render Tile Entities that have special renderer's however
   private def renderShip(shipWorld: ShipWorldClient) = {
     // Setup tessellator and worldRenderer
     def tessellator = Tessellator.getInstance()
@@ -166,37 +169,39 @@ class ShipRender(rm: RenderManager) extends Render[EntityShip](rm) {
     shipWorld.BlocksOnShip.foreach(uPos => {
       if (shipWorld.isBlockLoaded(uPos.RelativePos, true)) {
         val blockState = shipWorld.getBlockState(uPos.RelativePos)
-        renderBlock(shipWorld, blockState, uPos.RelativePos, worldRenderer)
+        val blockDispatcher = Minecraft.getMinecraft.getBlockRendererDispatcher
+        // Renders blocks (and liquids) based on their state
+        blockDispatcher.renderBlock(blockState, uPos.RelativePos, shipWorld, worldRenderer)
       }
     })
     tessellator.draw()
-
-
   }
 
-  def renderBlockBreak(destroyBlockProgress: DestroyBlockProgress, shipWorldClient: ShipWorldClient): Unit = {
-    val blockpos: BlockPos = destroyBlockProgress.getPosition
-    val d3: Double = blockpos.getX.toDouble - ShipWorld.ShipBlockVec.xCoord
-    val d4: Double = blockpos.getY.toDouble - ShipWorld.ShipBlockVec.yCoord
-    val d5: Double = blockpos.getZ.toDouble - ShipWorld.ShipBlockVec.zCoord
-    val block: Block = shipWorldClient.getBlockState(blockpos).getBlock
-    val te: TileEntity = shipWorldClient.getTileEntity(blockpos)
-    var hasBreak: Boolean = block.isInstanceOf[BlockChest] || block.isInstanceOf[BlockEnderChest] || block.isInstanceOf[BlockSign] || block.isInstanceOf[BlockSkull]
-    if (!hasBreak) hasBreak = te != null && te.canRenderBreaking
-    if (!hasBreak) {
-      if (d3 * d3 + d4 * d4 + d5 * d5 > 1024.0D)
-        return
-      val iblockstate: IBlockState = shipWorldClient.getBlockState(blockpos)
-      if (iblockstate.getBlock.getMaterial != Material.air) {
-        val i: Int = destroyBlockProgress.getPartialBlockDamage
-        val textureatlassprite: TextureAtlasSprite = ShipRender.destroyBlockIcons(i)
-        val blockrendererdispatcher: BlockRendererDispatcher = Minecraft.getMinecraft.getBlockRendererDispatcher
-        blockrendererdispatcher.renderBlockDamage(iblockstate, blockpos, textureatlassprite, shipWorldClient)
+  // This function renders all the block breaking textures on the ship
+  private def renderBlockBreaking(shipWorld: ShipWorldClient): Unit = {
+    // This function renders a block breaking texture on a single block
+    def renderBlockBreak(destroyBlockProgress: DestroyBlockProgress, shipWorldClient: ShipWorldClient): Unit = {
+      val blockpos: BlockPos = destroyBlockProgress.getPosition
+      val d3: Double = blockpos.getX.toDouble - ShipWorld.ShipBlockVec.xCoord
+      val d4: Double = blockpos.getY.toDouble - ShipWorld.ShipBlockVec.yCoord
+      val d5: Double = blockpos.getZ.toDouble - ShipWorld.ShipBlockVec.zCoord
+      val block: Block = shipWorldClient.getBlockState(blockpos).getBlock
+      val te: TileEntity = shipWorldClient.getTileEntity(blockpos)
+      var hasBreak: Boolean = block.isInstanceOf[BlockChest] || block.isInstanceOf[BlockEnderChest] || block.isInstanceOf[BlockSign] || block.isInstanceOf[BlockSkull]
+      if (!hasBreak) hasBreak = te != null && te.canRenderBreaking
+      if (!hasBreak) {
+        if (d3 * d3 + d4 * d4 + d5 * d5 > 1024.0D)
+          return
+        val iblockstate: IBlockState = shipWorldClient.getBlockState(blockpos)
+        if (iblockstate.getBlock.getMaterial != Material.air) {
+          val i: Int = destroyBlockProgress.getPartialBlockDamage
+          val textureatlassprite: TextureAtlasSprite = RenderShip.DestroyBlockIcons(i)
+          val blockrendererdispatcher: BlockRendererDispatcher = Minecraft.getMinecraft.getBlockRendererDispatcher
+          blockrendererdispatcher.renderBlockDamage(iblockstate, blockpos, textureatlassprite, shipWorldClient)
+        }
       }
     }
-  }
 
-  def renderBlockBreaking(shipWorld: ShipWorldClient, x: Double, y: Double, z: Double): Unit = {
     if (shipWorld.ShipRenderGlobal.DamagedBlocks.isEmpty) return
     GlStateManager.tryBlendFuncSeparate(774, 768, 1, 0)
     GlStateManager.enableBlend()
@@ -226,16 +231,8 @@ class ShipRender(rm: RenderManager) extends Render[EntityShip](rm) {
     GlStateManager.disableBlend()
   }
 
-  def renderBlock(shipWorld: ShipWorld, blockState: IBlockState, pos: BlockPos, worldRenderer: WorldRenderer) = {
-    // Get the block renderer
-    def blockRendererDispatcher = Minecraft.getMinecraft.getBlockRendererDispatcher
-
-    // Renders blocks based on their render type
-    blockRendererDispatcher.renderBlock(blockState, pos, shipWorld, worldRenderer)
-
-  }
-
-  private def renderBlackOutline(ship: EntityShip, pos: BlockPos, x: Double, y: Double, z: Double, partialTicks: Float) = {
+  // Renders a selection box around a given position
+  private def renderSelectionBox(ship: EntityShip, pos: BlockPos) = {
 
     val blockstate = ship.Shipworld.getBlockState(pos)
 
@@ -245,7 +242,7 @@ class ShipRender(rm: RenderManager) extends Render[EntityShip](rm) {
 
     val aabb = block.getSelectedBoundingBox(ship.Shipworld, pos)
 
-    val rotatedBB = new RotatedBB(aabb, new Vec3(0.5, 0.5, 0.5), ship.getRotation)
+    val rotatedBB = new RotatedBB(aabb, new Vec3(0.5, 0.5, 0.5), new Quat4f(0, 0, 0, 1))
 
     val tessellator: Tessellator = Tessellator.getInstance
     val worldrenderer: WorldRenderer = tessellator.getWorldRenderer
@@ -261,23 +258,25 @@ class ShipRender(rm: RenderManager) extends Render[EntityShip](rm) {
     RenderUtils.drawRotatedBB(rotatedBB.expand(0.002), worldrenderer)
 
     GlStateManager.depthMask(true)
-    GlStateManager.enableTexture2D
-    GlStateManager.disableBlend
+    GlStateManager.enableTexture2D()
+    GlStateManager.disableBlend()
 
 
   }
 
-
-  private def doDebugRender(shipWorld: ShipWorldClient, x: Double, y: Double, z: Double) = {
-    DebugRender.drawRotatedBoundingBox(new RotatedBB(shipWorld.Ship.getBoundingBox.RelativeAABB, new Vec3(0, 0, 0), new Quat4f(0, 0, 0, 1)), shipWorld.Ship, x, y, z)
+  // Draws things useful for debugging
+  private def doDebugRender(shipWorld: ShipWorldClient) = {
+    DebugRender.drawRotatedBoundingBox(new RotatedBB(shipWorld.Ship.getBoundingBox.RelativeAABB, new Vec3(0.5, 0.5, 0.5), shipWorld.Ship.getInverseRotation), shipWorld.Ship)
 
     shipWorld.BlocksOnShip.foreach(uPos => {
       val blockState = shipWorld.getBlockState(uPos.RelativePos)
-      DebugRender.debugRenderBlock(shipWorld, blockState, uPos.RelativePos, x, y, z)
+      DebugRender.debugRenderBlock(shipWorld, blockState, uPos.RelativePos)
 
     })
   }
 
+  // Converts a Matrix4f to a FloatBuffer so we can pass it to OpenGL
+  // Used for Ship Rotation
   private def matrixToFloatBuffer(m: Matrix4f): FloatBuffer = {
     val fb = BufferUtils.createFloatBuffer(16)
     fb.put(m.m00)
@@ -300,6 +299,8 @@ class ShipRender(rm: RenderManager) extends Render[EntityShip](rm) {
     fb
   }
 
+  // Converts a Quaternion to a Matrix4f
+  // Used for Ship Rotation
   private def quaternionToMatrix4f(q: Quat4f): Matrix4f = {
     q.normalize()
     new Matrix4f(1.0f - 2.0f * q.getY * q.getY - 2.0f * q.getZ * q.getZ, 2.0f * q.getX * q.getY - 2.0f * q.getZ * q.getW, 2.0f * q.getX * q.getZ + 2.0f * q.getY * q.getW, 0.0f,

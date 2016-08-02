@@ -1,5 +1,7 @@
 package mrpf1ster.flyingships.render
 
+import javax.vecmath.Quat4f
+
 import mrpf1ster.flyingships.entities.EntityShip
 import mrpf1ster.flyingships.util.{RenderUtils, RotatedBB}
 import mrpf1ster.flyingships.world.ShipWorld
@@ -16,7 +18,7 @@ object DebugRender {
 
   def isDebugMenuShown = Minecraft.getMinecraft.gameSettings.showDebugInfo
 
-  def debugRenderBlock(shipWorld: ShipWorld, blockState: IBlockState, pos: BlockPos, x: Double, y: Double, z: Double) = {
+  def debugRenderBlock(shipWorld: ShipWorld, blockState: IBlockState, pos: BlockPos) = {
     // Small delta so we can see the block outline
     val delta = 0.01
 
@@ -26,11 +28,11 @@ object DebugRender {
     val blockBB = block.getSelectedBoundingBox(shipWorld, pos).expand(delta, delta, delta)
     val min = new Vec3(blockBB.minX, blockBB.minY, blockBB.minZ)
     val max = new Vec3(blockBB.maxX, blockBB.maxY, blockBB.maxZ)
-    drawRotatedBoundingBox(new RotatedBB(min, max, new Vec3(0.5, 0.5, 0.5), shipWorld.Ship.getRotation), shipWorld.Ship, x, y, z)
+    drawRotatedBoundingBox(new RotatedBB(min, max, new Vec3(0.5, 0.5, 0.5), new Quat4f(0, 0, 0, 1)), shipWorld.Ship)
 
   }
 
-  def drawRotatedBoundingBox(rotatedBB: RotatedBB, shipEntity: EntityShip, x: Double, y: Double, z: Double) = {
+  def drawRotatedBoundingBox(rotatedBB: RotatedBB, shipEntity: EntityShip) = {
 
     GlStateManager.enableBlend()
     GlStateManager.tryBlendFuncSeparate(770, 771, 1, 0)
