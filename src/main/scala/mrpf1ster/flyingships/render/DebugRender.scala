@@ -32,9 +32,6 @@ object DebugRender {
 
   def drawRotatedBoundingBox(rotatedBB: RotatedBB, shipEntity: EntityShip, x: Double, y: Double, z: Double) = {
 
-    GL11.glPushMatrix()
-    GL11.glTranslated(x, y, z)
-    GL11.glTranslated(shipEntity.posX, shipEntity.posY, shipEntity.posZ)
     GlStateManager.enableBlend()
     GlStateManager.tryBlendFuncSeparate(770, 771, 1, 0)
     GlStateManager.color(1.0F, 0.0F, 0.0F, 0.4F)
@@ -45,7 +42,7 @@ object DebugRender {
 
     val tessellator: Tessellator = Tessellator.getInstance
     val worldrenderer: WorldRenderer = tessellator.getWorldRenderer
-    worldrenderer.setTranslation(-shipEntity.posX - ShipWorld.ShipBlockPos.getX, -shipEntity.posY - ShipWorld.ShipBlockPos.getY, -shipEntity.posZ - ShipWorld.ShipBlockPos.getZ)
+    worldrenderer.setTranslation(0, 0, 0)
 
     RenderUtils.drawRotatedBB(rotatedBB, worldrenderer)
 
@@ -54,8 +51,8 @@ object DebugRender {
     GlStateManager.depthMask(true)
     GlStateManager.enableTexture2D()
     GlStateManager.disableBlend()
+    GlStateManager.color(0, 0, 0, 0)
 
-    GL11.glPopMatrix()
   }
 
 

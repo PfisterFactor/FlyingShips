@@ -9,26 +9,26 @@ import net.minecraftforge.fml.common.network.simpleimpl.{IMessage, IMessageHandl
 /**
   * Created by EJ on 7/30/2016.
   */
-class ShipRelMoveMessage(shipID: Int, posX: Double, posY: Double, posZ: Double, doTeleport: Boolean) extends IMessage {
-  def this() = this(-1, -1, -1, -1, false)
+class ShipRelMoveMessage(shipID: Int, posX: Byte, posY: Byte, posZ: Byte) extends IMessage {
+  def this() = this(-1, -1.toByte, -1.toByte, -1.toByte)
 
-  var ShipID = shipID
-  var PosX = posX
-  var PosY = posY
-  var PosZ = posZ
+  var ShipID: Int = shipID
+  var PosX: Byte = posX
+  var PosY: Byte = posY
+  var PosZ: Byte = posZ
 
   override def toBytes(buf: ByteBuf): Unit = {
     // ShipID
     buf.writeInt(ShipID)
 
     // PosX
-    buf.writeDouble(PosX)
+    buf.writeByte(PosX)
 
     // PosY
-    buf.writeDouble(PosY)
+    buf.writeByte(PosY)
 
     // PosZ
-    buf.writeDouble(PosZ)
+    buf.writeByte(PosZ)
 
   }
 
@@ -37,13 +37,13 @@ class ShipRelMoveMessage(shipID: Int, posX: Double, posY: Double, posZ: Double, 
     ShipID = buf.readInt()
 
     // PosX
-    PosX = buf.readDouble()
+    PosX = buf.readByte()
 
     // PosY
-    PosY = buf.readDouble()
+    PosY = buf.readByte()
 
     // PosZ
-    PosZ = buf.readDouble()
+    PosZ = buf.readByte()
 
   }
 }
@@ -60,11 +60,15 @@ class ClientShipRelMoveMessageHandler extends IMessageHandler[ShipRelMoveMessage
       val Ship = ShipLocator.getClientShip(Message.ShipID)
       if (!FlyingShips.flyingShipPacketHandler.nullCheck(Ship, "ShipRelMoveMessageTask", Message.ShipID)) return
 
-      Ship.get.serverPosX += Message.PosX.toInt
-      Ship.get.serverPosY += Message.PosY.toInt
-      Ship.get.serverPosZ += Message.PosZ.toInt
+      Ship.get.serverPosX += Message.PosX
+      Ship.get.serverPosY += Message.PosY
+      Ship.get.serverPosZ += Message.PosZ
 
-      Ship.get.setPosition(Ship.get.serverPosX, Ship.get.serverPosY, Ship.get.serverPosZ)
+      val x = Ship.get.serverPosX / 32.0d
+      val y = Ship.get.serverPosY / 32.0d
+      val z = Ship.get.serverPosZ / 32.0d
+
+      Ship.get.setPosition(x, y, z)
 
 
     }

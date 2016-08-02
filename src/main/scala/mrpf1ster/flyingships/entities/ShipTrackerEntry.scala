@@ -51,80 +51,71 @@ case class ShipTrackerEntry(ShipEntity: EntityShip, TrackingRange: Int, Tracking
       PlayerEntitiesUpdated = true
       updatePlayerEntities(players.map(_.asInstanceOf[EntityPlayerMP]).toSet)
     }
-    // Don't change this, it looks wrong, im just stupid and wanted to avoid extra braces
-    // Todo: refactor this
-    if (updateCounter % TrackingFrequency != 0 && !ShipEntity.getDataWatcher.hasObjectChanged) {
-      updateCounter += 1
-      if (ShipEntity.velocityChanged) {
-        val velocityMessage = new ShipVelocityMessage(ShipEntity)
-        sendMessageToTrackedPlayers(velocityMessage)
-        ShipEntity.velocityChanged = false
-      }
-      return
-    }
 
-    ticksSinceLastForcedTeleport += 1
-    // Todo: Implement rotation in here rather than in datawatcher
-    val encodedShipPosX: Int = MathHelper.floor_double(ShipEntity.posX * 32.0D)
-    val encodedShipPosY: Int = MathHelper.floor_double(ShipEntity.posY * 32.0D)
-    val encodedShipPosZ: Int = MathHelper.floor_double(ShipEntity.posZ * 32.0D)
-    val deltaPosX: Int = encodedShipPosX - this.encodedPosX
-    val deltaPosY: Int = encodedShipPosY - this.encodedPosY
-    val deltaPosZ: Int = encodedShipPosZ - this.encodedPosZ
-    var message: IMessage = null
-    val sendMoveMsg: Boolean = Math.abs(deltaPosX) >= 4 || Math.abs(deltaPosY) >= 4 || Math.abs(deltaPosZ) >= 4 || this.updateCounter % 60 == 0
-    val sendRotMsg: Boolean = !rotation.epsilonEquals(ShipEntity.getRotation, 0.01f)
+    if (updateCounter % TrackingFrequency == 0 || ShipEntity.getDataWatcher.hasObjectChanged) {
 
+      ticksSinceLastForcedTeleport += 1
+      // Todo: Implement rotation in here rather than in datawatcher
+      val encodedShipPosX: Int = MathHelper.floor_double(ShipEntity.posX * 32.0D)
+      val encodedShipPosY: Int = MathHelper.floor_double(ShipEntity.posY * 32.0D)
+      val encodedShipPosZ: Int = MathHelper.floor_double(ShipEntity.posZ * 32.0D)
+      val deltaPosX: Int = encodedShipPosX - this.encodedPosX
+      val deltaPosY: Int = encodedShipPosY - this.encodedPosY
+      val deltaPosZ: Int = encodedShipPosZ - this.encodedPosZ
+      var message: IMessage = null
+      val sendMoveMsg: Boolean = Math.abs(deltaPosX) >= 4 || Math.abs(deltaPosY) >= 4 || Math.abs(deltaPosZ) >= 4 || this.updateCounter % 60 == 0
+      val sendRotMsg: Boolean = !rotation.epsilonEquals(ShipEntity.getRotation, 0.01f)
 
-    if (updateCounter > 0) {
-      if (deltaPosX >= -128 && deltaPosX < 128 && deltaPosY >= -128 && deltaPosY < 128 && deltaPosZ >= -128 && deltaPosZ < 128 && this.ticksSinceLastForcedTeleport <= 400) {
-        if (!sendMoveMsg || !sendRotMsg) {
-          // If both are true don't execute
-          if (sendMoveMsg)
-            message = new ShipRelMoveMessage(ShipEntity.ShipID, deltaPosX, deltaPosY, deltaPosZ, false)
-          else if (sendRotMsg)
-            message = new ShipRotMessage(ShipEntity)
+      if (updateCounter > 0) {
+        if (deltaPosX >= -128 && deltaPosX < 128 && deltaPosY >= -128 && deltaPosY < 128 && deltaPosZ >= -128 && deltaPosZ < 128 && this.ticksSinceLastForcedTeleport <= 400) {
+          if (!sendMoveMsg || !sendRotMsg) {
+            // If both are true don't execute
+            if (sendMoveMsg)
+              message = new ShipRelMoveMessage(ShipEntity.ShipID, deltaPosX.toByte, deltaPosY.toByte, deltaPosZ.toByte)
+            else if (sendRotMsg)
+              message = new ShipRotMessage(ShipEntity)
+          }
+          else
+            message = new ShipMoveRotMessage(ShipEntity.ShipID, deltaPosX, deltaPosY, deltaPosZ, ShipEntity.getRotation, false)
         }
-        else
-          message = new ShipMoveRotMessage(ShipEntity.ShipID, deltaPosX, deltaPosY, deltaPosZ, ShipEntity.getRotation, false)
+        else {
+          ticksSinceLastForcedTeleport = 0
+          message = new ShipMoveRotMessage(ShipEntity.ShipID, encodedShipPosX, encodedShipPosY, encodedShipPosZ, ShipEntity.getRotation, true)
+        }
       }
-      else {
-        ticksSinceLastForcedTeleport = 0
-        message = new ShipMoveRotMessage(ShipEntity.ShipID, ShipEntity.posX, ShipEntity.posY, ShipEntity.posZ, ShipEntity.getRotation, true)
+
+      val d0: Double = ShipEntity.motionX - this.lastTrackedEntityMotionX
+      val d1: Double = ShipEntity.motionY - this.lastTrackedEntityMotionY
+      val d2: Double = ShipEntity.motionZ - this.lastTrackedEntityMotionZ
+      val d3: Double = 0.02D
+      val d4: Double = d0 * d0 + d1 * d1 + d2 * d2
+
+      if (d4 > d3 * d3 || d4 > 0.0D && ShipEntity.motionX == 0.0D && ShipEntity.motionY == 0.0D && ShipEntity.motionZ == 0.0D) {
+        this.lastTrackedEntityMotionX = ShipEntity.motionX
+        this.lastTrackedEntityMotionY = ShipEntity.motionY
+        this.lastTrackedEntityMotionZ = ShipEntity.motionZ
+        val velocityMessage = new ShipVelocityMessage(ShipEntity.ShipID, lastTrackedEntityMotionX, lastTrackedEntityMotionY, lastTrackedEntityMotionZ)
+        sendMessageToTrackedPlayers(velocityMessage)
       }
-    }
 
-    val d0: Double = ShipEntity.motionX - this.lastTrackedEntityMotionX
-    val d1: Double = ShipEntity.motionY - this.lastTrackedEntityMotionY
-    val d2: Double = ShipEntity.motionZ - this.lastTrackedEntityMotionZ
-    val d3: Double = 0.02D
-    val d4: Double = d0 * d0 + d1 * d1 + d2 * d2
+      if (message != null)
+        sendMessageToTrackedPlayers(message)
 
-    if (d4 > d3 * d3 || d4 > 0.0D && ShipEntity.motionX == 0.0D && ShipEntity.motionY == 0.0D && ShipEntity.motionZ == 0.0D) {
-      this.lastTrackedEntityMotionX = ShipEntity.motionX
-      this.lastTrackedEntityMotionY = ShipEntity.motionY
-      this.lastTrackedEntityMotionZ = ShipEntity.motionZ
-      val velocityMessage = new ShipVelocityMessage(ShipEntity)
-      sendMessageToTrackedPlayers(velocityMessage)
-    }
+      //sendMetadataToAllAssociatedPlayers()
 
-    if (message != null)
-      sendMessageToTrackedPlayers(message)
-
-    //sendMetadataToAllAssociatedPlayers()
-
-    if (sendMoveMsg) {
-      this.encodedPosX = encodedShipPosX
-      this.encodedPosY = encodedShipPosY
-      this.encodedPosZ = encodedShipPosZ
-    }
-    if (sendRotMsg) {
-      rotation = ShipEntity.getRotation
+      if (sendMoveMsg) {
+        this.encodedPosX = encodedShipPosX
+        this.encodedPosY = encodedShipPosY
+        this.encodedPosZ = encodedShipPosZ
+      }
+      if (sendRotMsg) {
+        rotation = ShipEntity.getRotation
+      }
     }
     updateCounter += 1
 
     if (ShipEntity.velocityChanged) {
-      val velocityMessage = new ShipVelocityMessage(ShipEntity)
+      val velocityMessage = new ShipVelocityMessage(ShipEntity.ShipID, ShipEntity.motionX, ShipEntity.motionY, ShipEntity.motionZ)
       sendMessageToTrackedPlayers(velocityMessage)
       ShipEntity.velocityChanged = false
     }
@@ -157,7 +148,7 @@ case class ShipTrackerEntry(ShipEntity: EntityShip, TrackingRange: Int, Tracking
     lastTrackedEntityMotionY = ShipEntity.motionY
     lastTrackedEntityMotionZ = ShipEntity.motionZ
 
-    val velocityMessage = new ShipVelocityMessage(ShipEntity)
+    val velocityMessage = new ShipVelocityMessage(ShipEntity.ShipID, ShipEntity.motionX, ShipEntity.motionY, ShipEntity.motionZ)
     FlyingShips.flyingShipPacketHandler.INSTANCE.sendTo(velocityMessage, playerMP)
 
   }

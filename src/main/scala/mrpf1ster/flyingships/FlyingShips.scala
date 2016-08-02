@@ -5,10 +5,11 @@ package mrpf1ster.flyingships
   */
 
 import mrpf1ster.flyingships.command.DeleteAllShipsCommand
+import mrpf1ster.flyingships.entities.EntityShip
 import mrpf1ster.flyingships.network.FlyingShipsPacketHandler
 import net.minecraftforge.fml.common.Mod
 import net.minecraftforge.fml.common.Mod.EventHandler
-import net.minecraftforge.fml.common.event.{FMLInitializationEvent, FMLPostInitializationEvent, FMLPreInitializationEvent, FMLServerStartingEvent}
+import net.minecraftforge.fml.common.event._
 import org.apache.logging.log4j.LogManager
 
 
@@ -56,6 +57,11 @@ object FlyingShips {
   @EventHandler
   def registerCommands(event: FMLServerStartingEvent) = {
     event.registerServerCommand(new DeleteAllShipsCommand())
+  }
+
+  @EventHandler
+  def onServerStop(event: FMLServerStoppedEvent): Unit = {
+    EntityShip.resetIDs()
   }
 
   // Debug usage

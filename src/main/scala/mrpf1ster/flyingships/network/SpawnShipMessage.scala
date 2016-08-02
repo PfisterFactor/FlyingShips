@@ -7,7 +7,7 @@ import mrpf1ster.flyingships.world.{ShipWorldClient, ShipWorldServer}
 import net.minecraft.client.Minecraft
 import net.minecraft.entity.player.EntityPlayerMP
 import net.minecraft.network.play.server.S21PacketChunkData
-import net.minecraft.util.BlockPos
+import net.minecraft.util.{BlockPos, MathHelper}
 import net.minecraft.world.ChunkCoordIntPair
 import net.minecraft.world.chunk.Chunk
 import net.minecraftforge.fml.common.network.simpleimpl.{IMessage, IMessageHandler, MessageContext}
@@ -21,9 +21,9 @@ class SpawnShipMessage(ship: EntityShip, player: EntityPlayerMP) extends IMessag
   def this() = this(null, null)
 
   var ShipID = if (ship != null) ship.ShipID else -1
-  var X: Double = if (ship != null) ship.posX else -1
-  var Y: Double = if (ship != null) ship.posY else -1
-  var Z: Double = if (ship != null) ship.posZ else -1
+  var X: Int = if (ship != null) MathHelper.floor_double(ship.posX * 32.0D) else -1
+  var Y: Int = if (ship != null) MathHelper.floor_double(ship.posY * 32.0D) else -1
+  var Z: Int = if (ship != null) MathHelper.floor_double(ship.posZ * 32.0D) else -1
 
   private val chunksToSave: Map[ChunkCoordIntPair, S21PacketChunkData.Extracted] = if (ship != null) ship.Shipworld.ChunksOnShip.map(chunkCoord => (chunkCoord, S21PacketChunkData.func_179756_a(ship.Shipworld.getChunkFromChunkCoords(chunkCoord.chunkXPos, chunkCoord.chunkZPos), true, true, 65535))).toMap else Map()
   var ChunkLength: Int = chunksToSave.size
@@ -41,13 +41,13 @@ class SpawnShipMessage(ship: EntityShip, player: EntityPlayerMP) extends IMessag
     buf.writeInt(ShipID)
 
     // X
-    buf.writeDouble(X)
+    buf.writeInt(X)
 
     // Y
-    buf.writeDouble(Y)
+    buf.writeInt(Y)
 
     // Z
-    buf.writeDouble(Z)
+    buf.writeInt(Z)
 
     // Chunk Length
     buf.writeInt(ChunkLength)
@@ -79,13 +79,13 @@ class SpawnShipMessage(ship: EntityShip, player: EntityPlayerMP) extends IMessag
     ShipID = buf.readInt()
 
     // X
-    X = buf.readDouble()
+    X = buf.readInt()
 
     // Y
-    Y = buf.readDouble()
+    Y = buf.readInt()
 
     // Z
-    Z = buf.readDouble()
+    Z = buf.readInt()
 
     // Chunk Length
     ChunkLength = buf.readInt()
@@ -139,12 +139,18 @@ case class SpawnShipMessageTask(Message: SpawnShipMessage, Ctx: MessageContext) 
   override def run(): Unit = {
     def player = Minecraft.getMinecraft.thePlayer
 
-    val ship = new EntityShip(new BlockPos(Message.X, Message.Y, Message.Z), player.worldObj)
+    val x = Message.X / 32.0d
+    val y = Message.X / 32.0d
+    val z = Message.X / 32.0d
+
+    val ship = new EntityShip(new BlockPos(x, y, z), player.worldObj)
     ship.setShipID(Message.ShipID)
-    ship.setPosition(Message.X, Message.Y, Message.Z)
-    ship.serverPosX = Message.X.toInt
-    ship.serverPosY = Message.Y.toInt
-    ship.serverPosZ = Message.Z.toInt
+
+    ship.serverPosX = Message.X
+    ship.serverPosY = Message.Y
+    ship.serverPosZ = Message.Z
+    ship.setPosition(x, y, z)
+
     ship.createShipWorld()
 
 

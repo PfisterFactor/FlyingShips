@@ -25,6 +25,10 @@ object EntityShip {
     nextShipID - 1
   }
 
+  def resetIDs(): Unit = {
+    nextShipID = 0
+  }
+
   def addShipToWorld(entityShip: EntityShip): Boolean = {
     if (entityShip == null || entityShip.Shipworld == null || entityShip.Shipworld.OriginWorld.isRemote) return false
     EntityShipTracker.trackShip(entityShip)
@@ -70,6 +74,8 @@ class EntityShip(pos: BlockPos, world: World) extends Entity(world) {
 
   generateBoundingBox()
 
+  noClip = true
+
   def generateBoundingBox() = {
     if (Shipworld != null)
       _boundingBox = new BoundingBox(BoundingBox.generateRotated(Shipworld.BlocksOnShip.toSet, Rotation), BoundingBox.generateRotatedRelative(Shipworld.BlocksOnShip.toSet, Rotation), Rotation, getPositionVector)
@@ -79,8 +85,7 @@ class EntityShip(pos: BlockPos, world: World) extends Entity(world) {
   def ShipBlock = Shipworld.ShipBlock
 
   override def getEntityId = {
-    println("Don't use entity id! Use shipID instead!")
-    throw new IllegalAccessException()
+    throw new IllegalAccessException("Don't use entity id! Use ShipID instead!")
   }
   override def getEntityBoundingBox = if (Shipworld != null && Shipworld.isShipValid && _boundingBox != null) _boundingBox.AABB else new AxisAlignedBB(0, 0, 0, 0, 0, 0)
 
@@ -155,6 +160,7 @@ class EntityShip(pos: BlockPos, world: World) extends Entity(world) {
 
   def getRotation: Quat4f = Rotation
 
+  var updateCounter = 0
   override def onUpdate(): Unit = {
 
     // If the Ship is empty and there's no spawn entry for it, delete it
@@ -165,14 +171,23 @@ class EntityShip(pos: BlockPos, world: World) extends Entity(world) {
     if (!Shipworld.isRemote) {
       //debugDoRotate()
       setRotation(new Quat4f(0, 0, 0, 1f))
-      moveEntity(motionX, motionY, motionZ)
+      setVelocity(0.1f, 0, 0)
     }
+    moveEntity(motionX, motionY, motionZ)
 
 
     if (_boundingBox != null)
       _boundingBox = _boundingBox.moveTo(getPositionVector).rotateTo(Rotation)
 
 
+  }
+
+
+  override def setVelocity(x: Double, y: Double, z: Double): Unit = {
+    velocityChanged = x != motionX || y != motionY || z != motionZ
+    motionX = x
+    motionY = y
+    motionZ = z
   }
 
   override def setPosition(x: Double, y: Double, z: Double):Unit = {
@@ -184,7 +199,8 @@ class EntityShip(pos: BlockPos, world: World) extends Entity(world) {
     posX = x
     posY = y
     posZ = z
-    Shipworld.onShipMove()
+    if (Shipworld != null)
+      Shipworld.onShipMove()
 
   }
 
@@ -221,5 +237,6 @@ class EntityShip(pos: BlockPos, world: World) extends Entity(world) {
     new Vec3(clampedX, clampedY, clampedZ)
   }
 
-  override def entityInit(): Unit = {}
+  override def entityInit(): Unit = {
+  }
 }

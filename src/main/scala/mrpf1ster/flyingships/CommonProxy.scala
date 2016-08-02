@@ -13,8 +13,9 @@ import net.minecraftforge.fml.relauncher.Side
   */
 object CommonProxy {
   var ShipCreatorBlock: ShipCreatorBlock = null
-  // Tracking Range and frequency
-  val ShipTracking = (256, 5)
+  // Tracking Range and Frequency
+  // Tracking Range doesn't matter for our EntityTracker
+  val ShipTracking = (999, 3)
 
   def preInit(event:FMLPreInitializationEvent) = {
     ShipCreatorBlock = new ShipCreatorBlock()
@@ -29,6 +30,7 @@ object CommonProxy {
     EntityRegistry.registerModEntity(classOf[EntityShip], "Ship Entity", 0, FlyingShips, ShipTracking._1, ShipTracking._2, true)
 
   }
+
   def postInit(event: FMLPostInitializationEvent) = {
 
   }

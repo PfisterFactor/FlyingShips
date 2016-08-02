@@ -318,9 +318,10 @@ class ClickSimulator(shipWorld: ShipWorld) {
           player.swingItem()
         }
       }
+      else
+        resetBlockRemoving(player)
     }
-    else
-      resetBlockRemoving(player)
+
   }
 
   @SideOnly(Side.CLIENT)

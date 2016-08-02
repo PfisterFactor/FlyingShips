@@ -4,7 +4,7 @@ import java.nio.FloatBuffer
 import javax.vecmath.{Matrix4f, Quat4f}
 
 import mrpf1ster.flyingships.entities.EntityShip
-import mrpf1ster.flyingships.util.{RenderUtils, RotatedBB, ShipLocator, UnifiedPos}
+import mrpf1ster.flyingships.util.{RenderUtils, RotatedBB, ShipLocator}
 import mrpf1ster.flyingships.world.{ShipWorld, ShipWorldClient}
 import net.minecraft.block._
 import net.minecraft.block.material.Material
@@ -79,11 +79,9 @@ class ShipRender(rm: RenderManager) extends Render[EntityShip](rm) {
     // Translate into the center of the ship block for rotation
     GL11.glTranslated(0.5, 0.5, 0.5)
 
-    // Interpolate rotation so it doesn't look jerky
-    entity.oldRotation.interpolate(entity.getRotation, 1.0f)
 
     // Turn a quaternion into a matrix, then into a FloatBuffer
-    val rotationBuffer = matrixToFloatBuffer(quaternionToMatrix4f(entity.oldRotation)) //entity.renderMatrix)
+    val rotationBuffer = matrixToFloatBuffer(quaternionToMatrix4f(entity.getRotation)) //entity.renderMatrix)
 
 
     // Multiply current matrix by FloatBuffer
@@ -94,8 +92,8 @@ class ShipRender(rm: RenderManager) extends Render[EntityShip](rm) {
     GL11.glTranslated(-0.5, -0.5, -0.5)
 
 
-    // Translate to Ship Position
-    GL11.glTranslated(entity.posX, entity.posY, entity.posZ)
+    // Translate away from the ShipBlock
+    GL11.glTranslated(-ShipWorld.ShipBlockPos.getX, -128, -ShipWorld.ShipBlockPos.getZ)
 
     RenderHelper.disableStandardItemLighting()
 
@@ -111,18 +109,15 @@ class ShipRender(rm: RenderManager) extends Render[EntityShip](rm) {
     shipWorld.loadedTileEntityList
       .filter(te => TileEntityRendererDispatcher.instance.getSpecialRenderer(te) != null)
       .foreach(te => {
-        val relPos: BlockPos = te.getPos.subtract(ShipWorld.ShipBlockPos) // From this we get relative distance from ship block, (ship block = x:0,y:0,z:0)
-        val worldPos: BlockPos = UnifiedPos.convertToWorld(te.getPos, shipWorld.OriginPos())
         te.setWorldObj(shipWorld)
-        // If anyone ever wants to explain why the below works i'll be happy to hear
-        TileEntityRendererDispatcher.instance.renderTileEntityAt(te, -(worldPos.getX - 2 * relPos.getX), -(worldPos.getY - 2 * relPos.getY), -(worldPos.getZ - 2 * relPos.getZ), partialTicks, -1)
+        TileEntityRendererDispatcher.instance.renderTileEntityAt(te, te.getPos.getX, te.getPos.getY, te.getPos.getZ, partialTicks, -1)
       })
 
     // Block breaking textures
-    renderBlockBreaking(shipWorld)
+    renderBlockBreaking(shipWorld, x, y, z)
 
 
-    GL11.glPopMatrix()
+
     if (DebugRender.isDebugMenuShown)
       doDebugRender(shipWorld, x, y, z)
 
@@ -137,7 +132,7 @@ class ShipRender(rm: RenderManager) extends Render[EntityShip](rm) {
 
     RenderHelper.enableStandardItemLighting()
 
-
+    GL11.glPopMatrix()
   }
 
   private def getDisplayList(shipWorld: ShipWorldClient): Int = {
@@ -165,10 +160,7 @@ class ShipRender(rm: RenderManager) extends Render[EntityShip](rm) {
     def tessellator = Tessellator.getInstance()
     def worldRenderer = tessellator.getWorldRenderer
 
-    val i: Double = shipWorld.Ship.posX + ShipWorld.ShipBlockPos.getX
-    val j: Double = shipWorld.Ship.posY + ShipWorld.ShipBlockPos.getY
-    val k: Double = shipWorld.Ship.posZ + ShipWorld.ShipBlockPos.getZ
-    worldRenderer.setTranslation(-i, -j, -k)
+    worldRenderer.setTranslation(0, 0, 0)
     worldRenderer.begin(GL11.GL_QUADS, DefaultVertexFormats.BLOCK)
 
     shipWorld.BlocksOnShip.foreach(uPos => {
@@ -177,14 +169,6 @@ class ShipRender(rm: RenderManager) extends Render[EntityShip](rm) {
         renderBlock(shipWorld, blockState, uPos.RelativePos, worldRenderer)
       }
     })
-    /*
-    Shipworld.BlockSet.foreach(uPos => {
-      val blockState = Shipworld.getBlockState(uPos.RelativePos)
-      renderBlock(Shipworld, blockState, uPos.RelativePos, worldRenderer)
-    })
-    */
-
-    worldRenderer.setTranslation(0, 0, 0)
     tessellator.draw()
 
 
@@ -212,7 +196,7 @@ class ShipRender(rm: RenderManager) extends Render[EntityShip](rm) {
     }
   }
 
-  def renderBlockBreaking(shipWorld: ShipWorldClient): Unit = {
+  def renderBlockBreaking(shipWorld: ShipWorldClient, x: Double, y: Double, z: Double): Unit = {
     if (shipWorld.ShipRenderGlobal.DamagedBlocks.isEmpty) return
     GlStateManager.tryBlendFuncSeparate(774, 768, 1, 0)
     GlStateManager.enableBlend()
@@ -228,10 +212,9 @@ class ShipRender(rm: RenderManager) extends Render[EntityShip](rm) {
     val vec = shipWorld.Ship.getPositionVector.add(ShipWorld.ShipBlockVec)
 
     worldRenderer.begin(7, DefaultVertexFormats.BLOCK)
-    worldRenderer.setTranslation(-vec.xCoord, -vec.yCoord, -vec.zCoord)
+    worldRenderer.setTranslation(0, 0, 0)
     worldRenderer.noColor()
     shipWorld.ShipRenderGlobal.DamagedBlocks.foreach(pair => renderBlockBreak(pair._2, shipWorld))
-    worldRenderer.setTranslation(0.0D, 0.0D, 0.0D)
     tessellator.draw()
 
 
@@ -240,6 +223,7 @@ class ShipRender(rm: RenderManager) extends Render[EntityShip](rm) {
     GlStateManager.disablePolygonOffset()
     GlStateManager.enableAlpha()
     GlStateManager.depthMask(true)
+    GlStateManager.disableBlend()
   }
 
   def renderBlock(shipWorld: ShipWorld, blockState: IBlockState, pos: BlockPos, worldRenderer: WorldRenderer) = {
@@ -263,29 +247,23 @@ class ShipRender(rm: RenderManager) extends Render[EntityShip](rm) {
 
     val rotatedBB = new RotatedBB(aabb, new Vec3(0.5, 0.5, 0.5), ship.getRotation)
 
-    GL11.glPushMatrix()
-    GL11.glTranslated(x, y, z)
-    GL11.glTranslated(ship.posX, ship.posY, ship.posZ)
-    GL11.glTranslated(pos.getX, pos.getY, pos.getZ)
+    val tessellator: Tessellator = Tessellator.getInstance
+    val worldrenderer: WorldRenderer = tessellator.getWorldRenderer
+    worldrenderer.setTranslation(0, 0, 0)
+
     GlStateManager.enableBlend()
     GlStateManager.tryBlendFuncSeparate(770, 771, 1, 0)
     GlStateManager.color(0.0F, 0.0F, 0.0F, 0.4F)
     GL11.glLineWidth(2.0F)
     GlStateManager.disableTexture2D()
     GlStateManager.depthMask(false)
-    val tessellator: Tessellator = Tessellator.getInstance
-    val worldrenderer: WorldRenderer = tessellator.getWorldRenderer
-    worldrenderer.setTranslation(-ship.posX - ShipWorld.ShipBlockPos.getX - pos.getX, -ship.posY - ShipWorld.ShipBlockPos.getY - pos.getY, -ship.posZ - ShipWorld.ShipBlockPos.getZ - pos.getZ)
 
-    RenderUtils.drawRotatedBB(rotatedBB.expand(0.001), worldrenderer)
-
-    worldrenderer.setTranslation(0, 0, 0)
+    RenderUtils.drawRotatedBB(rotatedBB.expand(0.002), worldrenderer)
 
     GlStateManager.depthMask(true)
-    GlStateManager.enableTexture2D()
-    GlStateManager.disableBlend()
+    GlStateManager.enableTexture2D
+    GlStateManager.disableBlend
 
-    GL11.glPopMatrix()
 
   }
 

@@ -11,8 +11,8 @@ import net.minecraftforge.fml.common.network.simpleimpl.{IMessage, IMessageHandl
 /**
   * Created by EJ on 7/30/2016.
   */
-class ShipMoveRotMessage(shipID: Int, posX: Double, posY: Double, posZ: Double, rotation: Quat4f, doTeleport: Boolean) extends IMessage {
-  def this() = this(-1, -1, -1, -1, null, false)
+class ShipMoveRotMessage(shipID: Int, posX: Int, posY: Int, posZ: Int, rotation: Quat4f, doTeleport: Boolean) extends IMessage {
+  def this() = this(-1, -1.toByte, -1.toByte, -1.toByte, null, false)
 
   var ShipID = shipID
   var PosX = posX
@@ -26,13 +26,13 @@ class ShipMoveRotMessage(shipID: Int, posX: Double, posY: Double, posZ: Double, 
     buf.writeInt(ShipID)
 
     // PosX
-    buf.writeDouble(PosX)
+    buf.writeInt(PosX)
 
     // PosY
-    buf.writeDouble(PosY)
+    buf.writeInt(PosY)
 
     // PosZ
-    buf.writeDouble(PosZ)
+    buf.writeInt(PosZ)
 
     // Rotation
     buf.writeFloat(Rotation.x)
@@ -49,13 +49,13 @@ class ShipMoveRotMessage(shipID: Int, posX: Double, posY: Double, posZ: Double, 
     ShipID = buf.readInt()
 
     // PosX
-    PosX = buf.readDouble()
+    PosX = buf.readInt()
 
     // PosY
-    PosY = buf.readDouble()
+    PosY = buf.readInt()
 
     // PosZ
-    PosZ = buf.readDouble()
+    PosZ = buf.readInt()
 
     // Rotation
     Rotation = new Quat4f(buf.readFloat(), buf.readFloat(), buf.readFloat(), buf.readFloat())
@@ -79,20 +79,22 @@ class ClientShipMoveRotMessageHandler extends IMessageHandler[ShipMoveRotMessage
       if (!FlyingShips.flyingShipPacketHandler.nullCheck(Ship, "ShipMoveRotMessageTask", message.ShipID)) return
 
       if (message.DoTeleport) {
-        Ship.get.serverPosX = message.PosX.toInt
-        Ship.get.serverPosY = message.PosY.toInt
-        Ship.get.serverPosZ = message.PosZ.toInt
-
-        Ship.get.setPosition(message.PosX, message.PosY, message.PosZ)
-        Ship.get.setRotation(message.Rotation)
+        Ship.get.serverPosX = message.PosX
+        Ship.get.serverPosY = message.PosY
+        Ship.get.serverPosZ = message.PosZ
       }
       else {
-        Ship.get.serverPosX += message.PosX.toInt
-        Ship.get.serverPosY += message.PosY.toInt
-        Ship.get.serverPosZ += message.PosZ.toInt
-        Ship.get.setPosition(Ship.get.serverPosX, Ship.get.serverPosY, Ship.get.serverPosZ)
-        Ship.get.setRotation(message.Rotation)
+        Ship.get.serverPosX += message.PosX
+        Ship.get.serverPosY += message.PosY
+        Ship.get.serverPosZ += message.PosZ
       }
+
+      val x = Ship.get.serverPosX / 32.0d
+      val y = Ship.get.serverPosY / 32.0d
+      val z = Ship.get.serverPosZ / 32.0d
+
+      Ship.get.setPosition(x, y, z)
+      Ship.get.setRotation(message.Rotation)
     }
   }
 

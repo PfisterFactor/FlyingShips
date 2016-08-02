@@ -41,7 +41,7 @@ class ShipWorldClient(originWorld: World, ship: EntityShip) extends ShipWorld(or
   }
 
   override def onShipMove() = {
-    doRenderUpdate = true
+    //doRenderUpdate = true
   }
 
   override def addBlockEvent(pos: BlockPos, block: Block, eventID: Int, eventParam: Int) = block.onBlockEventReceived(this, pos, getBlockState(pos), eventID, eventParam)
