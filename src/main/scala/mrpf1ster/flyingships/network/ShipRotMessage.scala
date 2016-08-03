@@ -49,7 +49,7 @@ class ClientShipRotMessageHandler extends IMessageHandler[ShipRotMessage, IMessa
     override def run(): Unit = {
       val Ship = ShipLocator.getClientShip(message.ShipID)
       if (!FlyingShips.flyingShipPacketHandler.nullCheck(Ship, "ShipRotMessageTask", message.ShipID)) return
-      Ship.get.setRotation(message.Rotation)
+      Ship.get.setRotationFromServer(message.Rotation)
     }
   }
 

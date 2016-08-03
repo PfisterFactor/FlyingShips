@@ -52,6 +52,7 @@ object RenderShip {
         false
     }).foreach(ship => Minecraft.getMinecraft.getRenderManager.renderEntitySimple(ship, partialTicks))
   }
+
 }
 
 @SideOnly(Side.CLIENT)
@@ -69,20 +70,25 @@ class RenderShip(rm: RenderManager) extends Render[EntityShip](rm) {
 
     val shipWorld = entity.Shipworld.asInstanceOf[ShipWorldClient]
 
+    // Adds one to the frame counter in entity
+    // Used for determining the number of frames inbetween rotation sync from the server
+    // The client then interpolates the rotation to match the servers rotation
+    entity.IncrementFrameCounter()
+
     GL11.glPushMatrix()
 
     // Translate away from player
     GL11.glTranslated(x, y, z)
 
-
     // Translate into the center of the ship block for rotation
     GL11.glTranslated(0.5, 0.5, 0.5)
 
-    entity.interpolatedRotation.interpolate(entity.getRotation, partialTicks)
+    // Interpolate our rotation
+    val delta = 1.0 / entity.FramesBetweenLastServerSync
+    entity.interpolatedRotation.interpolate(entity.getRotation, delta.toFloat)
 
     // Turn a quaternion into a matrix, then into a FloatBuffer
-    val rotationBuffer = matrixToFloatBuffer(quaternionToMatrix4f(entity.interpolatedRotation)) //entity.renderMatrix)
-
+    val rotationBuffer = matrixToFloatBuffer(quaternionToMatrix4f(entity.interpolatedRotation))
 
     // Multiply current matrix by FloatBuffer
     GL11.glMultMatrix(rotationBuffer)

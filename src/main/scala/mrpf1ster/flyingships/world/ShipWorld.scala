@@ -267,8 +267,9 @@ abstract class ShipWorld(originWorld: World, ship: EntityShip, uUID: UUID) exten
     val relativeEnd = UnifiedVec.convertToRelative(end, Ship.getPositionVector)
 
     // The eye position and ray, rotated by the ship block's center, to the opposite of the ships current rotation
-    val rotatedStart = VectorUtils.rotatePointFromShip(relativeStart, Ship)
-    val rotatedEnd = VectorUtils.rotatePointFromShip(relativeEnd, Ship)
+    // We use the interpolated rotation if its on client so the raytrace matches what the client sees
+    val rotatedStart = VectorUtils.rotatePointFromShip(relativeStart, Ship, useInterpolated = isRemote)
+    val rotatedEnd = VectorUtils.rotatePointFromShip(relativeEnd, Ship, useInterpolated = isRemote)
 
     // The result of the ray-trace on the ship world
     super.rayTraceBlocks(rotatedStart, rotatedEnd)

@@ -45,14 +45,24 @@ object VectorUtils {
   }
 
   // Assumes P is relative to ship
-  def rotatePointToShip(P:Vec3, Ship:EntityShip):Vec3 =
-    rotatePointByQuaternion(P.subtract(0.5, 0.5, 0.5).subtract(ShipWorld.ShipBlockVec), Ship.getRotation).addVector(0.5, 0.5, 0.5).add(ShipWorld.ShipBlockVec)
+  def rotatePointToShip(P: Vec3, Ship: EntityShip, useInterpolated: Boolean = false): Vec3 = {
+    if (useInterpolated)
+      rotatePointByQuaternion(P.subtract(0.5, 0.5, 0.5).subtract(ShipWorld.ShipBlockVec), Ship.interpolatedRotation).addVector(0.5, 0.5, 0.5).add(ShipWorld.ShipBlockVec)
+    else
+      rotatePointByQuaternion(P.subtract(0.5, 0.5, 0.5).subtract(ShipWorld.ShipBlockVec), Ship.getRotation).addVector(0.5, 0.5, 0.5).add(ShipWorld.ShipBlockVec)
+  }
+
 
   def rotatePointToShip(x: Double, y: Double, z: Double, Ship: EntityShip): Vec3 = rotatePointToShip(new Vec3(x, y, z), Ship)
 
   // Assumes P is relative to ship
-  def rotatePointFromShip(P:Vec3, Ship:EntityShip):Vec3 = {
-    val inversedRot: Quat4f = Ship.getRotation.clone().asInstanceOf[Quat4f] // clone because inverse mutates
+  def rotatePointFromShip(P: Vec3, Ship: EntityShip, useInterpolated: Boolean = false): Vec3 = {
+    var inversedRot: Quat4f = null
+    if (useInterpolated)
+      inversedRot = Ship.interpolatedRotation.clone().asInstanceOf[Quat4f] // clone because inverse mutates
+    else
+      inversedRot = Ship.getRotation.clone().asInstanceOf[Quat4f] // clone because inverse mutates
+
     inversedRot.inverse()
 
     rotatePointByQuaternion(P.subtract(0.5, 0.5, 0.5).subtract(ShipWorld.ShipBlockVec), inversedRot).addVector(0.5, 0.5, 0.5).add(ShipWorld.ShipBlockVec)

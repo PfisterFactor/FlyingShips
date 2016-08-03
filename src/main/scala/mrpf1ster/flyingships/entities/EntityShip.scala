@@ -152,12 +152,28 @@ class EntityShip(pos: BlockPos, world: World) extends Entity(world) {
     setRotation(newRot)
   }
 
+  // Unused on Server
+  private var framesBetweenLastServerSync = 0
+  // Unused on Server
+  private var frameCounter = 0
+
+  // Used in rendering
+  // For interpolating between the client rotation to server rotation
+  def FramesBetweenLastServerSync = framesBetweenLastServerSync
+
+  // See above
+  def IncrementFrameCounter() = frameCounter += 1
+
 
   def setRotation(newRotation: Quat4f): Unit = {
-    interpolatedRotation = Rotation
     Rotation = newRotation
   }
 
+  def setRotationFromServer(newRotation: Quat4f) = {
+    framesBetweenLastServerSync = frameCounter
+    frameCounter = 0
+    setRotation(newRotation)
+  }
   def getRotation: Quat4f = Rotation
 
   def getInverseRotation: Quat4f = {
@@ -166,14 +182,12 @@ class EntityShip(pos: BlockPos, world: World) extends Entity(world) {
     result
   }
 
-  var updateCounter = 0
   override def onUpdate(): Unit = {
 
     // If the Ship is empty and there's no spawn entry for it, delete it
     if (Shipworld == null || !Shipworld.isShipValid) {
       this.setDead()
     }
-
     if (!Shipworld.isRemote) {
       debugDoRotate()
       //setRotation(new Quat4f(0, 0, 0, 1f))

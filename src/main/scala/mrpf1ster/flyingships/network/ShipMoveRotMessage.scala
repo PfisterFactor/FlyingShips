@@ -94,7 +94,7 @@ class ClientShipMoveRotMessageHandler extends IMessageHandler[ShipMoveRotMessage
       val z = Ship.get.serverPosZ / 32.0d
 
       Ship.get.setPosition(x, y, z)
-      Ship.get.setRotation(message.Rotation)
+      Ship.get.setRotationFromServer(message.Rotation)
     }
   }
 
