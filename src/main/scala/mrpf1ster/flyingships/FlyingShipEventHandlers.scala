@@ -18,6 +18,7 @@ import net.minecraftforge.fml.relauncher.{Side, SideOnly}
   * Created by EJ on 3/9/2016.
   */
 class FlyingShipEventHandlers {
+
   @SubscribeEvent
   def onServerTick(event: ServerTickEvent): Unit = ShipManager.onServerTick(event)
 

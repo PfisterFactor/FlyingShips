@@ -30,5 +30,5 @@ class DeleteAllShipsCommand extends ICommand {
     ShipLocator.getShips(sender.getEntityWorld).foreach(ship => ship.setDead())
   }
 
-  override def compareTo(t: ICommand): Int = 0
+  override def compareTo(other: ICommand): Int = getCommandName.compareTo(other.getCommandName)
 }

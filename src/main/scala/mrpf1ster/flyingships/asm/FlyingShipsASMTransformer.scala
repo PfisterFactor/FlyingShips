@@ -69,7 +69,6 @@ class FlyingShipsASMTransformer extends IClassTransformer {
             val previousNode = node.getPrevious
             val ldcNode = if (previousNode.getOpcode == Opcodes.LDC) previousNode.asInstanceOf[LdcInsnNode] else null
             if (castedNode.name == profilerMethodName && previousNode != null && ldcNode.cst.isInstanceOf[String] && ldcNode.cst.asInstanceOf[String] == "entities") {
-              // Ahh! Long if-statements are scary!
               targetNode = castedNode
               methodNode = method
               return

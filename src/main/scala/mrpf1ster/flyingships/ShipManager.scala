@@ -16,6 +16,7 @@ import net.minecraftforge.event.entity.player.PlayerOpenContainerEvent
 import net.minecraftforge.fml.common.eventhandler.Event.Result
 import net.minecraftforge.fml.common.gameevent.TickEvent
 import net.minecraftforge.fml.common.gameevent.TickEvent.{ClientTickEvent, ServerTickEvent}
+import net.minecraftforge.fml.relauncher.{Side, SideOnly}
 
 import scala.reflect.io.Directory
 
@@ -36,6 +37,7 @@ object ShipManager {
 
   }
 
+  @SideOnly(Side.CLIENT)
   def onClientTick(event: ClientTickEvent): Unit = event.phase match {
     case TickEvent.Phase.END =>
       if (Minecraft.getMinecraft.isGamePaused) return
@@ -106,6 +108,7 @@ object ShipManager {
   // and once before rendering.
   // So the only option I saw was ASM
   // Don't hurt me...
+  @SideOnly(Side.CLIENT)
   def onMouseOverHook() = {
     val mouseOver = Minecraft.getMinecraft.objectMouseOver
 
@@ -123,6 +126,7 @@ object ShipManager {
   }
 
   //noinspection AccessorLikeMethodIsEmptyParen
+  @SideOnly(Side.CLIENT)
   private def getShipMouseOver(): (Int, MovingObjectPosition) = {
     val renderViewEntity = Minecraft.getMinecraft.getRenderViewEntity.asInstanceOf[EntityPlayer]
     val reachDistance = ClickSimulator.ShipInteractionHelper.getPlayerReachDistance(renderViewEntity)
