@@ -14,6 +14,7 @@ import scala.collection.mutable
 object EntityShipTracker {
   private val ships: mutable.Map[Int, ShipTrackerEntry] = mutable.Map()
 
+
   def Ships = ships
 
   private val TrackingRange = CommonProxy.ShipTracking._1
@@ -31,6 +32,7 @@ object EntityShipTracker {
   private def addShipToTracker(entityShip: EntityShip): Unit = {
     if (entityShip.Shipworld.OriginWorld.isRemote) return
     ships.put(entityShip.ShipID, new ShipTrackerEntry(entityShip, TrackingRange, TrackingFrequency))
+
   }
 
   private def removeShipFromTracker(entityShip: EntityShip): Unit = {

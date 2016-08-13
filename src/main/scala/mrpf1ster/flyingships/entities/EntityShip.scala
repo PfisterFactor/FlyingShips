@@ -1,5 +1,6 @@
 package mrpf1ster.flyingships.entities
 
+import java.util.UUID
 import javax.vecmath.Quat4f
 
 import mrpf1ster.flyingships.blocks.ShipCreatorBlock
@@ -9,7 +10,7 @@ import net.minecraft.entity.Entity
 import net.minecraft.init.Blocks
 import net.minecraft.nbt.NBTTagCompound
 import net.minecraft.util._
-import net.minecraft.world.World
+import net.minecraft.world.{ChunkCoordIntPair, World}
 
 import scala.collection.mutable
 import scala.collection.mutable.{Set => mSet}
@@ -20,14 +21,16 @@ import scala.reflect.io.Path
 object EntityShip {
   private var nextShipID = 0
 
-  def getShipID(): Int = {
+  def getNextShipID(): Int = {
     nextShipID += 1
     nextShipID - 1
   }
 
-  def resetIDs(): Unit = {
-    nextShipID = 0
+  def maxShipID(id: Int): Unit = {
+    nextShipID = Math.max(nextShipID, id)
   }
+
+  def resetIDs(): Unit = nextShipID = 0
 
   def addShipToWorld(entityShip: EntityShip): Boolean = {
     if (entityShip == null || entityShip.Shipworld == null || entityShip.Shipworld.OriginWorld.isRemote) return false
@@ -39,6 +42,8 @@ object EntityShip {
 class EntityShip(pos: BlockPos, world: World) extends Entity(world) {
 
   def this(world: World) = this(new BlockPos(0, 0, 0), world)
+
+  setWorld(world)
   // Set position
   posX = pos.getX
   posY = pos.getY
@@ -62,7 +67,7 @@ class EntityShip(pos: BlockPos, world: World) extends Entity(world) {
   // Rotation of the ship in Quaternions
   private var Rotation: Quat4f = new Quat4f(0, 0, 0, 1f)
 
-  var interpolatedRotation: Quat4f = Rotation
+  var interpolatedRotation: Quat4f = Rotation.clone().asInstanceOf[Quat4f]
 
   // Returns ship direction based on which way the creator block is facing
   def ShipDirection: EnumFacing = if (Shipworld != null && Shipworld.isShipValid) Shipworld.ShipBlock.getValue(ShipCreatorBlock.FACING) else null
@@ -90,12 +95,17 @@ class EntityShip(pos: BlockPos, world: World) extends Entity(world) {
   override def getEntityBoundingBox = if (Shipworld != null && Shipworld.isShipValid && _boundingBox != null) _boundingBox.AABB else new AxisAlignedBB(0, 0, 0, 0, 0, 0)
 
   def createShipWorld() = {
-    Shipworld = if (worldObj.isRemote) new ShipWorldClient(worldObj, this) else new ShipWorldServer(worldObj, this, getUniqueID)
+    Shipworld = if (worldObj.isRemote) new ShipWorldClient(worldObj, this) else new ShipWorldServer(worldObj, this, entityUniqueID)
     InteractionHandler = new ShipInteractionHandler(Shipworld)
   }
   override def writeEntityToNBT(tagCompound: NBTTagCompound): Unit = {
     // ShipID
     tagCompound.setInteger("ShipID", shipID)
+
+    // Position
+    tagCompound.setDouble("PosX", posX)
+    tagCompound.setDouble("PosY", posY)
+    tagCompound.setDouble("PosZ", posZ)
 
     // Quaternion Rotation
     tagCompound.setFloat("RotX", Rotation.getX)
@@ -103,6 +113,12 @@ class EntityShip(pos: BlockPos, world: World) extends Entity(world) {
     tagCompound.setFloat("RotZ", Rotation.getZ)
     tagCompound.setFloat("RotW", Rotation.getW)
 
+    // ShipUUID
+    tagCompound.setLong("LeastUUID", Shipworld.UUID.getLeastSignificantBits)
+    tagCompound.setLong("MostUUID", Shipworld.UUID.getMostSignificantBits)
+
+    // Only write non-air blocks
+    Shipworld.BlocksOnShip = Shipworld.BlocksOnShip.filter(pos => Shipworld.getBlockState(pos.RelativePos) != Blocks.air.getDefaultState)
     val blocksOnShipX = Shipworld.BlocksOnShip.toArray.map(pos => pos.RelPosX)
     val blocksOnShipY = Shipworld.BlocksOnShip.toArray.map(pos => pos.RelPosY)
     val blocksOnShipZ = Shipworld.BlocksOnShip.toArray.map(pos => pos.RelPosZ)
@@ -117,8 +133,16 @@ class EntityShip(pos: BlockPos, world: World) extends Entity(world) {
     // ShipID
     shipID = tagCompound.getInteger("ShipID")
 
+    // Position
+    posX = tagCompound.getDouble("PosX")
+    posY = tagCompound.getDouble("PosY")
+    posZ = tagCompound.getDouble("PosZ")
+
     // Quaternion Rotation
     Rotation = new Quat4f(tagCompound.getFloat("RotX"), tagCompound.getFloat("RotY"), tagCompound.getFloat("RotZ"), tagCompound.getFloat("RotW"))
+
+    // ShipUUID
+    entityUniqueID = new UUID(tagCompound.getLong("MostUUID"), tagCompound.getLong("LeastUUID"))
 
     // BlocksOnShip
     createShipWorld()
@@ -127,8 +151,13 @@ class EntityShip(pos: BlockPos, world: World) extends Entity(world) {
     val blocksOnShipZ = tagCompound.getIntArray("BlocksOnShipZ")
 
     val blocksOnShip = (0 until blocksOnShipX.size).map(i => new UnifiedPos(new BlockPos(blocksOnShipX(i), blocksOnShipY(i), blocksOnShipZ(i)), Shipworld.OriginPos, true))
-    // Check to make sure blocks aren't air
-    Shipworld.BlocksOnShip = mutable.Set(blocksOnShip: _*).filter(pos => Shipworld.getBlockState(pos.RelativePos).getBlock != Blocks.air)
+    Shipworld.BlocksOnShip = mutable.Set(blocksOnShip: _*)
+    Shipworld.BlocksOnShip.foreach(uPos => {
+      Shipworld.ChunksOnShip.add(new ChunkCoordIntPair(uPos.RelPosX >> 4, uPos.RelPosZ >> 4))
+      Shipworld.getChunkProvider.provideChunk(uPos.RelativePos)
+    })
+
+    Shipworld.asInstanceOf[ShipWorldServer].createPlayerManager()
 
   }
 
@@ -146,7 +175,7 @@ class EntityShip(pos: BlockPos, world: World) extends Entity(world) {
 
   private def debugDoRotate() = {
     val deg15 = new Quat4f(0, 0, 0.94f, 0.94f)
-    deg15.mul(Rotation, deg15)
+    deg15.mul(Rotation)
     val newRot = Rotation.clone().asInstanceOf[Quat4f]
     newRot.interpolate(deg15, 0.1f)
     setRotation(newRot)
@@ -166,7 +195,11 @@ class EntityShip(pos: BlockPos, world: World) extends Entity(world) {
 
 
   def setRotation(newRotation: Quat4f): Unit = {
-    Rotation = newRotation
+    Rotation.get(newRotation)
+  }
+
+  def setInterpolatedRotation(newRotation: Quat4f): Unit = {
+    interpolatedRotation = newRotation
   }
 
   def setRotationFromServer(newRotation: Quat4f) = {
@@ -174,7 +207,8 @@ class EntityShip(pos: BlockPos, world: World) extends Entity(world) {
     frameCounter = 0
     setRotation(newRotation)
   }
-  def getRotation: Quat4f = Rotation
+
+  def getRotation: Quat4f = Rotation.clone().asInstanceOf[Quat4f]
 
   def getInverseRotation: Quat4f = {
     val result = new Quat4f(0, 0, 0, 1f)
@@ -189,7 +223,7 @@ class EntityShip(pos: BlockPos, world: World) extends Entity(world) {
       this.setDead()
     }
     if (!Shipworld.isRemote) {
-      debugDoRotate()
+      //debugDoRotate()
       //setRotation(new Quat4f(0, 0, 0, 1f))
       setVelocity(0f, 0f, 0f)
     }
@@ -210,7 +244,7 @@ class EntityShip(pos: BlockPos, world: World) extends Entity(world) {
     motionZ = z
   }
 
-  override def setPosition(x: Double, y: Double, z: Double):Unit = {
+  override def setPosition(x: Double, y: Double, z: Double): Unit = {
     if (posX == x && posY == y && posZ == z) return
     // Update positions
     prevPosX = posX
@@ -238,7 +272,6 @@ class EntityShip(pos: BlockPos, world: World) extends Entity(world) {
   def shouldRenderInPassOverride(pass: Int) = pass == 0
 
   def getDistanceSqToShipClamped(entityIn: Entity): Double = {
-
     val closest = getClosestPoint(entityIn.getPositionVector)
     val d0: Double = closest.xCoord - entityIn.posX
     val d1: Double = closest.yCoord - entityIn.posY

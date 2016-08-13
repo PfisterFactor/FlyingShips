@@ -1,5 +1,7 @@
 package mrpf1ster.flyingships
 
+import java.io.File
+
 import mrpf1ster.flyingships.entities.{ClickSimulator, EntityShip, EntityShipTracker, ShipInteractionHandler}
 import mrpf1ster.flyingships.render.RenderShip
 import mrpf1ster.flyingships.util.{ShipLocator, UnifiedPos, UnifiedVec}
@@ -7,6 +9,7 @@ import mrpf1ster.flyingships.world.chunk.{ChunkProviderShip, ClientChunkProvider
 import mrpf1ster.flyingships.world.{PlayerRelative, ShipWorld, ShipWorldServer}
 import net.minecraft.client.Minecraft
 import net.minecraft.entity.player.{EntityPlayer, EntityPlayerMP}
+import net.minecraft.nbt.{CompressedStreamTools, NBTTagCompound}
 import net.minecraft.server.MinecraftServer
 import net.minecraft.util.MovingObjectPosition.MovingObjectType
 import net.minecraft.util.{BlockPos, EnumFacing, MovingObjectPosition, Vec3}
@@ -19,6 +22,8 @@ import net.minecraftforge.fml.common.gameevent.TickEvent
 import net.minecraftforge.fml.common.gameevent.TickEvent.PlayerTickEvent
 import net.minecraftforge.fml.common.network.FMLNetworkEvent
 import net.minecraftforge.fml.relauncher.{Side, SideOnly}
+
+import scala.reflect.io.Directory
 
 /**
   * Created by EJ on 3/9/2016.
@@ -41,6 +46,7 @@ object FlyingShipEventHandlers {
     }
   }
 }
+
 class FlyingShipEventHandlers {
   @SubscribeEvent
   def onServerTick(event: TickEvent.WorldTickEvent): Unit = event.phase match {
@@ -143,6 +149,7 @@ class FlyingShipEventHandlers {
 
   var doLeftClick = false
   var doRightClick = false
+
   @SideOnly(Side.CLIENT)
   @SubscribeEvent
   def onMouseClick(event: MouseInputEvent): Unit = {
@@ -154,8 +161,7 @@ class FlyingShipEventHandlers {
     if (!rightMouseButtonDown)
       doRightClick = false
     val ships = ShipLocator.getShips(Minecraft.getMinecraft.theWorld)
-    if (leftMouseButtonDown && !doLeftClick)
-    {
+    if (leftMouseButtonDown && !doLeftClick) {
       if (Minecraft.getMinecraft.theWorld != null)
         ships.foreach(ship => if (ship.Shipworld != null) ship.InteractionHandler.ClickSimulator.clickMouse(Minecraft.getMinecraft.thePlayer))
     }
@@ -194,10 +200,10 @@ class FlyingShipEventHandlers {
 
   @SubscribeEvent
   def onPlayerDisconnect(event: FMLNetworkEvent.ClientDisconnectionFromServerEvent) = {
-    EntityShipTracker.ClientSideShips.keys.foreach(shipID => {
-      EntityShipTracker.ClientSideShips.remove(shipID)
-      RenderShip.DisplayListIDs.remove(shipID)
-    })
+    EntityShipTracker.ClientSideShips.clear()
+    RenderShip.DisplayListIDs.clear()
+    ShipWorld.ShipMouseOver = ShipWorld.DEFUALTMOUSEOVER
+    ShipWorld.ShipMouseOverID = -1
   }
 
   @SubscribeEvent
@@ -230,5 +236,50 @@ class FlyingShipEventHandlers {
     case false =>
       val ships = ShipLocator.getShips(event.world)
       ships.foreach(ship => ship.Shipworld.asInstanceOf[ShipWorldServer].PlayerManager.onWorldChunkLoad(event.getChunk.xPosition, event.getChunk.zPosition))
+  }
+
+  @SubscribeEvent
+  def onWorldSave(event: WorldEvent.Save) = {
+    val ships = ShipLocator.getShips(event.world)
+    ships.foreach(ship => {
+      if (!ship.isDead && ship.Shipworld != null && ship.Shipworld.isShipValid) {
+        try {
+          val saveFile = new File(ship.Shipworld.getSaveHandler.getWorldDirectory.getPath + File.separator + "ShipEntity" + event.world.provider.getDimensionId + ".dat")
+          val nbt = new NBTTagCompound()
+          ship.writeEntityToNBT(nbt)
+          CompressedStreamTools.write(nbt, saveFile)
+        }
+        catch {
+          case e: Exception => FlyingShips.logger.warn(s"onWorldSave: Something went wrong writing Ship ID ${ship.ShipID} to file!\n$e")
+        }
+
+      }
+    })
+  }
+
+  @SubscribeEvent
+  def onWorldLoad(event: WorldEvent.Load): Unit = {
+    if (event.world.isRemote) return
+    try {
+      val file = new File(event.world.getSaveHandler.getWorldDirectory.getPath + File.separator + "ShipWorlds")
+      val saveDirectory = new Directory(file)
+      saveDirectory.deepList(2).foreach(path => {
+        if (path.name.endsWith("ShipEntity" + event.world.provider.getDimensionId + ".dat")) {
+          val nbt = CompressedStreamTools.read(path.jfile)
+          if (!nbt.hasNoTags) {
+            val entityShip = new EntityShip(event.world)
+            entityShip.readEntityFromNBT(nbt)
+            EntityShip.addShipToWorld(entityShip)
+            EntityShip.maxShipID(entityShip.ShipID)
+          }
+        }
+      })
+    }
+    catch {
+      case e: Exception =>
+        FlyingShips.logger.warn(s"onWorldLoad: Something went wrong loading Ships into world!")
+        e.printStackTrace(System.out)
+    }
+
   }
 }

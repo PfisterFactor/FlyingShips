@@ -44,7 +44,7 @@ object RenderShip {
     val renderViewEntity = Minecraft.getMinecraft.getRenderViewEntity
     val pass = net.minecraftforge.client.MinecraftForgeClient.getRenderPass
 
-    val shipsToRender = ShipLocator.getShips(Minecraft.getMinecraft.theWorld).filter(ship => {
+    val shipsToRender = ShipLocator.getClientShips.filter(ship => {
       val shipRender = Minecraft.getMinecraft.getRenderManager.getEntityRenderObject(ship).asInstanceOf[RenderShip]
       if (shipRender != null)
         ship.shouldRenderInPassOverride(pass) && shipRender.shouldRender(ship, camera, x, y, z)
@@ -71,7 +71,7 @@ class RenderShip(rm: RenderManager) extends Render[EntityShip](rm) {
     val shipWorld = entity.Shipworld.asInstanceOf[ShipWorldClient]
 
     // Adds one to the frame counter in entity
-    // Used for determining the number of frames inbetween rotation sync from the server
+    // Used for determining the number of frames in between rotation sync from the server
     // The client then interpolates the rotation to match the servers rotation
     entity.IncrementFrameCounter()
 
@@ -85,7 +85,9 @@ class RenderShip(rm: RenderManager) extends Render[EntityShip](rm) {
 
     // Interpolate our rotation
     val delta = 1.0 / entity.FramesBetweenLastServerSync
-    entity.interpolatedRotation.interpolate(entity.getRotation, delta.toFloat)
+    if (entity.FramesBetweenLastServerSync != 0)
+      entity.interpolatedRotation.interpolate(entity.getRotation, delta.toFloat)
+
 
     // Turn a quaternion into a matrix, then into a FloatBuffer
     val rotationBuffer = matrixToFloatBuffer(quaternionToMatrix4f(entity.interpolatedRotation))

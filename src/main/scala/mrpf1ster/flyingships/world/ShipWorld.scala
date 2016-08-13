@@ -6,7 +6,6 @@ import java.util.{Random, UUID}
 import com.google.common.base.Predicate
 import mrpf1ster.flyingships.entities.EntityShip
 import mrpf1ster.flyingships.util.{ShipLocator, UnifiedPos, UnifiedVec, VectorUtils}
-import mrpf1ster.flyingships.world.chunk.ChunkProviderShip
 import net.minecraft.block.Block
 import net.minecraft.block.state.IBlockState
 import net.minecraft.client.Minecraft
@@ -275,7 +274,7 @@ abstract class ShipWorld(originWorld: World, ship: EntityShip, uUID: UUID) exten
     super.rayTraceBlocks(rotatedStart, rotatedEnd)
   }
 
-  def isShipValid = BlocksOnShip.nonEmpty && chunkProvider.asInstanceOf[ChunkProviderShip].ChunkMap.nonEmpty
+  def isShipValid = BlocksOnShip.nonEmpty
 
   protected def isValid(pos: BlockPos) = pos.getX >= -30000000 && pos.getZ >= -30000000 && pos.getX < 30000000 && pos.getZ < 30000000 && pos.getY >= 0 && pos.getY < 256
 

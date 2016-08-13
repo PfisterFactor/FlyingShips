@@ -1,5 +1,7 @@
 package mrpf1ster.flyingships.network
 
+import javax.vecmath.Quat4f
+
 import io.netty.buffer.ByteBuf
 import mrpf1ster.flyingships.entities.{EntityShip, EntityShipTracker}
 import mrpf1ster.flyingships.util.UnifiedPos
@@ -24,6 +26,7 @@ class SpawnShipMessage(ship: EntityShip, player: EntityPlayerMP) extends IMessag
   var X: Int = if (ship != null) MathHelper.floor_double(ship.posX * 32.0D) else -1
   var Y: Int = if (ship != null) MathHelper.floor_double(ship.posY * 32.0D) else -1
   var Z: Int = if (ship != null) MathHelper.floor_double(ship.posZ * 32.0D) else -1
+  var Rotation: Quat4f = if (ship != null) ship.getRotation else new Quat4f(0, 0, 0, 1f)
 
   private val chunksToSave: Map[ChunkCoordIntPair, S21PacketChunkData.Extracted] = if (ship != null) ship.Shipworld.ChunksOnShip.map(chunkCoord => (chunkCoord, S21PacketChunkData.func_179756_a(ship.Shipworld.getChunkFromChunkCoords(chunkCoord.chunkXPos, chunkCoord.chunkZPos), true, true, 65535))).toMap else Map()
   var ChunkLength: Int = chunksToSave.size
@@ -48,6 +51,12 @@ class SpawnShipMessage(ship: EntityShip, player: EntityPlayerMP) extends IMessag
 
     // Z
     buf.writeInt(Z)
+
+    // Rotation
+    buf.writeFloat(Rotation.x)
+    buf.writeFloat(Rotation.y)
+    buf.writeFloat(Rotation.z)
+    buf.writeFloat(Rotation.w)
 
     // Chunk Length
     buf.writeInt(ChunkLength)
@@ -86,6 +95,9 @@ class SpawnShipMessage(ship: EntityShip, player: EntityPlayerMP) extends IMessag
 
     // Z
     Z = buf.readInt()
+
+    // Rotation
+    Rotation = new Quat4f(buf.readFloat(), buf.readFloat(), buf.readFloat(), buf.readFloat())
 
     // Chunk Length
     ChunkLength = buf.readInt()
@@ -140,8 +152,8 @@ case class SpawnShipMessageTask(Message: SpawnShipMessage, Ctx: MessageContext) 
     def player = Minecraft.getMinecraft.thePlayer
 
     val x = Message.X / 32.0d
-    val y = Message.X / 32.0d
-    val z = Message.X / 32.0d
+    val y = Message.Y / 32.0d
+    val z = Message.Z / 32.0d
 
     val ship = new EntityShip(new BlockPos(x, y, z), player.worldObj)
     ship.setShipID(Message.ShipID)
@@ -175,6 +187,8 @@ case class SpawnShipMessageTask(Message: SpawnShipMessage, Ctx: MessageContext) 
     })
 
     ship.generateBoundingBox()
+    ship.setRotationFromServer(Message.Rotation)
+    ship.setInterpolatedRotation(Message.Rotation)
     EntityShipTracker.addShipClientSide(ship)
 
   }

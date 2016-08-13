@@ -27,9 +27,9 @@ import java.util.List;
 // The entire PlayerManager class copied here, so we can use it for our ship worlds
 public class PlayerManagerShip {
     private final ShipWorldServer theShipWorldServer;
-    private final LongHashMap<PlayerManagerShip.PlayerInstance> playerInstances = new LongHashMap();
-    private final List<PlayerManagerShip.PlayerInstance> playerInstancesToUpdate = Lists.newArrayList();
-    private final List<PlayerManagerShip.PlayerInstance> playerInstanceList = Lists.newArrayList();
+    private final LongHashMap<PlayerInstance> playerInstances = new LongHashMap();
+    private final List<PlayerInstance> playerInstancesToUpdate = Lists.newArrayList();
+    private final List<PlayerInstance> playerInstanceList = Lists.newArrayList();
     /**
      * time what is using to check if InhabitedTime should be calculated
      */
@@ -40,40 +40,40 @@ public class PlayerManagerShip {
     private final int[][] xzDirectionsConst = {{1, 0}, {0, 1}, {-1, 0}, {0, -1}};
 
     public PlayerManagerShip(ShipWorldServer shipWorldServer) {
-        this.theShipWorldServer = shipWorldServer;
-        Iterator<ChunkCoordIntPair> iter = this.theShipWorldServer.ChunksOnShip().iterator();
+        theShipWorldServer = shipWorldServer;
+        Iterator<ChunkCoordIntPair> iter = theShipWorldServer.ChunksOnShip().iterator();
         while (iter.hasNext()) {
             ChunkCoordIntPair coord = iter.next();
-            this.getPlayerInstance(coord.chunkXPos, coord.chunkZPos, true);
+            getPlayerInstance(coord.chunkXPos, coord.chunkZPos, true);
         }
     }
 
     public List<EntityPlayer> getPlayers() {
-        return this.theShipWorldServer.OriginWorld().playerEntities;
+        return theShipWorldServer.OriginWorld().playerEntities;
     }
     /**
      * Returns the ShipWorldServer associated with this PlayerManager
      */
     public ShipWorldServer getShipWorldServer() {
-        return this.theShipWorldServer;
+        return theShipWorldServer;
     }
 
     public void onWorldChunkLoad(int chunkX, int chunkZ) {
-        ChunkCoordIntPair relChunk = BlockUtils.getRelativeChunkFromWorld(chunkX, chunkZ, this.theShipWorldServer.OriginPos());
-        this.getPlayerInstance(relChunk.chunkXPos, relChunk.chunkZPos, true);
+        ChunkCoordIntPair relChunk = BlockUtils.getRelativeChunkFromWorld(chunkX, chunkZ, theShipWorldServer.OriginPos());
+        getPlayerInstance(relChunk.chunkXPos, relChunk.chunkZPos, true);
 
     }
 
     public void onWorldChunkUnload(int chunkX, int chunkZ) {
-        ChunkCoordIntPair relChunk = BlockUtils.getRelativeChunkFromWorld(chunkX, chunkZ, this.theShipWorldServer.OriginPos());
-        PlayerManagerShip.PlayerInstance toBeRemoved = this.getPlayerInstance(relChunk.chunkXPos, relChunk.chunkZPos, false);
+        ChunkCoordIntPair relChunk = BlockUtils.getRelativeChunkFromWorld(chunkX, chunkZ, theShipWorldServer.OriginPos());
+        PlayerInstance toBeRemoved = getPlayerInstance(relChunk.chunkXPos, relChunk.chunkZPos, false);
         if (toBeRemoved != null) {
             long i = (long) relChunk.chunkXPos + 2147483647L | (long) relChunk.chunkZPos + 2147483647L << 32;
-            this.playerInstances.remove(i);
-            this.playerInstanceList.remove(toBeRemoved);
+            playerInstances.remove(i);
+            playerInstanceList.remove(toBeRemoved);
             if (toBeRemoved.numBlocksToUpdate > 0)
-                this.playerInstancesToUpdate.remove(toBeRemoved);
-            this.theShipWorldServer.getChunkProviderServer().dropChunk(relChunk.chunkXPos, relChunk.chunkZPos);
+                playerInstancesToUpdate.remove(toBeRemoved);
+            theShipWorldServer.getChunkProviderServer().dropChunk(relChunk.chunkXPos, relChunk.chunkZPos);
         }
     }
     /**
@@ -81,44 +81,44 @@ public class PlayerManagerShip {
      */
 
     public void updatePlayerInstances() {
-        long i = theShipWorldServer.getTotalWorldTime();
-        if (i - previousTotalWorldTime > 8000L) {
-            previousTotalWorldTime = i;
-            for (int j = 0; j < playerInstanceList.size(); ++j) {
-                PlayerManagerShip.PlayerInstance playermanager$playerinstance = playerInstanceList.get(j);
+        long i = this.theShipWorldServer.getTotalWorldTime();
+        if (i - this.previousTotalWorldTime > 8000L) {
+            this.previousTotalWorldTime = i;
+            for (int j = 0; j < this.playerInstanceList.size(); ++j) {
+                PlayerInstance playermanager$playerinstance = this.playerInstanceList.get(j);
                 playermanager$playerinstance.onUpdate();
                 playermanager$playerinstance.processChunk();
             }
         } else {
-            for (int k = 0; k < playerInstancesToUpdate.size(); ++k) {
-                PlayerManagerShip.PlayerInstance playermanager$playerinstance1 = playerInstancesToUpdate.get(k);
+            for (int k = 0; k < this.playerInstancesToUpdate.size(); ++k) {
+                PlayerInstance playermanager$playerinstance1 = this.playerInstancesToUpdate.get(k);
                 playermanager$playerinstance1.onUpdate();
             }
         }
 
-        this.playerInstancesToUpdate.clear();
+        playerInstancesToUpdate.clear();
 
-        if (this.getPlayers().isEmpty()) {
-            this.theShipWorldServer.getChunkProviderServer().unloadAllChunks();
+        if (getPlayers().isEmpty()) {
+            theShipWorldServer.getChunkProviderServer().unloadAllChunks();
         }
     }
 
     public boolean hasPlayerInstance(int chunkX, int chunkZ) {
         long i = (long) chunkX + 2147483647L | (long) chunkZ + 2147483647L << 32;
-        return playerInstances.getValueByKey(i) != null;
+        return this.playerInstances.getValueByKey(i) != null;
     }
 
     /**
      * pass in the chunk x and y and a flag as to whether or not the instance should be made if it doesn't exist
      */
-    private PlayerManagerShip.PlayerInstance getPlayerInstance(int chunkX, int chunkZ, boolean createIfAbsent) {
+    private PlayerInstance getPlayerInstance(int chunkX, int chunkZ, boolean createIfAbsent) {
         long i = (long) chunkX + 2147483647L | (long) chunkZ + 2147483647L << 32;
-        PlayerManagerShip.PlayerInstance playermanager$playerinstance = playerInstances.getValueByKey(i);
+        PlayerInstance playermanager$playerinstance = this.playerInstances.getValueByKey(i);
 
-        if (playermanager$playerinstance == null && createIfAbsent && this.theShipWorldServer.ChunksOnShip().contains(new ChunkCoordIntPair(chunkX, chunkZ))) {
-            playermanager$playerinstance = new PlayerManagerShip.PlayerInstance(chunkX, chunkZ);
-            playerInstances.add(i, playermanager$playerinstance);
-            playerInstanceList.add(playermanager$playerinstance);
+        if (playermanager$playerinstance == null && createIfAbsent && theShipWorldServer.ChunksOnShip().contains(new ChunkCoordIntPair(chunkX, chunkZ))) {
+            playermanager$playerinstance = new PlayerInstance(chunkX, chunkZ);
+            this.playerInstances.add(i, playermanager$playerinstance);
+            this.playerInstanceList.add(playermanager$playerinstance);
         }
 
         return playermanager$playerinstance;
@@ -127,7 +127,7 @@ public class PlayerManagerShip {
     public void markBlockForUpdate(BlockPos pos) {
         int i = pos.getX() >> 4;
         int j = pos.getZ() >> 4;
-        PlayerManagerShip.PlayerInstance playermanager$playerinstance = getPlayerInstance(i, j, false);
+        PlayerInstance playermanager$playerinstance = this.getPlayerInstance(i, j, false);
 
         if (playermanager$playerinstance != null) {
             playermanager$playerinstance.flagChunkForUpdate(pos.getX() & 15, pos.getY(), pos.getZ() & 15);
@@ -147,16 +147,16 @@ public class PlayerManagerShip {
     }
 
     public boolean isPlayerWatchingChunk(EntityPlayerMP player, int chunkX, int chunkZ) {
-        ChunkCoordIntPair worldChunk = BlockUtils.getWorldChunkFromRelative(chunkX, chunkZ, this.theShipWorldServer.OriginPos());
-        return ((WorldServer) this.theShipWorldServer.OriginWorld()).getPlayerManager().isPlayerWatchingChunk(player, worldChunk.chunkXPos, worldChunk.chunkZPos);
+        ChunkCoordIntPair worldChunk = BlockUtils.getWorldChunkFromRelative(chunkX, chunkZ, theShipWorldServer.OriginPos());
+        return ((WorldServer) theShipWorldServer.OriginWorld()).getPlayerManager().isPlayerWatchingChunk(player, worldChunk.chunkXPos, worldChunk.chunkZPos);
     }
 
     public boolean isPlayerWatchingChunk(EntityPlayerMP player, ChunkCoordIntPair chunkCoords) {
-        return this.isPlayerWatchingChunk(player, chunkCoords.chunkXPos, chunkCoords.chunkZPos);
+        return isPlayerWatchingChunk(player, chunkCoords.chunkXPos, chunkCoords.chunkZPos);
     }
 
     public boolean isPlayerWatchingPos(EntityPlayerMP player, BlockPos pos) {
-        return this.isPlayerWatchingChunk(player, pos.getX() >> 4, pos.getZ() >> 4);
+        return isPlayerWatchingChunk(player, pos.getX() >> 4, pos.getZ() >> 4);
     }
 
 
@@ -180,50 +180,50 @@ public class PlayerManagerShip {
         private long previousWorldTime;
 
         public PlayerInstance(int chunkX, int chunkZ) {
-            this.chunkCoords = new ChunkCoordIntPair(chunkX, chunkZ);
-            PlayerManagerShip.this.getShipWorldServer().getChunkProviderServer().provideChunk(this.chunkCoords.chunkXPos, this.chunkCoords.chunkZPos);
+            chunkCoords = new ChunkCoordIntPair(chunkX, chunkZ);
+            getShipWorldServer().getChunkProviderServer().provideChunk(chunkCoords.chunkXPos, chunkCoords.chunkZPos);
         }
 
         /**
          * This method currently only increases chunk inhabited time. Extension is possible in next versions
          */
         public void processChunk() {
-            increaseInhabitedTime(PlayerManagerShip.this.theShipWorldServer.getChunkFromChunkCoords(chunkCoords.chunkXPos, chunkCoords.chunkZPos));
+            this.increaseInhabitedTime(theShipWorldServer.getChunkFromChunkCoords(this.chunkCoords.chunkXPos, this.chunkCoords.chunkZPos));
         }
 
         /**
          * Increases chunk inhabited time every 8000 ticks
          */
         private void increaseInhabitedTime(Chunk theChunk) {
-            theChunk.setInhabitedTime(theChunk.getInhabitedTime() + PlayerManagerShip.this.theShipWorldServer.getTotalWorldTime() - previousWorldTime);
-            previousWorldTime = PlayerManagerShip.this.theShipWorldServer.getTotalWorldTime();
+            theChunk.setInhabitedTime(theChunk.getInhabitedTime() + theShipWorldServer.getTotalWorldTime() - this.previousWorldTime);
+            this.previousWorldTime = theShipWorldServer.getTotalWorldTime();
         }
 
         public void flagChunkForUpdate(int x, int y, int z) {
-            if (numBlocksToUpdate == 0) {
+            if (this.numBlocksToUpdate == 0) {
                 PlayerManagerShip.this.playerInstancesToUpdate.add(this);
             }
 
-            flagsYAreasToUpdate |= 1 << (y >> 4);
+            this.flagsYAreasToUpdate |= 1 << (y >> 4);
 
             //Forge; Cache everything, so always run
             short short1 = (short) (x << 12 | z << 8 | y);
 
-            for (int i = 0; i < this.numBlocksToUpdate; ++i) {
-                if (this.locationOfBlockChange[i] == short1) {
+            for (int i = 0; i < numBlocksToUpdate; ++i) {
+                if (locationOfBlockChange[i] == short1) {
                         return;
                     }
                 }
 
-            if (numBlocksToUpdate == locationOfBlockChange.length) {
-                locationOfBlockChange = Arrays.copyOf(locationOfBlockChange, locationOfBlockChange.length << 1);
+            if (this.numBlocksToUpdate == this.locationOfBlockChange.length) {
+                this.locationOfBlockChange = Arrays.copyOf(this.locationOfBlockChange, this.locationOfBlockChange.length << 1);
                 }
-            this.locationOfBlockChange[this.numBlocksToUpdate++] = short1;
+            locationOfBlockChange[numBlocksToUpdate++] = short1;
         }
 
         public void sendToAllPlayersWatchingChunk(IMessage theMessage) {
             for (EntityPlayer player : PlayerManagerShip.this.theShipWorldServer.OriginWorld().playerEntities) {
-                if (PlayerManagerShip.this.isPlayerWatchingChunk((EntityPlayerMP) player, this.chunkCoords)) {
+                if (PlayerManagerShip.this.isPlayerWatchingChunk((EntityPlayerMP) player, chunkCoords)) {
                     FlyingShips.flyingShipPacketHandler().INSTANCE().sendTo(theMessage, (EntityPlayerMP) player);
                 }
             }
@@ -231,54 +231,54 @@ public class PlayerManagerShip {
 
         @SuppressWarnings("unused")
         public void onUpdate() {
-            if (this.numBlocksToUpdate != 0) {
-                if (this.numBlocksToUpdate == 1) {
-                    int i = (this.locationOfBlockChange[0] >> 12 & 15) + this.chunkCoords.chunkXPos * 16;
-                    int j = this.locationOfBlockChange[0] & 255;
-                    int k = (this.locationOfBlockChange[0] >> 8 & 15) + this.chunkCoords.chunkZPos * 16;
+            if (numBlocksToUpdate != 0) {
+                if (numBlocksToUpdate == 1) {
+                    int i = (locationOfBlockChange[0] >> 12 & 15) + chunkCoords.chunkXPos * 16;
+                    int j = locationOfBlockChange[0] & 255;
+                    int k = (locationOfBlockChange[0] >> 8 & 15) + chunkCoords.chunkZPos * 16;
                     BlockPos blockpos = new BlockPos(i, j, k);
-                    BlockChangedMessage message = new BlockChangedMessage(theShipWorldServer.Ship(), blockpos);
-                    this.sendToAllPlayersWatchingChunk(message);
+                    BlockChangedMessage message = new BlockChangedMessage(PlayerManagerShip.this.theShipWorldServer.Ship(), blockpos);
+                    sendToAllPlayersWatchingChunk(message);
 
-                    if (theShipWorldServer.getBlockState(blockpos).getBlock().hasTileEntity(theShipWorldServer.getBlockState(blockpos))) {
-                        this.sendTileToAllPlayersWatchingChunk(theShipWorldServer.getTileEntity(blockpos));
+                    if (PlayerManagerShip.this.theShipWorldServer.getBlockState(blockpos).getBlock().hasTileEntity(PlayerManagerShip.this.theShipWorldServer.getBlockState(blockpos))) {
+                        sendTileToAllPlayersWatchingChunk(PlayerManagerShip.this.theShipWorldServer.getTileEntity(blockpos));
                     }
-                } else if (this.numBlocksToUpdate >= ForgeModContainer.clumpingThreshold) {
-                    int i1 = this.chunkCoords.chunkXPos * 16;
-                    int k1 = this.chunkCoords.chunkZPos * 16;
-                    ChunkDataMessage message = new ChunkDataMessage(getShipWorldServer().Ship().ShipID(), getShipWorldServer().getChunkFromChunkCoords(this.chunkCoords.chunkXPos, this.chunkCoords.chunkZPos), false, this.flagsYAreasToUpdate);
-                    this.sendToAllPlayersWatchingChunk(message);
+                } else if (numBlocksToUpdate >= ForgeModContainer.clumpingThreshold) {
+                    int i1 = chunkCoords.chunkXPos * 16;
+                    int k1 = chunkCoords.chunkZPos * 16;
+                    ChunkDataMessage message = new ChunkDataMessage(PlayerManagerShip.this.getShipWorldServer().Ship().ShipID(), PlayerManagerShip.this.getShipWorldServer().getChunkFromChunkCoords(chunkCoords.chunkXPos, chunkCoords.chunkZPos), false, flagsYAreasToUpdate);
+                    sendToAllPlayersWatchingChunk(message);
 
                     // Forge: Grabs ALL tile entities is costly on a modded server, only send needed ones
                     for (int i2 = 0; false && i2 < 16; ++i2) {
-                        if ((this.flagsYAreasToUpdate & 1 << i2) != 0) {
+                        if ((flagsYAreasToUpdate & 1 << i2) != 0) {
                             int k2 = i2 << 4;
-                            List<TileEntity> list = getShipWorldServer().getTileEntitiesIn(i1, k2, k1, i1 + 16, k2 + 16, k1 + 16);
+                            List<TileEntity> list = PlayerManagerShip.this.getShipWorldServer().getTileEntitiesIn(i1, k2, k1, i1 + 16, k2 + 16, k1 + 16);
 
                             for (int l = 0; l < list.size(); ++l) {
-                                this.sendTileToAllPlayersWatchingChunk(list.get(l));
+                                sendTileToAllPlayersWatchingChunk(list.get(l));
                             }
                         }
                     }
                 } else {
-                    MultipleBlocksChangedMessage message = new MultipleBlocksChangedMessage(theShipWorldServer.Ship().ShipID(), numBlocksToUpdate, locationOfBlockChange, theShipWorldServer.getChunkFromChunkCoords(chunkCoords.chunkXPos, chunkCoords.chunkZPos));
-                    this.sendToAllPlayersWatchingChunk(message);
+                    MultipleBlocksChangedMessage message = new MultipleBlocksChangedMessage(PlayerManagerShip.this.theShipWorldServer.Ship().ShipID(), this.numBlocksToUpdate, this.locationOfBlockChange, PlayerManagerShip.this.theShipWorldServer.getChunkFromChunkCoords(this.chunkCoords.chunkXPos, this.chunkCoords.chunkZPos));
+                    sendToAllPlayersWatchingChunk(message);
                 }
                 // Forge: Send only the tile entities that are updated, Adding this brace lets us keep the indent and the patch small
-                ShipWorldServer world = PlayerManagerShip.this.theShipWorldServer;
-                for (int j1 = 0; j1 < numBlocksToUpdate; ++j1) {
-                    int l1 = (locationOfBlockChange[j1] >> 12 & 15) + chunkCoords.chunkXPos * 16;
-                    int j2 = locationOfBlockChange[j1] & 255;
-                    int l2 = (locationOfBlockChange[j1] >> 8 & 15) + chunkCoords.chunkZPos * 16;
+                ShipWorldServer world = theShipWorldServer;
+                for (int j1 = 0; j1 < this.numBlocksToUpdate; ++j1) {
+                    int l1 = (this.locationOfBlockChange[j1] >> 12 & 15) + this.chunkCoords.chunkXPos * 16;
+                    int j2 = this.locationOfBlockChange[j1] & 255;
+                    int l2 = (this.locationOfBlockChange[j1] >> 8 & 15) + this.chunkCoords.chunkZPos * 16;
                     BlockPos blockpos1 = new BlockPos(l1, j2, l2);
 
                     if (world.getBlockState(blockpos1).getBlock().hasTileEntity(world.getBlockState(blockpos1))) {
-                        sendTileToAllPlayersWatchingChunk(PlayerManagerShip.this.theShipWorldServer.getTileEntity(blockpos1));
+                        this.sendTileToAllPlayersWatchingChunk(theShipWorldServer.getTileEntity(blockpos1));
                     }
                 }
 
-                numBlocksToUpdate = 0;
-                flagsYAreasToUpdate = 0;
+                this.numBlocksToUpdate = 0;
+                this.flagsYAreasToUpdate = 0;
             }
         }
 
@@ -286,8 +286,8 @@ public class PlayerManagerShip {
             if (theTileEntity != null) {
                 Packet packet = theTileEntity.getDescriptionPacket();
                 if (packet != null) {
-                    UpdateTileEntityMessage message = new UpdateTileEntityMessage(PlayerManagerShip.this.getShipWorldServer().Ship().ShipID(), (S35PacketUpdateTileEntity) packet);
-                    sendToAllPlayersWatchingChunk(message);
+                    UpdateTileEntityMessage message = new UpdateTileEntityMessage(getShipWorldServer().Ship().ShipID(), (S35PacketUpdateTileEntity) packet);
+                    this.sendToAllPlayersWatchingChunk(message);
                 }
             }
         }
