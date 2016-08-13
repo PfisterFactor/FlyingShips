@@ -3,6 +3,7 @@ package mrpf1ster.flyingships.render
 import java.nio.FloatBuffer
 import javax.vecmath.{Matrix4f, Quat4f}
 
+import mrpf1ster.flyingships.FlyingShips
 import mrpf1ster.flyingships.entities.EntityShip
 import mrpf1ster.flyingships.util.{RenderUtils, RotatedBB, ShipLocator}
 import mrpf1ster.flyingships.world.{ShipWorld, ShipWorldClient}
@@ -51,6 +52,25 @@ object RenderShip {
       else
         false
     }).foreach(ship => Minecraft.getMinecraft.getRenderManager.renderEntitySimple(ship, partialTicks))
+  }
+
+  // Clear is a better word...
+  // But I want to annihilate those display lists.
+  def destroyDisplayLists() = {
+    val task = new Runnable {
+      override def run(): Unit = {
+        DisplayListIDs.foreach(pair =>
+          try {
+            GL11.glDeleteLists(pair._2, 1)
+          }
+          catch {
+            case ex: Exception => FlyingShips.logger.warn(s"RenderShip: There was a problem while destroying Ship ID: ${pair._1}'s display list (id: ${pair._2})! {${ex.getLocalizedMessage}}")
+          })
+        FlyingShips.logger.info(s"RenderShip: Purged ${DisplayListIDs.size} display list(s).")
+        DisplayListIDs.clear()
+      }
+    }
+    Minecraft.getMinecraft.addScheduledTask(task)
   }
 
 }

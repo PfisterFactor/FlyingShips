@@ -3,6 +3,8 @@ package mrpf1ster.flyingships.entities
 import mrpf1ster.flyingships.CommonProxy
 import mrpf1ster.flyingships.network.DeleteShipMessage
 import net.minecraft.entity.player.EntityPlayerMP
+import net.minecraftforge.fml.common.gameevent.TickEvent
+import net.minecraftforge.fml.common.gameevent.TickEvent.PlayerTickEvent
 import net.minecraftforge.fml.common.network.simpleimpl.IMessage
 
 import scala.collection.JavaConversions._
@@ -71,7 +73,10 @@ object EntityShipTracker {
       false
   }
 
-  def onPlayerUpdate(playerMP: EntityPlayerMP) = {
+  def onPlayerUpdate(event: PlayerTickEvent): Unit = {
+    if (event.player.worldObj.isRemote || event.phase == TickEvent.Phase.END) return
+    val playerMP = event.player.asInstanceOf[EntityPlayerMP]
+
     ships.values.foreach(shipTracker => {
       if (shipTracker.withinTrackingDistance(playerMP))
         shipTracker.updatePlayerEntity(playerMP)

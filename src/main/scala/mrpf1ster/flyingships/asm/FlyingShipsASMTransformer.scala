@@ -109,6 +109,8 @@ class FlyingShipsASMTransformer extends IClassTransformer {
       classBytes
   }
 
+  // Uhh, Todo: add documentation
+  // Just read the above and like, use intuition I guess
   def entityrendererTransformer(classBytes: Array[Byte], obfusucated: Boolean): Array[Byte] = {
     FlyingShips.logger.info("Patching EntityRenderer...")
     val classNode = new ClassNode()
@@ -147,8 +149,8 @@ class FlyingShipsASMTransformer extends IClassTransformer {
 
       val insnList = new InsnList()
       // getMouseOverHook()
-      // Calls our method in FlyingShipEventHandlers -- getMouseOverHook()
-      insnList.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "mrpf1ster/flyingships/FlyingShipEventHandlers", "getMouseOverHook", "()V"))
+      // Calls our method in ShipManager -- onMouseOverHook()
+      insnList.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "mrpf1ster/flyingships/ShipManager", "onMouseOverHook", "()V"))
       methodNode.instructions.insert(targetNode, insnList)
 
       FlyingShips.logger.info("EntityRenderer patched.")

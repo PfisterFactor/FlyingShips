@@ -64,6 +64,10 @@ class ShipWorldServer(originWorld: World, ship: EntityShip, uUID: UUID) extends 
     sendQueuedBlockEvents()
   }
 
+  override def onChunkLoad(x: Int, z: Int) = PlayerManager.onWorldChunkLoad(x, z)
+
+  override def onChunkUnload(x: Int, z: Int) = PlayerManager.onWorldChunkUnload(x, z)
+
   override def addBlockEvent(pos: BlockPos, block: Block, eventID: Int, eventParam: Int) = ServerBlockEventList.add(new BlockEventData(pos, block, eventID, eventParam))
 
   private def sendQueuedBlockEvents() = {

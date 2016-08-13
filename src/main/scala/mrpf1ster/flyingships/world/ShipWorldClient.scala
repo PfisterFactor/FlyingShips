@@ -43,6 +43,11 @@ class ShipWorldClient(originWorld: World, ship: EntityShip) extends ShipWorld(or
     updateBlocks()
   }
 
+  override def onChunkLoad(x: Int, z: Int) = chunkProvider.asInstanceOf[ClientChunkProviderShip].onWorldChunkLoad(x, z)
+
+  override def onChunkUnload(x: Int, z: Int) = chunkProvider.asInstanceOf[ClientChunkProviderShip].onWorldChunkUnload(x, z)
+
+
   def doRandomDisplayTick() = {
     val relPlayerPos = UnifiedPos.convertToRelative(Minecraft.getMinecraft.thePlayer.getPosition, Ship.getPosition)
     // Ripped from doVoidFogParticles in World class

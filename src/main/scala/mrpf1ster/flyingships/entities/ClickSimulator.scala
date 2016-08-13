@@ -1,6 +1,6 @@
 package mrpf1ster.flyingships.entities
 
-import mrpf1ster.flyingships.util.UnifiedPos
+import mrpf1ster.flyingships.util.{ShipLocator, UnifiedPos}
 import mrpf1ster.flyingships.world.ShipWorld
 import net.minecraft.block.Block
 import net.minecraft.block.material.Material
@@ -21,6 +21,33 @@ object ClickSimulator {
   var leftClickCounter = 0
   var rightClickDelayTimer = 0
 
+  private var doLeftClick = false
+  private var doRightClick = false
+
+  def handleMousePress(): Unit = {
+    val leftMouseButtonDown = Minecraft.getMinecraft.gameSettings.keyBindAttack.isKeyDown
+    val rightMouseButtonDown = Minecraft.getMinecraft.gameSettings.keyBindUseItem.isKeyDown
+
+    if (!leftMouseButtonDown)
+      doLeftClick = false
+    if (!rightMouseButtonDown)
+      doRightClick = false
+    val ships = ShipLocator.getShips(Minecraft.getMinecraft.theWorld)
+    if (leftMouseButtonDown && !doLeftClick) {
+      if (Minecraft.getMinecraft.theWorld != null)
+        ships.foreach(ship => if (ship.Shipworld != null) ship.InteractionHandler.ClickSimulator.clickMouse(Minecraft.getMinecraft.thePlayer))
+    }
+    if (rightMouseButtonDown && !doRightClick) {
+      if (Minecraft.getMinecraft.theWorld != null)
+        ships.foreach(ship => if (ship.Shipworld != null) ship.InteractionHandler.ClickSimulator.rightClickMouse())
+    }
+
+    if (leftMouseButtonDown)
+      doLeftClick = true
+    if (rightMouseButtonDown)
+      doRightClick = true
+  }
+
   def onClientTick() = {
     if (Minecraft.getMinecraft.currentScreen != null)
       ClickSimulator.leftClickCounter = 10000
@@ -31,6 +58,8 @@ object ClickSimulator {
     if (ClickSimulator.rightClickDelayTimer > 0)
       ClickSimulator.rightClickDelayTimer -= 1
   }
+
+
 }
 
 // This class is pretty much a carbon copy of PlayerControllerMP

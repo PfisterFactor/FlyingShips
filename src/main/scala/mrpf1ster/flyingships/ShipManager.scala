@@ -1,15 +1,23 @@
 package mrpf1ster.flyingships
 
+import java.io.File
+
 import mrpf1ster.flyingships.entities.{ClickSimulator, EntityShip, EntityShipTracker, ShipInteractionHandler}
-import mrpf1ster.flyingships.util.ShipLocator
+import mrpf1ster.flyingships.util.{ShipLocator, UnifiedVec}
 import mrpf1ster.flyingships.world.chunk.ChunkProviderShip
-import mrpf1ster.flyingships.world.{ShipWorld, ShipWorldClient}
+import mrpf1ster.flyingships.world.{PlayerRelative, ShipWorld, ShipWorldClient, ShipWorldServer}
 import net.minecraft.client.Minecraft
 import net.minecraft.entity.player.EntityPlayer
+import net.minecraft.nbt.{CompressedStreamTools, NBTTagCompound}
 import net.minecraft.util.MovingObjectPosition.MovingObjectType
 import net.minecraft.util.{BlockPos, EnumFacing, MovingObjectPosition, Vec3}
+import net.minecraft.world.WorldServer
+import net.minecraftforge.event.entity.player.PlayerOpenContainerEvent
+import net.minecraftforge.fml.common.eventhandler.Event.Result
 import net.minecraftforge.fml.common.gameevent.TickEvent
 import net.minecraftforge.fml.common.gameevent.TickEvent.{ClientTickEvent, ServerTickEvent}
+
+import scala.reflect.io.Directory
 
 /**
   * Created by ej on 8/12/16.
@@ -45,6 +53,26 @@ object ShipManager {
     case _ =>
   }
 
+  // Hackish way to get the tile entity the player is interacting with
+  // Todo: Make this more reliable
+  def onContainerOpen(event: PlayerOpenContainerEvent): Unit = {
+    var ship: Option[EntityShip] = None
+
+    val ships = ShipLocator.getShips(event.entityPlayer.worldObj)
+    ShipWorld.startAccessing()
+    event.entityPlayer.openContainer.canInteractWith(event.entityPlayer)
+    ship = ships.find(ent => ent.Shipworld != null && ent.Shipworld.wasAccessed)
+    ShipWorld.stopAccessing(event.entityPlayer.worldObj)
+
+    if (ship.isEmpty) return
+
+    val interactWith = event.entityPlayer.openContainer.canInteractWith(PlayerRelative(event.entityPlayer, ship.get.Shipworld))
+    if (interactWith)
+      event.setResult(Result.ALLOW)
+    else
+      event.setResult(Result.DEFAULT)
+  }
+
   def updateShip(entityShip: EntityShip): Unit = {
     val isClient = entityShip.worldObj.isRemote
 
@@ -69,6 +97,30 @@ object ShipManager {
     }
   }
 
+  // Our coremod hooks into EntityRenderer's getMouseOver method and calls this method
+  // This changes the objectMouseOver result to be a Miss if there is a ship in front of the block/entity
+  // And vice-versa changes ShipMouseOver to be a Miss if there is a block/entity in front of the ship
+  // When trying to implement this via forge events, I found getMouseOver was called twice:
+  // Once per tick,
+  // and once before rendering.
+  // So the only option I saw was ASM
+  // Don't hurt me...
+  def onMouseOverHook() = {
+    val mouseOver = Minecraft.getMinecraft.objectMouseOver
+
+    val player = Minecraft.getMinecraft.thePlayer
+    if (mouseOver.typeOfHit != MovingObjectPosition.MovingObjectType.MISS && ShipWorld.ShipMouseOver.typeOfHit != MovingObjectPosition.MovingObjectType.MISS) {
+      // Find the closest one
+      val shipMouseOverVec = UnifiedVec.convertToWorld(ShipWorld.ShipMouseOver.hitVec, ShipLocator.getClientShip(ShipWorld.ShipMouseOverID).get.Shipworld.OriginVec())
+
+      if (player.getDistanceSq(mouseOver.hitVec.xCoord, mouseOver.hitVec.yCoord, mouseOver.hitVec.zCoord) < player.getDistanceSq(shipMouseOverVec.xCoord, shipMouseOverVec.yCoord, shipMouseOverVec.zCoord)) {
+        ShipWorld.ShipMouseOver = ShipWorld.DEFUALTMOUSEOVER
+      }
+      else
+        Minecraft.getMinecraft.objectMouseOver = ShipWorld.DEFUALTMOUSEOVER
+    }
+  }
+
   //noinspection AccessorLikeMethodIsEmptyParen
   private def getShipMouseOver(): (Int, MovingObjectPosition) = {
     val renderViewEntity = Minecraft.getMinecraft.getRenderViewEntity.asInstanceOf[EntityPlayer]
@@ -89,4 +141,55 @@ object ShipManager {
     else
       mop.get
   }
+
+  object ShipLoadManager {
+    def saveShips(world: WorldServer) = {
+      val ships = ShipLocator.getShips(world)
+
+      ships.foreach(ship => {
+        if (!ship.isDead && ship.Shipworld != null && ship.Shipworld.isShipValid) {
+          try {
+            val saveFile = new File(ship.Shipworld.getSaveHandler.getWorldDirectory.getPath + File.separator + "ShipEntity" + world.provider.getDimensionId + ".dat")
+            val nbt = new NBTTagCompound()
+            ship.writeEntityToNBT(nbt)
+            CompressedStreamTools.write(nbt, saveFile)
+          }
+          catch {
+            case e: Exception => FlyingShips.logger.warn(s"onWorldSave: Something went wrong writing Ship ID ${ship.ShipID} to file!\n$e")
+          }
+
+        }
+      })
+    }
+
+    def loadShips(world: WorldServer) = try {
+      val file = new File(world.getSaveHandler.getWorldDirectory.getPath + File.separator + "ShipWorlds")
+      val saveDirectory = new Directory(file)
+      saveDirectory.deepList(2).foreach(path => {
+        if (path.name.endsWith("ShipEntity" + world.provider.getDimensionId + ".dat")) {
+          val nbt = CompressedStreamTools.read(path.jfile)
+          if (!nbt.hasNoTags) {
+            val entityShip = new EntityShip(world)
+            entityShip.readEntityFromNBT(nbt)
+            EntityShip.addShipToWorld(entityShip)
+            EntityShip.maxShipID(entityShip.ShipID)
+          }
+        }
+      })
+    }
+    catch {
+      case e: Exception =>
+        FlyingShips.logger.warn(s"onWorldLoad: Something went wrong loading Ships into world!")
+        e.printStackTrace(System.out)
+    }
+
+    def unloadShips(world: WorldServer) = {
+      val ships = ShipLocator.getShips(world)
+      ships.foreach(ship => {
+        ship.Shipworld.asInstanceOf[ShipWorldServer].saveAllChunks(true)
+        EntityShipTracker.untrackShip(ship)
+      })
+    }
+  }
+
 }
