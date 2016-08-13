@@ -175,7 +175,7 @@ class EntityShip(pos: BlockPos, world: World) extends Entity(world) {
 
   private def debugDoRotate() = {
     val deg15 = new Quat4f(0, 0, 0.94f, 0.94f)
-    deg15.mul(Rotation)
+    deg15.mul(Rotation, deg15)
     val newRot = Rotation.clone().asInstanceOf[Quat4f]
     newRot.interpolate(deg15, 0.1f)
     setRotation(newRot)
@@ -195,7 +195,7 @@ class EntityShip(pos: BlockPos, world: World) extends Entity(world) {
 
 
   def setRotation(newRotation: Quat4f): Unit = {
-    Rotation.get(newRotation)
+    Rotation.set(newRotation)
   }
 
   def setInterpolatedRotation(newRotation: Quat4f): Unit = {
