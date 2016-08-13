@@ -13,9 +13,13 @@ import net.minecraft.util.{BlockPos, EnumFacing, MovingObjectPosition, Vec3}
 /**
   * Created by EJ on 7/9/2016.
   */
+
+// Handles block breaking particles on ships
+// As they appear to be literally the only particles that have special treatment within Minecraft
 object EffectRendererShip {
   val rand = new Random()
 
+  // Overload of below
   def addBlockHitEffects(shipWorld: ShipWorld, pos: BlockPos, target: MovingObjectPosition) {
     val block: Block = shipWorld.getBlockState(pos).getBlock
     if (block != null && !block.addHitEffects(shipWorld, target, Minecraft.getMinecraft.effectRenderer)) {
@@ -23,10 +27,13 @@ object EffectRendererShip {
     }
   }
 
+  // Adds those little particles that fall when you punch the shit out of a tree
+  // In this case, a moving tree
   def addBlockHitEffects(shipWorld: ShipWorld, pos: BlockPos, side: EnumFacing) {
     val iblockstate: IBlockState = shipWorld.getBlockState(pos)
     val block: Block = iblockstate.getBlock
     if (block.getRenderType != -1) {
+      // First up: Weird particle position math
       val i: Int = pos.getX
       val j: Int = pos.getY
       val k: Int = pos.getZ
@@ -53,19 +60,23 @@ object EffectRendererShip {
       if (side == EnumFacing.EAST) {
         d0 = i.toDouble + block.getBlockBoundsMaxX + f.toDouble
       }
+      // Next: Conversion to world and unrotating to match the world
       val worldVec = UnifiedVec.convertToWorld(VectorUtils.rotatePointToShip(new Vec3(d0, d1, d2), shipWorld.Ship), shipWorld.Ship.getPositionVector)
       val a = new EntityDiggingFX.Factory
       val fx: EntityDiggingFX = a.getEntityFX(0, shipWorld.OriginWorld, worldVec.xCoord, worldVec.yCoord, worldVec.zCoord, 0.0D, 0.0D, 0.0D, Block.getStateId(iblockstate)).asInstanceOf[EntityDiggingFX]
+      // We bring it all together and tell Minecraft to render this oddly specially coded effect
       Minecraft.getMinecraft.effectRenderer.addEffect(fx.func_174846_a(new BlockPos(worldVec)).multiplyVelocity(0.2F).multipleParticleScaleBy(0.6F))
     }
   }
 
+  // Handles the particles that come after said tree block was destroyed
   // Assumes a relative pos
   def addBlockDestroyEffects(shipWorld: ShipWorld, pos: BlockPos, state: IBlockState) {
     if (!state.getBlock.isAir(shipWorld, pos) && !state.getBlock.addDestroyEffects(shipWorld, pos, Minecraft.getMinecraft.effectRenderer)) {
       val newState = state.getBlock.getActualState(state, shipWorld, pos)
       val i: Int = 4
       var j: Int = 0
+      // Because it just wouldn't be decompiled java code converted to scala code without a few while loops and oddly named variables!
       while (j < i) {
 
         var k: Int = 0
@@ -77,9 +88,11 @@ object EffectRendererShip {
             val d0: Double = pos.getX.toDouble + (j.toDouble + 0.5D) / i.toDouble
             val d1: Double = pos.getY.toDouble + (k.toDouble + 0.5D) / i.toDouble
             val d2: Double = pos.getZ.toDouble + (l.toDouble + 0.5D) / i.toDouble
+            // Convert and unrotate it
             val worldVec = UnifiedVec.convertToWorld(VectorUtils.rotatePointToShip(new Vec3(d0, d1, d2), shipWorld.Ship), shipWorld.Ship.getPositionVector)
             val a = new EntityDiggingFX.Factory
             val fx = a.getEntityFX(0, shipWorld.OriginWorld, worldVec.xCoord, worldVec.yCoord, worldVec.zCoord, 0, 0, 0, Block.getStateId(newState)).asInstanceOf[EntityDiggingFX]
+            // Add it to the effect renderer
             Minecraft.getMinecraft.effectRenderer.addEffect(fx.func_174846_a(new BlockPos(worldVec)))
             l += 1
           }

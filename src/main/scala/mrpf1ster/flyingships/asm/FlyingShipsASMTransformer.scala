@@ -10,17 +10,26 @@ import scala.tools.asm.{ClassReader, ClassWriter, Opcodes}
 /**
   * Created by EJ on 7/28/2016.
   */
+
+// Transforms any classes forge sends our way
+// But we only touch the ones we absolutely need to modify
+// ...Promise
 class FlyingShipsASMTransformer extends IClassTransformer {
 
+  // Forge calls this method with a class passed in in byte form
   override def transform(name: String, transformedName: String, basicClass: Array[Byte]): Array[Byte] = {
     var returnClass = basicClass
+    // If it's name matches any of these, then we transform them
+    // The seemingly random letters are the MCP obfuscated method names for the class under it
     name match {
-      case "bfr" => returnClass = renderGlobalTransformer(basicClass, obfusucated = true)
-      case "net.minecraft.client.renderer.RenderGlobal" => returnClass = renderGlobalTransformer(basicClass, obfusucated = false)
-      case "bfk" => returnClass = entityrendererTransformer(basicClass, obfusucated = true)
-      case "net.minecraft.client.renderer.EntityRenderer" => returnClass = entityrendererTransformer(basicClass, obfusucated = false)
+      case "bfr" => returnClass = renderGlobalTransformer(basicClass, obfuscated = true)
+      case "net.minecraft.client.renderer.RenderGlobal" => returnClass = renderGlobalTransformer(basicClass, obfuscated = false)
+      case "bfk" => returnClass = entityrendererTransformer(basicClass, obfuscated = true)
+      case "net.minecraft.client.renderer.EntityRenderer" => returnClass = entityrendererTransformer(basicClass, obfuscated = false)
       case _ =>
     }
+    // Return the class with any modifications made to it
+    // We were gentle, hopefully
     returnClass
   }
 
@@ -44,16 +53,16 @@ class FlyingShipsASMTransformer extends IClassTransformer {
   // Then we create a Instruction list of our method intermediary in bytecode
   // Then we insert that list after the method we found
   // Finally we write it all back to bytes and return it
-  def renderGlobalTransformer(classBytes: Array[Byte], obfusucated: Boolean): Array[Byte] = {
+  def renderGlobalTransformer(classBytes: Array[Byte], obfuscated: Boolean): Array[Byte] = {
     FlyingShips.logger.info("Patching RenderGlobal...")
     val classNode = new ClassNode()
     val classReader = new ClassReader(classBytes)
     classReader.accept(classNode, 0)
 
-    val targetMethod = if (obfusucated) "a" else "renderEntities"
-    val targetDesc = if (obfusucated) "(Lpk;Lbia;F)V" else "(Lnet/minecraft/entity/Entity;Lnet/minecraft/client/renderer/culling/ICamera;F)V"
-    val profilerMethodName = if (obfusucated) "c" else "endStartSection"
-    val insertedInstructionParams = if (obfusucated) "(FLbia;DDD)V" else "(FLnet/minecraft/client/renderer/culling/ICamera;DDD)V"
+    val targetMethod = if (obfuscated) "a" else "renderEntities"
+    val targetDesc = if (obfuscated) "(Lpk;Lbia;F)V" else "(Lnet/minecraft/entity/Entity;Lnet/minecraft/client/renderer/culling/ICamera;F)V"
+    val profilerMethodName = if (obfuscated) "c" else "endStartSection"
+    val insertedInstructionParams = if (obfuscated) "(FLbia;DDD)V" else "(FLnet/minecraft/client/renderer/culling/ICamera;DDD)V"
 
     var methodNode: MethodNode = null
     var targetNode: MethodInsnNode = null
@@ -110,15 +119,15 @@ class FlyingShipsASMTransformer extends IClassTransformer {
 
   // Uhh, Todo: add documentation
   // Just read the above and like, use intuition I guess
-  def entityrendererTransformer(classBytes: Array[Byte], obfusucated: Boolean): Array[Byte] = {
+  def entityrendererTransformer(classBytes: Array[Byte], obfuscated: Boolean): Array[Byte] = {
     FlyingShips.logger.info("Patching EntityRenderer...")
     val classNode = new ClassNode()
     val classReader = new ClassReader(classBytes)
     classReader.accept(classNode, 0)
 
-    val targetMethod = if (obfusucated) "a" else "getMouseOver"
+    val targetMethod = if (obfuscated) "a" else "getMouseOver"
     val targetDesc = "(F)V"
-    val profilerMethodName = if (obfusucated) "b" else "endSection"
+    val profilerMethodName = if (obfuscated) "b" else "endSection"
 
     var writeClass = false
 

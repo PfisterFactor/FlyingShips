@@ -28,48 +28,86 @@ import scala.collection.mutable.{Set => mSet}
   * Created by ej on 7/25/16.
   */
 
+// Much like WorldServer, shipworlds have a separate class on the Server
+// Handles most of the world logic, with client worlds being more of a slave to this class
+// I would've inherited from WorldServer directly, but that requires a separate dimension and other bloat on it
+// So we just copy and paste some stuff we don't understand and hope it works
+// Just think of this class as WorldServer's disowned, more-mobile child
 class ShipWorldServer(originWorld: World, ship: EntityShip, uUID: UUID) extends ShipWorld(originWorld, ship, uUID) {
 
+  // Holds all our block events that need to be processed
+  // Pistons do block events... I don't know much else
+  // Oh and redstone lights, them too.
   private val ServerBlockEventList = mutable.Set[BlockEventData]()
 
+  // Handles updating the clients about chunks on the ship
+  // Loading, unloading, block changes, etc.
+  // It currently does a very bad job at it however.
   var PlayerManager: PlayerManagerShip = null
+  // Takes world logic and updates the client about it
+  // Stuff like sounds, effects, block breaking
   val WorldManager = new ShipWorldManager(this)
   addWorldAccess(WorldManager)
 
-  // Stuff for compatibility with WorldServer methods
+  // This stuff does a lot of mumbo jumbo for tick events and such
+  // I would change it but I'm scared I might break compatibility with WorldServer or some obscure bug will rise up
   private val pendingTickListEntriesHashSet: java.util.Set[NextTickListEntry] = Sets.newHashSet[NextTickListEntry]
   private val pendingTickListEntriesTreeSet: java.util.TreeSet[NextTickListEntry] = new java.util.TreeSet[NextTickListEntry]
   private val pendingTickListEntriesThisTick: java.util.List[NextTickListEntry] = Lists.newArrayList[NextTickListEntry]
 
-  // Defer the creation until blocks are loaded onto the ship
+  // Creates a PlayerManager
+  // We call this method after blocks have been moved onto the ship
+  // Because I can't remember why
+  // Todo: Remember why
   def createPlayerManager() = {
     PlayerManager = new PlayerManagerShip(this)
   }
+
+  // Creates a chunk provider for the ship
+  // We use the anvil one, cause we don't have world gen
   override def createChunkProvider(): IChunkProvider = {
     val anvilLoader = new AnvilChunkLoader(saveHandler.getWorldDirectory)
     new ChunkProviderShip(this, anvilLoader)
   }
 
+  // Returns the chunk provider casted to a ChunkProviderShip because I got sick of typing it over and over
+  // Could probably change this to an immutable instead of a method
   def getChunkProviderServer: ChunkProviderShip = chunkProvider.asInstanceOf[ChunkProviderShip]
 
+  // Handles per tick updates and world logic
   override def tick(): Unit = {
+    // Does tick updates
+    // Code is ripped from WorldServer
     tickUpdates(false)
+
+    // Updates the blocks
     updateBlocks()
     //worldTeleporter.removeStalePortalLocations(this.getTotalWorldTime)
     //customTeleporters.foreach(tele => tele.removeStalePortalLocations(getTotalWorldTime))
+
+    // Unloads any chunks queued for unloading
     this.chunkProvider.unloadQueuedChunks()
+    // Syncs the time with it's originworld's time
     this.worldInfo.setWorldTotalTime(OriginWorld.getTotalWorldTime)
+    // Sends any block changes or chunk stuff to clients
     PlayerManager.updatePlayerInstances()
 
+    // Does block events for each block that has an event
     sendQueuedBlockEvents()
   }
 
+  // Called whenever a chunk in our origin world is loaded
+  // Forwarded to PlayerManager
   override def onChunkLoad(x: Int, z: Int) = PlayerManager.onWorldChunkLoad(x, z)
 
+  // Called whenever a chunk in our origin world is unloaded
+  // Forwarded to PlayerManager
   override def onChunkUnload(x: Int, z: Int) = PlayerManager.onWorldChunkUnload(x, z)
 
+  // Adds a block event to a queue for processing
   override def addBlockEvent(pos: BlockPos, block: Block, eventID: Int, eventParam: Int) = ServerBlockEventList.add(new BlockEventData(pos, block, eventID, eventParam))
 
+  // Executes and, if successful, sends block events to clients
   private def sendQueuedBlockEvents() = {
     ServerBlockEventList.foreach(event => {
       if (fireBlockEvent(event)) {
@@ -81,9 +119,9 @@ class ShipWorldServer(originWorld: World, ship: EntityShip, uUID: UUID) extends 
 
     })
     ServerBlockEventList.clear()
-
   }
 
+  // Executes a block event and returns a success boolean
   private def fireBlockEvent(event: BlockEventData): Boolean = {
     val iblockstate: IBlockState = this.getBlockState(event.getPosition)
 
@@ -93,6 +131,7 @@ class ShipWorldServer(originWorld: World, ship: EntityShip, uUID: UUID) extends 
       false
   }
 
+  // Saves all the chunks on the ship
   def saveAllChunks(extraData: Boolean): Unit = {
     if (!chunkProvider.canSave) return
     chunkProvider.saveChunks(extraData, null)
@@ -102,6 +141,10 @@ class ShipWorldServer(originWorld: World, ship: EntityShip, uUID: UUID) extends 
     })
   }
 
+  // Jesus christ...
+  // Gets tile entities within a bounding box, somehow
+  // Why must the decompiler screw with bit operators ... I despise them
+  // Ripped from World Server
   def getTileEntitiesIn(minX: Int, minY: Int, minZ: Int, maxX: Int, maxY: Int, maxZ: Int): java.util.List[TileEntity] = {
     val list: java.util.List[TileEntity] = Lists.newArrayList[TileEntity]
     var x: Int = minX & ~0x0F
@@ -128,10 +171,16 @@ class ShipWorldServer(originWorld: World, ship: EntityShip, uUID: UUID) extends 
     list
   }
 
+  // Figures out through a very extensive and in-depth contains call if we have a block tick pending
   override def isBlockTickPending(blockPos: BlockPos, block: Block): Boolean = pendingTickListEntriesThisTick.contains(new NextTickListEntry(blockPos, block))
 
+  // Schedules a block tick for a particularly lucky block
   override def scheduleUpdate(pos: BlockPos, blockIn: Block, delay: Int): Unit = this.updateBlockTick(pos, blockIn, delay, 0)
 
+  // Updates a block tick at a certain block
+  // Don't really know what it does
+  // Or what block ticks are, in general, for that matter...
+  // Ripped from WorldServer
   override def updateBlockTick(pos: BlockPos, blockIn: Block, delay: Int, priority: Int): Unit = {
     val nextticklistentry: NextTickListEntry = new NextTickListEntry(pos, blockIn)
     var newDelay = delay
@@ -166,6 +215,10 @@ class ShipWorldServer(originWorld: World, ship: EntityShip, uUID: UUID) extends 
     }
   }
 
+  // Schedules a block update
+  // ...Blockstates, block ticks, block events, tile entities...
+  // Oh the wonderful ways of throwing block data around here at Mojang HQ!
+  // Ripped from WorldServer
   override def scheduleBlockUpdate(pos: BlockPos, blockIn: Block, delay: Int, priority: Int): Unit = {
     val nextticklistentry: NextTickListEntry = new NextTickListEntry(pos, blockIn)
     nextticklistentry.setPriority(priority)
@@ -179,6 +232,8 @@ class ShipWorldServer(originWorld: World, ship: EntityShip, uUID: UUID) extends 
     }
   }
 
+  // Gets pending block updates within a chunk, with an boolean parameter that I have no idea what it does
+  // Ripped from WorldServer
   override def getPendingBlockUpdates(chunkIn: Chunk, par2: Boolean): java.util.List[NextTickListEntry] = {
     val chunkcoordintpair: ChunkCoordIntPair = chunkIn.getChunkCoordIntPair
     val i: Int = (chunkcoordintpair.chunkXPos << 4) - 2
@@ -188,6 +243,8 @@ class ShipWorldServer(originWorld: World, ship: EntityShip, uUID: UUID) extends 
     this.func_175712_a(new StructureBoundingBox(i, 0, k, j, 256, l), par2)
   }
 
+  // Finds block updates within a StructureBoundingBox which is different from an AxisAlignedBoundingBox because reasons
+  // Ripped from WorldServer
   override def func_175712_a(structureBB: StructureBoundingBox, par2: Boolean): java.util.List[NextTickListEntry] = {
     var list: java.util.List[NextTickListEntry] = null
     var i: Int = 0
@@ -217,6 +274,9 @@ class ShipWorldServer(originWorld: World, ship: EntityShip, uUID: UUID) extends 
     list
   }
 
+  // Atleast this method is in English...
+  // Ticks all block updates in the shipworld
+  // Ripped from WorldServer
   override def tickUpdates(par1: Boolean): Boolean = {
 
     var i: Int = this.pendingTickListEntriesTreeSet.size
@@ -271,6 +331,8 @@ class ShipWorldServer(originWorld: World, ship: EntityShip, uUID: UUID) extends 
 
   }
 
+  // Updates all the blocks within the active chunk set
+  // Ripped from WorldServer
   override def updateBlocks(): Unit = {
     super.updateBlocks()
 
@@ -288,6 +350,8 @@ class ShipWorldServer(originWorld: World, ship: EntityShip, uUID: UUID) extends 
       //this.theProfiler.endStartSection("thunder")
       //this.theProfiler.endStartSection("iceandsnow")
       /*
+      // We could probably intercept the OriginWorld's snow and throw some on the ship
+      // Much to the dismay of everyone ever: there can be snow on ships!
       Todo: Add snow on Shipworlds
       if (this.provider.canDoRainSnowIce(chunk) && this.rand.nextInt(16) == 0) {
         this.updateLCG = this.updateLCG * 3 + 1013904223
@@ -332,6 +396,9 @@ class ShipWorldServer(originWorld: World, ship: EntityShip, uUID: UUID) extends 
     }
   }
 
+  // I just have no idea what this remotely does and I'm too tired to find out
+  // Doesn't do anything in ShipWorldServer however
+  // Ripped from WorldServer
   private def adjustPosToNearbyEntity(pos: BlockPos): BlockPos = {
     val blockpos: BlockPos = this.getPrecipitationHeight(pos)
     //val axisalignedbb: AxisAlignedBB = new AxisAlignedBB(blockpos, new Blockpos(blockpos.getX, this.getHeight, blockpos.getZ)).expand(3.0D, 3.0D, 3.0D)

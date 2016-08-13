@@ -22,7 +22,9 @@ import net.minecraftforge.fml.relauncher.{Side, SideOnly}
   * Created by EJ on 7/3/2016.
   */
 
-// This class is pretty much a carbon copy of PlayerControllerMP
+// This class handles all the mouse input
+// It spoofs it on the shipworld
+// Lot of the code is just taken straight from PlayerControllerMP
 object ClickSimulator {
 
   var leftClickCounter = 0

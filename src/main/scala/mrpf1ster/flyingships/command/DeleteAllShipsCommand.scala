@@ -9,6 +9,9 @@ import net.minecraft.util.BlockPos
 /**
   * Created by EJ on 7/28/2016.
   */
+
+// Useful command for debugging
+// Deletes all ships within the sender's world
 class DeleteAllShipsCommand extends ICommand {
 
   val aliases = new util.ArrayList[String]()

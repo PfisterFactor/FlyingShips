@@ -31,11 +31,16 @@ import scala.collection.mutable.{Map => mMap}
 /**
   * Created by EJ on 2/21/2016.
   */
+// Handles some global variables relevant to rendering every ship
+// Used only on client, if the capital Side.CLIENT annotation didn't already inform you
 @SideOnly(Side.CLIENT)
 object RenderShip {
+  // Texture map for blocks, but we just want the destroy stages
   private def texturemap = Minecraft.getMinecraft.getTextureMapBlocks
 
+  // Contains the block breaking animation
   val DestroyBlockIcons: Array[TextureAtlasSprite] = Array.range(0, 10).map(i => texturemap.getAtlasSprite(s"minecraft:blocks/destroy_stage_$i"))
+  // Records all the OpenGL display lists used for our ships
   val DisplayListIDs: mMap[Int, Int] = mMap()
 
   // We render ships here to get rid of the reliance on the chunk the entity is in
@@ -56,6 +61,7 @@ object RenderShip {
 
   // Clear is a better word...
   // But I want to annihilate those display lists.
+  // Purges display lists from memory, then sends letters to their loved ones
   def destroyDisplayLists() = {
     val task = new Runnable {
       override def run(): Unit = {
@@ -75,6 +81,9 @@ object RenderShip {
 
 }
 
+// Handles rendering for individual ships
+// This could probably be just combined with the object class, but there would be some refactoring to do.
+// Along with the entity registration requiring a render class, but we've abandoned forge classes in entity tracking and render calling so whatever
 @SideOnly(Side.CLIENT)
 class RenderShip(rm: RenderManager) extends Render[EntityShip](rm) {
 
@@ -106,11 +115,11 @@ class RenderShip(rm: RenderManager) extends Render[EntityShip](rm) {
     // Interpolate our rotation
     val delta = 1.0 / entity.FramesBetweenLastServerSync
     if (entity.FramesBetweenLastServerSync > 0)
-      entity.interpolatedRotation.interpolate(entity.getRotation, delta.toFloat)
+      entity.InterpolatedRotation.interpolate(entity.getRotation, delta.toFloat)
 
 
     // Turn a quaternion into a matrix, then into a FloatBuffer
-    val rotationBuffer = matrixToFloatBuffer(quaternionToMatrix4f(entity.interpolatedRotation))
+    val rotationBuffer = matrixToFloatBuffer(quaternionToMatrix4f(entity.InterpolatedRotation))
 
     // Multiply current matrix by FloatBuffer
     GL11.glMultMatrix(rotationBuffer)

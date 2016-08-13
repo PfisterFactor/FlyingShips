@@ -22,6 +22,9 @@ import scala.reflect.io.Directory
 /**
   * Created by ej on 8/12/16.
   */
+
+// Not to be confused with ShipWorldManager
+// Handles updating ships each tick, tracking/un-tracking ships, and really anything to do with ships as a collective.
 object ShipManager {
   // Called once per tick on server
   def onServerTick(event: ServerTickEvent): Unit = event.phase match {
