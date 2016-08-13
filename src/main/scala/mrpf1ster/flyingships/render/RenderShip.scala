@@ -85,7 +85,7 @@ class RenderShip(rm: RenderManager) extends Render[EntityShip](rm) {
 
     // Interpolate our rotation
     val delta = 1.0 / entity.FramesBetweenLastServerSync
-    if (entity.FramesBetweenLastServerSync != 0)
+    if (entity.FramesBetweenLastServerSync > 0)
       entity.interpolatedRotation.interpolate(entity.getRotation, delta.toFloat)
 
 
@@ -127,7 +127,6 @@ class RenderShip(rm: RenderManager) extends Render[EntityShip](rm) {
     val rayTrace: Option[MovingObjectPosition] = entity.InteractionHandler.getBlockPlayerIsLookingAt(partialTicks)
 
     if (rayTrace.isDefined) {
-      //println(hoveredBlockOnShip.get)
       def block = rayTrace.get.getBlockPos
       renderSelectionBox(entity, block)
     }

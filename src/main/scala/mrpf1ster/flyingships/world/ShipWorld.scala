@@ -1,24 +1,21 @@
 package mrpf1ster.flyingships.world
 
 import java.util
-import java.util.{Random, UUID}
+import java.util.UUID
 
 import com.google.common.base.Predicate
 import mrpf1ster.flyingships.entities.EntityShip
 import mrpf1ster.flyingships.util.{ShipLocator, UnifiedPos, UnifiedVec, VectorUtils}
 import net.minecraft.block.Block
 import net.minecraft.block.state.IBlockState
-import net.minecraft.client.Minecraft
 import net.minecraft.entity.Entity
 import net.minecraft.entity.player.EntityPlayer
 import net.minecraft.init.Blocks
-import net.minecraft.item.ItemStack
 import net.minecraft.nbt.NBTTagCompound
 import net.minecraft.tileentity.TileEntity
 import net.minecraft.util._
 import net.minecraft.world.chunk.{Chunk, IChunkProvider}
-import net.minecraft.world.{ChunkCoordIntPair, World, WorldSettings}
-import net.minecraftforge.fml.relauncher.{Side, SideOnly}
+import net.minecraft.world.{ChunkCoordIntPair, World}
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable.{Map => mMap, Set => mSet}
@@ -281,31 +278,6 @@ abstract class ShipWorld(originWorld: World, ship: EntityShip, uUID: UUID) exten
   override def playSoundEffect(x: Double, y: Double, z: Double, soundName: String, volume: Float, pitch: Float) = {
     val newVec = UnifiedVec.convertToWorld(new Vec3(x, y, z), Ship.getPositionVector)
     OriginWorld.playSoundEffect(newVec.xCoord, newVec.yCoord, newVec.zCoord, soundName, volume, pitch)
-  }
-
-  // Ripped from doVoidFogParticles in World class
-  // Todo: Make a less laggy way to do this
-  @SideOnly(Side.CLIENT)
-  def doRandomDisplayTick(posX: Int, posY: Int, posZ: Int) = {
-    val i: Int = 16
-    val random: Random = new Random
-    val itemstack: ItemStack = Minecraft.getMinecraft.thePlayer.getHeldItem
-    val flag: Boolean = Minecraft.getMinecraft.playerController.getCurrentGameType == WorldSettings.GameType.CREATIVE && itemstack != null && Block.getBlockFromItem(itemstack.getItem) == Blocks.barrier
-    val blockpos$mutableblockpos: BlockPos.MutableBlockPos = new BlockPos.MutableBlockPos
-
-    var j: Int = 0
-    while (j < 1000) {
-      val k: Int = posX + this.rand.nextInt(i) - this.rand.nextInt(i)
-      val l: Int = posY + this.rand.nextInt(i) - this.rand.nextInt(i)
-      val i1: Int = posZ + this.rand.nextInt(i) - this.rand.nextInt(i)
-      blockpos$mutableblockpos.set(k, l, i1)
-      val iblockstate: IBlockState = this.getBlockState(blockpos$mutableblockpos)
-      iblockstate.getBlock.randomDisplayTick(this, blockpos$mutableblockpos, iblockstate, random)
-      if (flag && iblockstate.getBlock == Blocks.barrier)
-        this.spawnParticle(EnumParticleTypes.BARRIER, (k.toFloat + 0.5F).toDouble, (l.toFloat + 0.5F).toDouble, (i1.toFloat + 0.5F).toDouble, 0.0D, 0.0D, 0.0D, 0)
-
-      j += 1
-    }
   }
 
 

@@ -216,8 +216,9 @@ class EntityShip(pos: BlockPos, world: World) extends Entity(world) {
     result
   }
 
+  var clientTicks = 0
+  var serverTicks = 0
   override def onUpdate(): Unit = {
-
     // If the Ship is empty and there's no spawn entry for it, delete it
     if (Shipworld == null || !Shipworld.isShipValid) {
       this.setDead()
@@ -225,9 +226,10 @@ class EntityShip(pos: BlockPos, world: World) extends Entity(world) {
     if (!Shipworld.isRemote) {
       //debugDoRotate()
       //setRotation(new Quat4f(0, 0, 0, 1f))
-      setVelocity(0f, 0f, 0f)
+      setVelocity(0.1f, 0f, 0f)
     }
-    //moveEntity(motionX, motionY, motionZ)
+
+    moveEntity(motionX, motionY, motionZ)
 
 
     if (_boundingBox != null)

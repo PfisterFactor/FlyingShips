@@ -20,6 +20,17 @@ import net.minecraftforge.fml.relauncher.{Side, SideOnly}
 object ClickSimulator {
   var leftClickCounter = 0
   var rightClickDelayTimer = 0
+
+  def onClientTick() = {
+    if (Minecraft.getMinecraft.currentScreen != null)
+      ClickSimulator.leftClickCounter = 10000
+
+    if (ClickSimulator.leftClickCounter > 0)
+      ClickSimulator.leftClickCounter -= 1
+
+    if (ClickSimulator.rightClickDelayTimer > 0)
+      ClickSimulator.rightClickDelayTimer -= 1
+  }
 }
 
 // This class is pretty much a carbon copy of PlayerControllerMP
