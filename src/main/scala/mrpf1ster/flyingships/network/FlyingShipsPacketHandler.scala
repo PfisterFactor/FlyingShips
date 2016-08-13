@@ -58,11 +58,11 @@ class FlyingShipsPacketHandler {
 
   def nullCheck(ship: Option[EntityShip], caller: String, shipID: Int): Boolean = {
     if (ship.isEmpty) {
-      FlyingShips.logger.warn(s"$caller: Ship ID ${shipID} was not located! Aborting!")
+      FlyingShips.logger.warn(s"$caller: Ship ID $shipID was not located! Aborting!")
       return false
     }
     if (ship.get.Shipworld == null) {
-      FlyingShips.logger.warn(s"$caller: Ship ID ${shipID}'s Shipworld was null! Aborting!")
+      FlyingShips.logger.warn(s"$caller: Ship ID $shipID's Shipworld was null! Aborting!")
       return false
     }
     true

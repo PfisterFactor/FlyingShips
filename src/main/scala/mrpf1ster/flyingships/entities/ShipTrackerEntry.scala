@@ -16,9 +16,9 @@ import scala.collection.mutable
   */
 case class ShipTrackerEntry(ShipEntity: EntityShip, TrackingRange: Int, TrackingFrequency: Int) {
 
-  var encodedPosX: Int = MathHelper.floor_double(ShipEntity.posX * 32.0D);
-  var encodedPosY: Int = MathHelper.floor_double(ShipEntity.posY * 32.0D);
-  var encodedPosZ: Int = MathHelper.floor_double(ShipEntity.posZ * 32.0D);
+  var encodedPosX: Int = MathHelper.floor_double(ShipEntity.posX * 32.0D)
+  var encodedPosY: Int = MathHelper.floor_double(ShipEntity.posY * 32.0D)
+  var encodedPosZ: Int = MathHelper.floor_double(ShipEntity.posZ * 32.0D)
   var rotation: Quat4f = ShipEntity.getRotation
   var lastTrackedEntityMotionX: Double = 0
   var lastTrackedEntityMotionY: Double = 0

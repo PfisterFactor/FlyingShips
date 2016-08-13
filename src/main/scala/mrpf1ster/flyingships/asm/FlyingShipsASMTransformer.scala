@@ -15,10 +15,10 @@ class FlyingShipsASMTransformer extends IClassTransformer {
   override def transform(name: String, transformedName: String, basicClass: Array[Byte]): Array[Byte] = {
     var returnClass = basicClass
     name match {
-      case "bfr" => returnClass = renderGlobalTransformer(basicClass, true)
-      case "net.minecraft.client.renderer.RenderGlobal" => returnClass = renderGlobalTransformer(basicClass, false)
-      case "bfk" => returnClass = entityrendererTransformer(basicClass, true)
-      case "net.minecraft.client.renderer.EntityRenderer" => returnClass = entityrendererTransformer(basicClass, false)
+      case "bfr" => returnClass = renderGlobalTransformer(basicClass, obfusucated = true)
+      case "net.minecraft.client.renderer.RenderGlobal" => returnClass = renderGlobalTransformer(basicClass, obfusucated = false)
+      case "bfk" => returnClass = entityrendererTransformer(basicClass, obfusucated = true)
+      case "net.minecraft.client.renderer.EntityRenderer" => returnClass = entityrendererTransformer(basicClass, obfusucated = false)
       case _ =>
     }
     returnClass
@@ -58,7 +58,7 @@ class FlyingShipsASMTransformer extends IClassTransformer {
     var methodNode: MethodNode = null
     var targetNode: MethodInsnNode = null
     var writeClass: Boolean = false
-    def findNodes: Unit = classNode.methods
+    def findNodes(): Unit = classNode.methods
       .filter(method => method.name == targetMethod && method.desc == targetDesc)
       .foreach(method => {
         val iter = method.instructions.iterator()
@@ -125,7 +125,7 @@ class FlyingShipsASMTransformer extends IClassTransformer {
 
     var methodNode: MethodNode = null
     var targetNode: MethodInsnNode = null
-    def findNodes: Unit = classNode.methods
+    def findNodes(): Unit = classNode.methods
       .filter(method => method.name == targetMethod && method.desc == targetDesc)
       .foreach(method => {
         val iter = method.instructions.iterator()

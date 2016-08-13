@@ -79,7 +79,7 @@ class SpawnShipMessage(ship: EntityShip, player: EntityPlayerMP) extends IMessag
     Blockpos.foreach(pos => buf.writeLong(pos.toLong))
 
     // ChunkWatchingArray
-    ChunkWatchingArray.foreach(buf.writeBoolean(_))
+    ChunkWatchingArray.foreach(buf.writeBoolean)
 
   }
 

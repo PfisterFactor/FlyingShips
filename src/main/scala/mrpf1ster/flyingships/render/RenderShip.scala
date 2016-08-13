@@ -4,7 +4,7 @@ import java.nio.FloatBuffer
 import javax.vecmath.{Matrix4f, Quat4f}
 
 import mrpf1ster.flyingships.FlyingShips
-import mrpf1ster.flyingships.entities.EntityShip
+import mrpf1ster.flyingships.entities.{ClickSimulator, EntityShip}
 import mrpf1ster.flyingships.util.{RenderUtils, RotatedBB, ShipLocator}
 import mrpf1ster.flyingships.world.{ShipWorld, ShipWorldClient}
 import net.minecraft.block._
@@ -144,7 +144,7 @@ class RenderShip(rm: RenderManager) extends Render[EntityShip](rm) {
     renderBlockBreaking(shipWorld)
 
     // Ray-trace across the ship and return it wrapped in an option
-    val rayTrace: Option[MovingObjectPosition] = entity.InteractionHandler.getBlockPlayerIsLookingAt(partialTicks)
+    val rayTrace: Option[MovingObjectPosition] = ClickSimulator.ShipInteractionHelper.getBlockPlayerIsLookingAt(entity.ShipID)
 
     if (rayTrace.isDefined) {
       def block = rayTrace.get.getBlockPos
@@ -194,7 +194,7 @@ class RenderShip(rm: RenderManager) extends Render[EntityShip](rm) {
     worldRenderer.begin(GL11.GL_QUADS, DefaultVertexFormats.BLOCK)
 
     shipWorld.BlocksOnShip.foreach(uPos => {
-      if (shipWorld.isBlockLoaded(uPos.RelativePos, true)) {
+      if (shipWorld.isBlockLoaded(uPos.RelativePos, allowEmpty = true)) {
         val blockState = shipWorld.getBlockState(uPos.RelativePos)
         val blockDispatcher = Minecraft.getMinecraft.getBlockRendererDispatcher
         // Renders blocks (and liquids) based on their state

@@ -27,7 +27,7 @@ class MultipleBlocksChangedMessage(shipID: Int, size: Int, crammedPositions: Arr
     buf.writeInt(ChunkPosCoord.chunkZPos)
 
     // ChangedBlocks
-    buf.writeInt(ChangedBlocks.size)
+    buf.writeInt(ChangedBlocks.length)
     ChangedBlocks.foreach(bud => {
       buf.writeShort(bud.func_180089_b)
       buf.writeInt(Block.getStateId(bud.getBlockState))
@@ -52,11 +52,11 @@ class MultipleBlocksChangedMessage(shipID: Int, size: Int, crammedPositions: Arr
     def this(par1: Short, chunkIn: Chunk) = this(par1, chunkIn.getBlockState(MultipleBlocksChangedMessage.this.getPos(par1)))
 
     def func_180089_b: Short = {
-      return this.chunkPosCrammed
+      this.chunkPosCrammed
     }
 
     def getBlockState: IBlockState = {
-      return this.blockState
+      this.blockState
     }
   }
 

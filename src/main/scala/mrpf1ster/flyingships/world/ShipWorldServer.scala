@@ -125,7 +125,7 @@ class ShipWorldServer(originWorld: World, ship: EntityShip, uUID: UUID) extends 
       }
       x += 16
     }
-    return list
+    list
   }
 
   override def isBlockTickPending(blockPos: BlockPos, block: Block): Boolean = pendingTickListEntriesThisTick.contains(new NextTickListEntry(blockPos, block))
@@ -235,7 +235,7 @@ class ShipWorldServer(originWorld: World, ship: EntityShip, uUID: UUID) extends 
       this.pendingTickListEntriesThisTick.add(nextticklistentry)
       j += 1
     }
-    cleanUp
+    cleanUp()
 
     //this.theProfiler.endSection
     //this.theProfiler.startSection("ticking")

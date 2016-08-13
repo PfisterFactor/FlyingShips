@@ -2,7 +2,7 @@ package mrpf1ster.flyingships
 
 import java.io.File
 
-import mrpf1ster.flyingships.entities.{ClickSimulator, EntityShip, EntityShipTracker, ShipInteractionHandler}
+import mrpf1ster.flyingships.entities.{ClickSimulator, EntityShip, EntityShipTracker}
 import mrpf1ster.flyingships.util.{ShipLocator, UnifiedVec}
 import mrpf1ster.flyingships.world.chunk.ChunkProviderShip
 import mrpf1ster.flyingships.world.{PlayerRelative, ShipWorld, ShipWorldClient, ShipWorldServer}
@@ -86,10 +86,11 @@ object ShipManager {
     }
     entityShip.onUpdate()
     if (isClient) {
-      entityShip.Shipworld.asInstanceOf[ShipWorldClient].doRandomDisplayTick()
-      entityShip.InteractionHandler.ClickSimulator.sendClickBlockToController(Minecraft.getMinecraft.thePlayer)
+      val shipWorld = entityShip.Shipworld.asInstanceOf[ShipWorldClient]
+      shipWorld.doRandomDisplayTick()
+      ClickSimulator.sendClickBlockToController(shipWorld)
       if (Minecraft.getMinecraft.gameSettings.keyBindUseItem.isKeyDown && ClickSimulator.rightClickDelayTimer == 0 && !Minecraft.getMinecraft.thePlayer.isUsingItem)
-        entityShip.InteractionHandler.ClickSimulator.rightClickMouse()
+        ClickSimulator.rightClickMouse(shipWorld)
     }
     if (entityShip.Shipworld.isShipValid) {
       entityShip.Shipworld.tick()
@@ -124,7 +125,7 @@ object ShipManager {
   //noinspection AccessorLikeMethodIsEmptyParen
   private def getShipMouseOver(): (Int, MovingObjectPosition) = {
     val renderViewEntity = Minecraft.getMinecraft.getRenderViewEntity.asInstanceOf[EntityPlayer]
-    val reachDistance = ShipInteractionHandler.getPlayerReachDistance(renderViewEntity)
+    val reachDistance = ClickSimulator.ShipInteractionHelper.getPlayerReachDistance(renderViewEntity)
     val eyePos = renderViewEntity.getPositionEyes(1.0f)
     val lookVector = renderViewEntity.getLookVec
     val ray = eyePos.addVector(lookVector.xCoord * reachDistance, lookVector.yCoord * reachDistance, lookVector.zCoord * reachDistance)

@@ -42,7 +42,7 @@ class ShipCreatorBlock extends Block(Material.wood) {
       shipEntity.setLocationAndAngles(pos.getX,pos.getY,pos.getZ,0,0)
       shipEntity.createShipWorld()
       shipEntity.Shipworld.moveBlocks(blocksConnected.map(UnifiedPos(_, shipEntity.Shipworld.OriginPos, IsRelative = false)))
-      shipEntity.setShipID(EntityShip.getNextShipID())
+      shipEntity.setShipID(EntityShip.incrementShipID())
 
       EntityShip.addShipToWorld(shipEntity)
 

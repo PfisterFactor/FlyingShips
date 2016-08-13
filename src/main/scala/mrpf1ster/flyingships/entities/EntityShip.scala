@@ -13,7 +13,6 @@ import net.minecraft.util._
 import net.minecraft.world.{ChunkCoordIntPair, World}
 
 import scala.collection.mutable
-import scala.collection.mutable.{Set => mSet}
 import scala.reflect.io.Path
 /**
   * Created by EJ on 2/21/2016.
@@ -21,7 +20,7 @@ import scala.reflect.io.Path
 object EntityShip {
   private var nextShipID = 0
 
-  def getNextShipID(): Int = {
+  def incrementShipID(): Int = {
     nextShipID += 1
     nextShipID - 1
   }
@@ -60,10 +59,6 @@ class EntityShip(pos: BlockPos, world: World) extends Entity(world) {
   // Fake world that holds all the blocks on the ship
   var Shipworld: ShipWorld = null
 
-  // Handles interacting with the ship, (left and right clicking on blocks on the ship)
-  // Relevant only on client
-  var InteractionHandler: ShipInteractionHandler = new ShipInteractionHandler(Shipworld)
-
   // Rotation of the ship in Quaternions
   private var Rotation: Quat4f = new Quat4f(0, 0, 0, 1f)
 
@@ -96,7 +91,6 @@ class EntityShip(pos: BlockPos, world: World) extends Entity(world) {
 
   def createShipWorld() = {
     Shipworld = if (worldObj.isRemote) new ShipWorldClient(worldObj, this) else new ShipWorldServer(worldObj, this, entityUniqueID)
-    InteractionHandler = new ShipInteractionHandler(Shipworld)
   }
   override def writeEntityToNBT(tagCompound: NBTTagCompound): Unit = {
     // ShipID
