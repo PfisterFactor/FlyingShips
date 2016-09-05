@@ -21,9 +21,6 @@ object CommonProxy {
     ShipCreatorBlock = new ShipCreatorBlock()
     MinecraftForge.EVENT_BUS.register(FlyingShips.flyingShipEventHandlers) // Register our events
 
-    if (event.getSide == Side.SERVER)
-      FlyingShips.flyingShipPacketHandler.registerServerSide()
-
     BlockUtils.loadInClasses // So game doesn't hang when implementing the Scala predefined library
   }
   def init(event: FMLInitializationEvent) = {

@@ -139,14 +139,19 @@ object ShipManager {
   // So the only option I saw was ASM
   // Don't hurt me...
   @SideOnly(Side.CLIENT)
-  def onMouseOverHook() = {
+  def onMouseOverHook(): Unit = {
     val mouseOver = Minecraft.getMinecraft.objectMouseOver
 
     val player = Minecraft.getMinecraft.thePlayer
     // Only do anything if both of them are a hit
     if (mouseOver.typeOfHit != MovingObjectPosition.MovingObjectType.MISS && ShipWorld.ShipMouseOver.typeOfHit != MovingObjectPosition.MovingObjectType.MISS) {
       // Convert our block-on-ship hit vector to world coords
-      val shipMouseOverVec = UnifiedVec.convertToWorld(ShipWorld.ShipMouseOver.hitVec, ShipLocator.getClientShip(ShipWorld.ShipMouseOverID).get.Shipworld.OriginVec())
+      val ship = ShipLocator.getClientShip(ShipWorld.ShipMouseOverID)
+      if (ship.isEmpty) {
+        ShipWorld.ShipMouseOver = ShipWorld.DEFUALTMOUSEOVER
+        return
+      }
+      val shipMouseOverVec = UnifiedVec.convertToWorld(ShipWorld.ShipMouseOver.hitVec,ship.get.Shipworld.OriginVec())
       // If objectMouseOver is closer...
       if (player.getDistanceSq(mouseOver.hitVec.xCoord, mouseOver.hitVec.yCoord, mouseOver.hitVec.zCoord) < player.getDistanceSq(shipMouseOverVec.xCoord, shipMouseOverVec.yCoord, shipMouseOverVec.zCoord)) {
         // Then ours is a miss

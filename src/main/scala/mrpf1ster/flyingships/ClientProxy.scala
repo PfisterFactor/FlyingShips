@@ -15,7 +15,6 @@ import net.minecraftforge.fml.common.event.{FMLInitializationEvent, FMLPostIniti
 object ClientProxy {
 
   def preInit(event:FMLPreInitializationEvent) = {
-    FlyingShips.flyingShipPacketHandler.registerClientSide()
 
   }
   def init(event: FMLInitializationEvent) = {

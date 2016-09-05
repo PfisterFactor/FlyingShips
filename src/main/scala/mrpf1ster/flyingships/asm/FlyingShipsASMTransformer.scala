@@ -13,7 +13,6 @@ import scala.tools.asm.{ClassReader, ClassWriter, Opcodes}
 
 // Transforms any classes forge sends our way
 // But we only touch the ones we absolutely need to modify
-// ...Promise
 class FlyingShipsASMTransformer extends IClassTransformer {
 
   // Forge calls this method with a class passed in in byte form
@@ -118,7 +117,7 @@ class FlyingShipsASMTransformer extends IClassTransformer {
   }
 
   // Uhh, Todo: add documentation
-  // Just read the above and like, use intuition I guess
+  // Just read the above
   def entityrendererTransformer(classBytes: Array[Byte], obfuscated: Boolean): Array[Byte] = {
     FlyingShips.logger.info("Patching EntityRenderer...")
     val classNode = new ClassNode()
