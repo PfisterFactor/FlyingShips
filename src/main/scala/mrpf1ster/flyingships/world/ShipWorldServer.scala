@@ -5,8 +5,8 @@ import java.util.UUID
 import com.google.common.collect.{Lists, Sets}
 import mrpf1ster.flyingships.FlyingShips
 import mrpf1ster.flyingships.entities.EntityShip
-import mrpf1ster.flyingships.network.BlockActionMessage
-import mrpf1ster.flyingships.util.UnifiedPos
+import mrpf1ster.flyingships.network.PacketSender
+import mrpf1ster.flyingships.util.{BlockUtils, UnifiedPos}
 import mrpf1ster.flyingships.world.chunk.ChunkProviderShip
 import net.minecraft.block.material.Material
 import net.minecraft.block.state.IBlockState
@@ -18,7 +18,6 @@ import net.minecraft.world.chunk.storage.AnvilChunkLoader
 import net.minecraft.world.chunk.{Chunk, IChunkProvider}
 import net.minecraft.world.gen.structure.StructureBoundingBox
 import net.minecraft.world.{ChunkCoordIntPair, NextTickListEntry, World}
-import net.minecraftforge.fml.common.network.NetworkRegistry.TargetPoint
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable
@@ -111,10 +110,18 @@ class ShipWorldServer(originWorld: World, ship: EntityShip, uUID: UUID) extends 
   private def sendQueuedBlockEvents() = {
     ServerBlockEventList.foreach(event => {
       if (fireBlockEvent(event)) {
+        /*
         val message = new BlockActionMessage(event.getPosition, event.getBlock, event.getEventID, event.getEventParameter, Ship.ShipID)
         val blockPos = UnifiedPos.convertToWorld(event.getPosition, OriginPos())
         val targetPoint = new TargetPoint(OriginWorld.provider.getDimensionId, blockPos.getX, blockPos.getY, blockPos.getZ, 64)
         FlyingShips.flyingShipPacketHandler.INSTANCE.sendToAllAround(message, targetPoint)
+        */
+        val blockPos = UnifiedPos.convertToWorld(event.getPosition, OriginPos())
+
+        // Send the block event
+        PacketSender.sendBlockActionPacket(ship.ShipID,event)
+          .toAllAround(OriginWorld,blockPos.getX,blockPos.getY,blockPos.getZ,64)
+
       }
 
     })

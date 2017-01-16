@@ -54,9 +54,9 @@ class ShipCreatorBlock extends Block(Material.wood) {
       shipEntity.createShipWorld()
       // Move blocks onto the ship
       shipEntity.Shipworld.moveBlocks(blocksConnected.map(UnifiedPos(_, shipEntity.Shipworld.OriginPos, IsRelative = false)))
-      // Give it a nice name for its birth
-      // I'm thinking: "Ship ID: 0" rings a nice bell doesn't it?
-      shipEntity.setShipID(EntityShip.incrementShipID())
+      // Give it a nice name for its creation
+      // I'm thinking: "Ship ID: 68391" rings a nice bell doesn't it?
+      shipEntity.setShipID(EntityShip.getNewShipID())
 
       // Add it to our entity tracker
       // Forge's entity tracker doesn't like big entities

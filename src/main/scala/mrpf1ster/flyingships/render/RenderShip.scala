@@ -173,7 +173,7 @@ class RenderShip(rm: RenderManager) extends Render[EntityShip](rm) {
   // Not entirely sure how this works
   // I think it just stores the render in memory and then calls upon it for re-render instead of regenerating it
   // Useful for not destroying frames per sec
-  private def getDisplayList(shipWorld: ShipWorldClient): Int = {
+  def getDisplayList(shipWorld: ShipWorldClient): Int = {
     var id = RenderShip.DisplayListIDs.get(shipWorld.Ship.ShipID)
     if (id.isDefined && shipWorld.doRenderUpdate) {
       GL11.glDeleteLists(id.get, 1)

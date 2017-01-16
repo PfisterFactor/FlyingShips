@@ -70,7 +70,8 @@ object BlockUtils {
   def getRelativeChunkFromWorld(chunkX: Int, chunkZ: Int, origin: BlockPos): ChunkCoordIntPair = {
     val worldPos = new BlockPos(chunkX * 16, 0, chunkZ * 16)
     val relPos = UnifiedPos.convertToRelative(worldPos, origin)
-    new ChunkCoordIntPair(relPos.getX >> 4, relPos.getZ >> 4)
+    new ChunkCoordIntPair(relPos.getX / 16, relPos.getZ / 16)
+
   }
 
   def getRelativeChunkFromWorld(chunkCoord: ChunkCoordIntPair, origin: BlockPos): ChunkCoordIntPair = getRelativeChunkFromWorld(chunkCoord.chunkXPos, chunkCoord.chunkZPos, origin)

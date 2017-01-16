@@ -1,11 +1,10 @@
 package mrpf1ster.flyingships.world;
 
 import com.google.common.collect.Lists;
+import com.unascribed.lambdanetwork.PendingPacket;
 import mrpf1ster.flyingships.FlyingShips;
-import mrpf1ster.flyingships.network.BlockChangedMessage;
-import mrpf1ster.flyingships.network.ChunkDataMessage;
-import mrpf1ster.flyingships.network.MultipleBlocksChangedMessage;
-import mrpf1ster.flyingships.network.UpdateTileEntityMessage;
+import mrpf1ster.flyingships.entities.EntityShip;
+import mrpf1ster.flyingships.network.PacketSender;
 import mrpf1ster.flyingships.util.BlockUtils;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
@@ -46,6 +45,7 @@ public class PlayerManagerShip {
             ChunkCoordIntPair coord = iter.next();
             getPlayerInstance(coord.chunkXPos, coord.chunkZPos, true);
         }
+
     }
 
     public List<EntityPlayer> getPlayers() {
@@ -136,6 +136,7 @@ public class PlayerManagerShip {
 
 
 
+
     /**
      * Determine if two rectangles centered at the given points overlap for the provided radius. Arguments: x1, z1, x2,
      * z2, radius.
@@ -221,10 +222,17 @@ public class PlayerManagerShip {
             locationOfBlockChange[numBlocksToUpdate++] = short1;
         }
 
-        public void sendToAllPlayersWatchingChunk(IMessage theMessage) {
+        public void sendToAllPlayersWatchingChunk(PendingPacket packet) {
             for (EntityPlayer player : PlayerManagerShip.this.theShipWorldServer.OriginWorld().playerEntities) {
                 if (PlayerManagerShip.this.isPlayerWatchingChunk((EntityPlayerMP) player, chunkCoords)) {
-                    FlyingShips.flyingShipPacketHandler().INSTANCE().sendTo(theMessage, (EntityPlayerMP) player);
+                    packet.to(player);
+                }
+            }
+        }
+        public void sendToAllPlayersWatchingChunk(IMessage packet) {
+            for (EntityPlayer player : PlayerManagerShip.this.theShipWorldServer.OriginWorld().playerEntities) {
+                if (PlayerManagerShip.this.isPlayerWatchingChunk((EntityPlayerMP) player, chunkCoords)) {
+                    FlyingShips.flyingShipPacketHandler().INSTANCE().sendTo(packet, (EntityPlayerMP) player);
                 }
             }
         }
@@ -237,8 +245,13 @@ public class PlayerManagerShip {
                     int j = locationOfBlockChange[0] & 255;
                     int k = (locationOfBlockChange[0] >> 8 & 15) + chunkCoords.chunkZPos * 16;
                     BlockPos blockpos = new BlockPos(i, j, k);
-                    BlockChangedMessage message = new BlockChangedMessage(PlayerManagerShip.this.theShipWorldServer.Ship(), blockpos);
-                    sendToAllPlayersWatchingChunk(message);
+
+
+                    EntityShip ship = theShipWorldServer.Ship();
+
+                    sendToAllPlayersWatchingChunk(PacketSender.sendBlockChangedPacket(ship.Shipworld(),blockpos));
+
+
 
                     if (PlayerManagerShip.this.theShipWorldServer.getBlockState(blockpos).getBlock().hasTileEntity(PlayerManagerShip.this.theShipWorldServer.getBlockState(blockpos))) {
                         sendTileToAllPlayersWatchingChunk(PlayerManagerShip.this.theShipWorldServer.getTileEntity(blockpos));
@@ -246,8 +259,9 @@ public class PlayerManagerShip {
                 } else if (numBlocksToUpdate >= ForgeModContainer.clumpingThreshold) {
                     int i1 = chunkCoords.chunkXPos * 16;
                     int k1 = chunkCoords.chunkZPos * 16;
-                    ChunkDataMessage message = new ChunkDataMessage(PlayerManagerShip.this.getShipWorldServer().Ship().ShipID(), PlayerManagerShip.this.getShipWorldServer().getChunkFromChunkCoords(chunkCoords.chunkXPos, chunkCoords.chunkZPos), false, flagsYAreasToUpdate);
-                    sendToAllPlayersWatchingChunk(message);
+                    //ChunkDataMessage message = new ChunkDataMessage(PlayerManagerShip.this.getShipWorldServer().Ship().ShipID(), PlayerManagerShip.this.getShipWorldServer().getChunkFromChunkCoords(chunkCoords.chunkXPos, chunkCoords.chunkZPos), false, flagsYAreasToUpdate);
+                    PendingPacket p = PacketSender.sendChunkDataPacket(PlayerManagerShip.this.getShipWorldServer().Ship().ShipID(),PlayerManagerShip.this.getShipWorldServer().getChunkFromChunkCoords(chunkCoords.chunkXPos, chunkCoords.chunkZPos), false, flagsYAreasToUpdate);
+                    sendToAllPlayersWatchingChunk(p);
 
                     // Forge: Grabs ALL tile entities is costly on a modded server, only send needed ones
                     for (int i2 = 0; false && i2 < 16; ++i2) {
@@ -261,8 +275,8 @@ public class PlayerManagerShip {
                         }
                     }
                 } else {
-                    MultipleBlocksChangedMessage message = new MultipleBlocksChangedMessage(PlayerManagerShip.this.theShipWorldServer.Ship().ShipID(), this.numBlocksToUpdate, this.locationOfBlockChange, PlayerManagerShip.this.theShipWorldServer.getChunkFromChunkCoords(this.chunkCoords.chunkXPos, this.chunkCoords.chunkZPos));
-                    sendToAllPlayersWatchingChunk(message);
+                    PendingPacket p = PacketSender.sendMultipleBlocksChangedPacket(PlayerManagerShip.this.theShipWorldServer.Ship().ShipID(), this.numBlocksToUpdate, this.locationOfBlockChange, PlayerManagerShip.this.theShipWorldServer.getChunkFromChunkCoords(this.chunkCoords.chunkXPos, this.chunkCoords.chunkZPos));
+                    sendToAllPlayersWatchingChunk(p);
                 }
                 // Forge: Send only the tile entities that are updated, Adding this brace lets us keep the indent and the patch small
                 ShipWorldServer world = theShipWorldServer;
@@ -286,8 +300,9 @@ public class PlayerManagerShip {
             if (theTileEntity != null) {
                 Packet packet = theTileEntity.getDescriptionPacket();
                 if (packet != null) {
-                    UpdateTileEntityMessage message = new UpdateTileEntityMessage(getShipWorldServer().Ship().ShipID(), (S35PacketUpdateTileEntity) packet);
-                    this.sendToAllPlayersWatchingChunk(message);
+                    PendingPacket p = PacketSender.sendUpdateTileEntityPacket(getShipWorldServer().Ship().ShipID(),(S35PacketUpdateTileEntity) packet);
+                    //UpdateTileEntityMessage message = new UpdateTileEntityMessage(getShipWorldServer().Ship().ShipID(), (S35PacketUpdateTileEntity) packet);
+                    this.sendToAllPlayersWatchingChunk(p);
                 }
             }
         }

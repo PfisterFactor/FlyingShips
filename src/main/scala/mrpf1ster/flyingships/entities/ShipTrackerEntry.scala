@@ -2,11 +2,12 @@ package mrpf1ster.flyingships.entities
 
 import javax.vecmath.Quat4f
 
+import com.unascribed.lambdanetwork.PendingPacket
 import mrpf1ster.flyingships.FlyingShips
 import mrpf1ster.flyingships.network._
 import mrpf1ster.flyingships.world.ShipWorldServer
 import net.minecraft.entity.player.{EntityPlayer, EntityPlayerMP}
-import net.minecraft.util.MathHelper
+import net.minecraft.util.{MathHelper, Vec3}
 import net.minecraftforge.fml.common.network.simpleimpl.IMessage
 
 import scala.collection.mutable
@@ -16,9 +17,9 @@ import scala.collection.mutable
   */
 case class ShipTrackerEntry(ShipEntity: EntityShip, TrackingRange: Int, TrackingFrequency: Int) {
 
-  var encodedPosX: Int = MathHelper.floor_double(ShipEntity.posX * 32.0D)
-  var encodedPosY: Int = MathHelper.floor_double(ShipEntity.posY * 32.0D)
-  var encodedPosZ: Int = MathHelper.floor_double(ShipEntity.posZ * 32.0D)
+  var lastPosX: Double = ShipEntity.posX
+  var lastPosY: Double = ShipEntity.posX
+  var lastPosZ: Double = ShipEntity.posX
   var rotation: Quat4f = ShipEntity.getRotation
   var lastTrackedEntityMotionX: Double = 0
   var lastTrackedEntityMotionY: Double = 0
@@ -38,9 +39,11 @@ case class ShipTrackerEntry(ShipEntity: EntityShip, TrackingRange: Int, Tracking
 
   override def hashCode(): Int = ShipEntity.ShipID
 
+  def sendPacketToTrackedPlayers(packet: PendingPacket) = TrackingPlayers.foreach(p => packet.to(p))
   def sendMessageToTrackedPlayers(message: IMessage) = TrackingPlayers.foreach(p => FlyingShips.flyingShipPacketHandler.INSTANCE.sendTo(message, p))
 
   def updatePlayerList(players: List[EntityPlayer]): Unit = {
+    if (players.isEmpty) return
     PlayerEntitiesUpdated = false
 
     if (!firstUpdateDone || ShipEntity.getDistanceSq(this.lastTrackedEntityPosX, this.lastTrackedEntityPosY, this.lastTrackedEntityPosZ) > 16.0D) {
@@ -56,31 +59,29 @@ case class ShipTrackerEntry(ShipEntity: EntityShip, TrackingRange: Int, Tracking
 
       ticksSinceLastForcedTeleport += 1
       // Todo: Implement rotation in here rather than in datawatcher
-      val encodedShipPosX: Int = MathHelper.floor_double(ShipEntity.posX * 32.0D)
-      val encodedShipPosY: Int = MathHelper.floor_double(ShipEntity.posY * 32.0D)
-      val encodedShipPosZ: Int = MathHelper.floor_double(ShipEntity.posZ * 32.0D)
-      val deltaPosX: Int = encodedShipPosX - this.encodedPosX
-      val deltaPosY: Int = encodedShipPosY - this.encodedPosY
-      val deltaPosZ: Int = encodedShipPosZ - this.encodedPosZ
-      var message: IMessage = null
+
+      val deltaPosX: Double = ShipEntity.posX - lastPosX
+      val deltaPosY: Double = ShipEntity.posY - lastPosY
+      val deltaPosZ: Double = ShipEntity.posZ - lastPosZ
+      var packet: PendingPacket = null
       val sendMoveMsg: Boolean = Math.abs(deltaPosX) >= 4 || Math.abs(deltaPosY) >= 4 || Math.abs(deltaPosZ) >= 4 || this.updateCounter % 60 == 0
       val sendRotMsg: Boolean = !rotation.epsilonEquals(ShipEntity.getRotation, 0.01f)
 
       if (updateCounter > 0) {
         if (deltaPosX >= -128 && deltaPosX < 128 && deltaPosY >= -128 && deltaPosY < 128 && deltaPosZ >= -128 && deltaPosZ < 128 && this.ticksSinceLastForcedTeleport <= 400) {
+          // If both are true don't execute
           if (!sendMoveMsg || !sendRotMsg) {
-            // If both are true don't execute
             if (sendMoveMsg)
-              message = new ShipRelMoveMessage(ShipEntity.ShipID, deltaPosX.toByte, deltaPosY.toByte, deltaPosZ.toByte)
+              packet = PacketSender.sendShipMovementPacket(ShipEntity.ShipID,Some(ShipEntity.getPositionVector),None,isRelative = true)
             else if (sendRotMsg)
-              message = new ShipRotMessage(ShipEntity)
+              packet = PacketSender.sendShipMovementPacket(ShipEntity.ShipID,None,Some(ShipEntity.getRotation),isRelative = false)
           }
           else
-            message = new ShipMoveRotMessage(ShipEntity.ShipID, deltaPosX, deltaPosY, deltaPosZ, ShipEntity.getRotation, false)
+            packet = PacketSender.sendShipMovementPacket(ShipEntity.ShipID,Some(new Vec3(deltaPosX,deltaPosY,deltaPosZ)),Some(ShipEntity.getRotation),isRelative = true)
         }
         else {
           ticksSinceLastForcedTeleport = 0
-          message = new ShipMoveRotMessage(ShipEntity.ShipID, encodedShipPosX, encodedShipPosY, encodedShipPosZ, ShipEntity.getRotation, true)
+          packet = PacketSender.sendShipMovementPacket(ShipEntity.ShipID,Some(ShipEntity.getPositionVector),Some(ShipEntity.getRotation),isRelative = false)
         }
       }
 
@@ -94,19 +95,19 @@ case class ShipTrackerEntry(ShipEntity: EntityShip, TrackingRange: Int, Tracking
         this.lastTrackedEntityMotionX = ShipEntity.motionX
         this.lastTrackedEntityMotionY = ShipEntity.motionY
         this.lastTrackedEntityMotionZ = ShipEntity.motionZ
-        val velocityMessage = new ShipVelocityMessage(ShipEntity.ShipID, lastTrackedEntityMotionX, lastTrackedEntityMotionY, lastTrackedEntityMotionZ)
-        sendMessageToTrackedPlayers(velocityMessage)
+        val velocityPacket = PacketSender.sendShipVelocityPacket(ShipEntity.ShipID,lastTrackedEntityMotionX,lastTrackedEntityMotionY,lastTrackedEntityMotionZ)
+        sendPacketToTrackedPlayers(velocityPacket)
       }
 
-      if (message != null)
-        sendMessageToTrackedPlayers(message)
+      if (packet != null)
+        sendPacketToTrackedPlayers(packet)
 
       //sendMetadataToAllAssociatedPlayers()
 
       if (sendMoveMsg) {
-        this.encodedPosX = encodedShipPosX
-        this.encodedPosY = encodedShipPosY
-        this.encodedPosZ = encodedShipPosZ
+        this.lastPosX = ShipEntity.posX
+        this.lastPosY = ShipEntity.posY
+        this.lastPosZ = ShipEntity.posZ
       }
       if (sendRotMsg) {
         rotation = ShipEntity.getRotation
@@ -115,8 +116,8 @@ case class ShipTrackerEntry(ShipEntity: EntityShip, TrackingRange: Int, Tracking
     updateCounter += 1
 
     if (ShipEntity.velocityChanged) {
-      val velocityMessage = new ShipVelocityMessage(ShipEntity.ShipID, ShipEntity.motionX, ShipEntity.motionY, ShipEntity.motionZ)
-      sendMessageToTrackedPlayers(velocityMessage)
+      val velocityPacket = PacketSender.sendShipVelocityPacket(ShipEntity.ShipID, ShipEntity.motionX, ShipEntity.motionY, ShipEntity.motionZ)
+      sendPacketToTrackedPlayers(velocityPacket)
       ShipEntity.velocityChanged = false
     }
   }
@@ -148,8 +149,8 @@ case class ShipTrackerEntry(ShipEntity: EntityShip, TrackingRange: Int, Tracking
     lastTrackedEntityMotionY = ShipEntity.motionY
     lastTrackedEntityMotionZ = ShipEntity.motionZ
 
-    val velocityMessage = new ShipVelocityMessage(ShipEntity.ShipID, ShipEntity.motionX, ShipEntity.motionY, ShipEntity.motionZ)
-    FlyingShips.flyingShipPacketHandler.INSTANCE.sendTo(velocityMessage, playerMP)
+    val velocityPacket = PacketSender.sendShipVelocityPacket(ShipEntity.ShipID, ShipEntity.motionX, ShipEntity.motionY, ShipEntity.motionZ)
+    velocityPacket.to(playerMP)
 
   }
 

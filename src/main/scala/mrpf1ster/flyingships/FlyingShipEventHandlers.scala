@@ -4,7 +4,9 @@ import mrpf1ster.flyingships.entities.{ClickSimulator, EntityShipTracker}
 import mrpf1ster.flyingships.render.RenderShip
 import mrpf1ster.flyingships.util.ShipLocator
 import mrpf1ster.flyingships.world.ShipWorld
+import net.minecraft.client.Minecraft
 import net.minecraft.world.WorldServer
+import net.minecraftforge.client.event.RenderGameOverlayEvent
 import net.minecraftforge.event.entity.player.PlayerOpenContainerEvent
 import net.minecraftforge.event.world.{ChunkEvent, WorldEvent}
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent
@@ -31,6 +33,23 @@ class FlyingShipEventHandlers {
   @SubscribeEvent
   def onClientTick(event: TickEvent.ClientTickEvent): Unit = ShipManager.onClientTick(event)
 
+  // Called when rendering a game overlay or something
+  // We need it to insert some debug info about our ships
+  @SideOnly(Side.CLIENT)
+  @SubscribeEvent
+  def onRenderGameOverlay(event: RenderGameOverlayEvent.Text): Unit = {
+    if (event.`type` == RenderGameOverlayEvent.ElementType.TEXT) {
+      // Gets the ship in order of biggest to smallest distance to the player, then flips it so it goes small to big
+      val ships = ShipLocator.getClientShips.toArray.sortBy(ship => ship.getDistanceSqToShipClamped(Minecraft.getMinecraft.thePlayer)).reverse
+      // Produces a string that looks like this:
+      // Active Ship IDs: 1234512, 987421
+      // The dropRight cuts the last comma and space off so it looks pretty
+      val debugString:String = "Active Ship IDs: " + ships.foldRight("")((Ship,acc) => acc + Ship.ShipID + s": ${Ship.Shipworld.BlocksOnShip.size} blocks, ").dropRight(2)
+
+      event.left.add(debugString)
+
+    }
+  }
   // Called basically every tick for some reason I cannot fathom.
   // Also calls when there is a player interacting with a container, that too.
   // Forwarded to our ShipManager

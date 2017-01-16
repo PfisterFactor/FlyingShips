@@ -4,7 +4,7 @@ import java.util.UUID
 import javax.vecmath.Quat4f
 
 import mrpf1ster.flyingships.blocks.ShipCreatorBlock
-import mrpf1ster.flyingships.util.{BoundingBox, UnifiedPos}
+import mrpf1ster.flyingships.util.{BoundingBox, ShipLocator, UnifiedPos}
 import mrpf1ster.flyingships.world.{ShipWorld, ShipWorldClient, ShipWorldServer}
 import net.minecraft.entity.Entity
 import net.minecraft.init.Blocks
@@ -17,27 +17,16 @@ import scala.reflect.io.Path
 /**
   * Created by EJ on 2/21/2016.
   */
-// Holds some global variables relevant to all EntityShips
-// Such as the nextShipID and that's about it
+// Holds some global variables and/or functions relevant to all EntityShips
 object EntityShip {
-  // Holds the ship ID we give to the next Ship created
-  private var nextShipID = 0
 
-  // Increments nextShipID and then returns it subtracted by one
-  // Essentially returns nextShipID and then increments it
-  def incrementShipID(): Int = {
-    nextShipID += 1
-    nextShipID - 1
+  def getNewShipID(): Int = {
+    var newID = scala.util.Random.nextInt(Int.MaxValue)
+    while (ShipLocator.getServerShips.exists(ship => ship.ShipID == newID)) {
+      newID = scala.util.Random.nextInt(Int.MaxValue)
+    }
+    newID
   }
-
-  // Assigns nextShipID to the max between itself and the number passed in
-  def maxShipID(id: Int): Unit = {
-    nextShipID = Math.max(nextShipID, id)
-  }
-
-  // Set it back to zero
-  def resetIDs(): Unit = nextShipID = 0
-
   // Adds a new EntityShip to an EntityShipTracker
   def addShipToWorld(entityShip: EntityShip): Boolean = {
     if (entityShip == null || entityShip.Shipworld == null || entityShip.Shipworld.OriginWorld.isRemote) return false
@@ -191,14 +180,17 @@ class EntityShip(pos: BlockPos, world: World) extends Entity(world) {
   // No backsies!
   override def setDead() = {
     super.setDead()
-    if (Shipworld != null && !Shipworld.isRemote) {
-      //Todo: Think about backing up shipworlds
-      // Flush everything to the disk...
-      Shipworld.getSaveHandler.flush()
-      // and delete recursively the world path
-      Path(Shipworld.getSaveHandler.getWorldDirectory.getPath).deleteRecursively()
+    if (Shipworld != null) {
+      if (Shipworld.isRemote)
+        EntityShipTracker.removeShipClientSide(this)
+      else {
+        //Todo: Think about backing up shipworlds
+        // Flush everything to the disk...
+        Shipworld.getSaveHandler.flush()
+        // and delete recursively the world path
+        Path(Shipworld.getSaveHandler.getWorldDirectory.getPath).deleteRecursively()
+      }
     }
-
   }
 
   // Debug method used to rotate the ship 15 degrees over time on the Z-axis
@@ -264,7 +256,7 @@ class EntityShip(pos: BlockPos, world: World) extends Entity(world) {
     if (!Shipworld.isRemote) {
       debugDoRotate()
       //setRotation(new Quat4f(0, 0, 0, 1f))
-      //setVelocity(1.0f, 0f, 0f)
+      setVelocity(0.1f, 0f, 0f)
     }
 
     moveEntity(motionX, motionY, motionZ)

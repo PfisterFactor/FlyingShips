@@ -250,8 +250,6 @@ object ShipManager {
             entityShip.readEntityFromNBT(nbt)
             // Add it to our ship tracker to notify the clients
             EntityShip.addShipToWorld(entityShip)
-            // If the current shipID is greater than what the shipID we have currently is, change it to that
-            EntityShip.maxShipID(entityShip.ShipID)
           }
         }
       })

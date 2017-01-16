@@ -1,7 +1,7 @@
 package mrpf1ster.flyingships.entities
 
 import mrpf1ster.flyingships.FlyingShips
-import mrpf1ster.flyingships.network.{BlockDiggingMessage, BlockPlacedMessage}
+import mrpf1ster.flyingships.network.PacketSender
 import mrpf1ster.flyingships.util.{ShipLocator, UnifiedPos}
 import mrpf1ster.flyingships.world.{ShipWorld, ShipWorldClient}
 import net.minecraft.block.Block
@@ -458,20 +458,17 @@ object ClickSimulator {
 
     @SideOnly(Side.CLIENT)
     def sendBlockDiggingMessage(shipID: Int, status: C07PacketPlayerDigging.Action, pos: BlockPos, side: EnumFacing) = {
-      val message = new BlockDiggingMessage(status, pos, side, shipID)
-      FlyingShips.flyingShipPacketHandler.INSTANCE.sendToServer(message)
+      PacketSender.sendBlockDiggingPacket(shipID,status,pos,side).toServer()
     }
 
     @SideOnly(Side.CLIENT)
     def sendBlockPlacedMessage(shipID: Int, pos: BlockPos, side: EnumFacing, heldItem: ItemStack, hitVec: Vec3) = {
-      val message = new BlockPlacedMessage(shipID, pos, side.getIndex, heldItem, hitVec)
-      FlyingShips.flyingShipPacketHandler.INSTANCE.sendToServer(message)
+      PacketSender.sendBlockPlacedPacket(shipID,pos,side,heldItem,hitVec).toServer()
     }
 
     @SideOnly(Side.CLIENT)
     def sendBlockPlacedMessage(shipID: Int, itemStack: ItemStack) = {
-      val message = new BlockPlacedMessage(shipID, itemStack)
-      FlyingShips.flyingShipPacketHandler.INSTANCE.sendToServer(message)
+      PacketSender.sendBlockPlacedPacket(shipID,new BlockPos(-1,-1,-1),null,itemStack,new Vec3(-1,-1,-1)).toServer()
     }
 
     // Code adapted from https://bitbucket.org/cuchaz/mod-shared/

@@ -1,7 +1,8 @@
 package mrpf1ster.flyingships.entities
 
 import mrpf1ster.flyingships.CommonProxy
-import mrpf1ster.flyingships.network.DeleteShipMessage
+import mrpf1ster.flyingships.network.PacketSender
+import mrpf1ster.flyingships.render.RenderShip
 import net.minecraft.entity.player.EntityPlayerMP
 import net.minecraftforge.fml.common.gameevent.TickEvent
 import net.minecraftforge.fml.common.gameevent.TickEvent.PlayerTickEvent
@@ -28,6 +29,7 @@ object EntityShipTracker {
   }
 
   def removeShipClientSide(entityShip: EntityShip): Unit = {
+    RenderShip.DisplayListIDs.remove(entityShip.ShipID)
     ClientSideShips.remove(entityShip.ShipID)
   }
 
@@ -41,8 +43,8 @@ object EntityShipTracker {
     if (entityShip.Shipworld.OriginWorld.isRemote) return
     val shipTracker = ships.get(entityShip.ShipID)
     if (shipTracker.isDefined) {
-      val message = new DeleteShipMessage(entityShip.ShipID)
-      shipTracker.get.sendMessageToTrackedPlayers(message)
+      val packet = PacketSender.sendDeleteShipPacket(entityShip.ShipID)
+      shipTracker.get.sendPacketToTrackedPlayers(packet)
     }
     ships.remove(entityShip.ShipID)
   }
