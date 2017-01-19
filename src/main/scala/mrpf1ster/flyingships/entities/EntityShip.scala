@@ -90,7 +90,7 @@ class EntityShip(pos: BlockPos, world: World) extends Entity(world) {
   // Generates a new boundingbox based on the blocks on the ship
   def generateBoundingBox() = {
     if (Shipworld != null)
-      boundingBox = new BoundingBox(BoundingBox.generateRotated(Shipworld.BlocksOnShip.toSet, rotation), BoundingBox.generateRotatedRelative(Shipworld.BlocksOnShip.toSet, rotation), rotation, getPositionVector)
+      boundingBox = new BoundingBox(BoundingBox.generateRotatedRelative(Shipworld.BlocksOnShip.toSet, rotation), getPositionVector)
   }
 
   // Returns ship creator block for the ship
@@ -256,7 +256,7 @@ class EntityShip(pos: BlockPos, world: World) extends Entity(world) {
     if (!Shipworld.isRemote) {
       debugDoRotate()
       //setRotation(new Quat4f(0, 0, 0, 1f))
-      setVelocity(0.1f, 0f, 0f)
+      setVelocity(0.0f, 0f, 0f)
     }
 
     moveEntity(motionX, motionY, motionZ)

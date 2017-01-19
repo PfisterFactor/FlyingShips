@@ -48,8 +48,10 @@ object BoundingBox {
   }
 }
 
-case class BoundingBox(RBB: RotatedBB, RelativeRBB: RotatedBB, Rotation: Quat4f, ShipPos: Vec3) {
+case class BoundingBox(RelativeRBB: RotatedBB, ShipPos: Vec3) {
 
+
+  def Rotation = RelativeRBB.Rotation
 
   val RelativeMinPos = new Vec3(RelativeRBB.Corners.minBy(v => v.xCoord).xCoord, RelativeRBB.Corners.minBy(v => v.yCoord).yCoord, RelativeRBB.Corners.minBy(v => v.zCoord).zCoord)
 
@@ -63,16 +65,16 @@ case class BoundingBox(RBB: RotatedBB, RelativeRBB: RotatedBB, Rotation: Quat4f,
 
   def RelativeAABB: AxisAlignedBB = new AxisAlignedBB(RelativeMinPos.xCoord, RelativeMinPos.yCoord, RelativeMinPos.zCoord, RelativeMaxPos.xCoord, RelativeMaxPos.yCoord, RelativeMaxPos.zCoord)
 
-  def moveTo(X: Double, Y: Double, Z: Double) = this.copy(RBB.moveTo(X, Y, Z), RelativeRBB, Rotation, ShipPos.addVector(X - ShipPos.xCoord, Y - ShipPos.yCoord, Z - ShipPos.zCoord))
+  def moveTo(X: Double, Y: Double, Z: Double) = this.copy(RelativeRBB, ShipPos.addVector(X - ShipPos.xCoord, Y - ShipPos.yCoord, Z - ShipPos.zCoord))
 
   def moveTo(pos: Vec3): BoundingBox = this.moveTo(pos.xCoord, pos.yCoord, pos.zCoord)
 
   // Returns BoundingBox with new rotation
-  def rotateTo(Rotation: Quat4f): BoundingBox = this.copy(RBB.rotateTo(Rotation), RelativeRBB.rotateTo(Rotation), Rotation)
+  def rotateTo(Rotation: Quat4f): BoundingBox = this.copy(RelativeRBB.rotateTo(Rotation))
 
   // Returns BoundingBox with rotation multiplied by the delta rotation
   def rotateBy(DeltaRotation: Quat4f): BoundingBox = {
     Rotation.mul(DeltaRotation)
-    this.copy(RBB.rotateTo(Rotation), RelativeRBB.rotateTo(Rotation), Rotation)
+    this.copy(RelativeRBB.rotateTo(Rotation))
   }
 }
