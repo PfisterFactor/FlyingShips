@@ -23,14 +23,13 @@ import scala.collection.mutable
   * Created by ej on 7/25/16.
   */
 class ShipWorldClient(originWorld: World, ship: EntityShip) extends ShipWorld(originWorld, ship, new UUID(0, 0)) {
-  var doRenderUpdate = false
+
   val ShipRenderGlobal = new ShipRenderGlobal(this)
   val ChunksToRender: mutable.HashSet[ChunkCoordIntPair] = mutable.HashSet()
   private val previousActiveChunkSet: java.util.Set[ChunkCoordIntPair] = Sets.newHashSet[ChunkCoordIntPair]
+  var doRenderUpdate = false
 
   addWorldAccess(ShipRenderGlobal)
-
-
   override def createChunkProvider() = {
     new ClientChunkProviderShip(this)
   }
@@ -38,18 +37,45 @@ class ShipWorldClient(originWorld: World, ship: EntityShip) extends ShipWorld(or
   override def isBlockLoaded(pos: BlockPos, allowEmpty: Boolean) = {
     isValid(pos) && ChunksToRender.contains(new ChunkCoordIntPair(pos.getX >> 4, pos.getZ >> 4))
   }
+
   override def tick() = {
     chunkProvider.unloadQueuedChunks()
     updateBlocks()
+  }
+
+  override def updateBlocks(): Unit = {
+    super.updateBlocks()
+    this.previousActiveChunkSet.retainAll(this.activeChunkSet)
+
+    if (this.previousActiveChunkSet.size == this.activeChunkSet.size) {
+      this.previousActiveChunkSet.clear()
+    }
+
+    var i: Int = 0
+    for (chunkcoordintpair <- this.activeChunkSet) {
+      if (!this.previousActiveChunkSet.contains(chunkcoordintpair)) {
+        val j: Int = chunkcoordintpair.chunkXPos * 16
+        val k: Int = chunkcoordintpair.chunkZPos * 16
+        //this.theProfiler.startSection("getChunk")
+        val chunk: Chunk = this.getChunkFromChunkCoords(chunkcoordintpair.chunkXPos, chunkcoordintpair.chunkZPos)
+        this.playMoodSoundAndCheckLight(j, k, chunk)
+        //this.theProfiler.endSection
+        this.previousActiveChunkSet.add(chunkcoordintpair)
+        i += 1
+        if (i >= 10) {
+          return
+        }
+      }
+    }
   }
 
   override def onChunkLoad(x: Int, z: Int) = chunkProvider.asInstanceOf[ClientChunkProviderShip].onWorldChunkLoad(x, z)
 
   override def onChunkUnload(x: Int, z: Int) = chunkProvider.asInstanceOf[ClientChunkProviderShip].onWorldChunkUnload(x, z)
 
-
   def doRandomDisplayTick() = {
     val relPlayerPos = UnifiedPos.convertToRelative(Minecraft.getMinecraft.thePlayer.getPosition, Ship.getPosition)
+
     // Ripped from doVoidFogParticles in World class
     // Todo: Make a less laggy way to do this
     def doRandomDisplayTickAtPos(posX: Int, posY: Int, posZ: Int) = {
@@ -76,7 +102,6 @@ class ShipWorldClient(originWorld: World, ship: EntityShip) extends ShipWorld(or
 
   }
 
-
   override def addBlockEvent(pos: BlockPos, block: Block, eventID: Int, eventParam: Int) = block.onBlockEventReceived(this, pos, getBlockState(pos), eventID, eventParam)
 
   override def setBlockState(pos: BlockPos, newState: IBlockState, flags: Int) = {
@@ -87,31 +112,6 @@ class ShipWorldClient(originWorld: World, ship: EntityShip) extends ShipWorld(or
     doRenderUpdate = true
 
     result
-  }
-  override def updateBlocks(): Unit = {
-    super.updateBlocks()
-    this.previousActiveChunkSet.retainAll(this.activeChunkSet)
-
-    if (this.previousActiveChunkSet.size == this.activeChunkSet.size) {
-      this.previousActiveChunkSet.clear()
-    }
-
-    var i: Int = 0
-    for (chunkcoordintpair <- this.activeChunkSet) {
-      if (!this.previousActiveChunkSet.contains(chunkcoordintpair)) {
-        val j: Int = chunkcoordintpair.chunkXPos * 16
-        val k: Int = chunkcoordintpair.chunkZPos * 16
-        //this.theProfiler.startSection("getChunk")
-        val chunk: Chunk = this.getChunkFromChunkCoords(chunkcoordintpair.chunkXPos, chunkcoordintpair.chunkZPos)
-        this.playMoodSoundAndCheckLight(j, k, chunk)
-        //this.theProfiler.endSection
-        this.previousActiveChunkSet.add(chunkcoordintpair)
-        i += 1
-        if (i >= 10) {
-          return
-        }
-      }
-    }
   }
 
 }

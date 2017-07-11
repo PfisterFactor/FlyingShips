@@ -45,7 +45,7 @@ public class PlayerManagerShip {
             ChunkCoordIntPair coord = iter.next();
             getPlayerInstance(coord.chunkXPos, coord.chunkZPos, true);
         }
-
+        System.out.println();
     }
 
     public List<EntityPlayer> getPlayers() {

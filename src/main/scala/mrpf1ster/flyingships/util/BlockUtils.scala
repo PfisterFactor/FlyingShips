@@ -10,15 +10,15 @@ import scala.collection.mutable.{Queue => mQueue, Set => mSet}
   * Created by EJ on 2/20/2016.
   */
 object BlockUtils {
-  def loadInClasses = {
+  // Loads in Scala's predefined classes and methods
+  // Implemented cause it caused a cpu stutter when ShipCreatorBlock was first used
+  def loadInClasses(): Unit = {
     def loader = ClassLoader.getSystemClassLoader
     def className(a: Any): String = a.getClass.getName
 
-    // Loads in Scala's predefined classes and methods
-    // Implemented cause it caused a cpu stutter when ShipCreatorBlock was first used
+
+    //loader.loadClass(classOf[PlayerControllerMP].getName)
     loader.loadClass(className(scala.Predef))
-
-
     loader.loadClass(className(mQueue))
     loader.loadClass(className(mSet))
   }

@@ -3,14 +3,14 @@ package mrpf1ster.flyingships
 import java.io.File
 
 import mrpf1ster.flyingships.entities.{ClickSimulator, EntityShip, EntityShipTracker}
-import mrpf1ster.flyingships.util.{ShipLocator, UnifiedVec}
+import mrpf1ster.flyingships.util.{ShipLocator, VectorUtils}
 import mrpf1ster.flyingships.world.chunk.ChunkProviderShip
 import mrpf1ster.flyingships.world.{PlayerRelative, ShipWorld, ShipWorldClient, ShipWorldServer}
 import net.minecraft.client.Minecraft
 import net.minecraft.nbt.{CompressedStreamTools, NBTTagCompound}
 import net.minecraft.util.MovingObjectPosition.MovingObjectType
 import net.minecraft.util.{BlockPos, EnumFacing, MovingObjectPosition, Vec3}
-import net.minecraft.world.WorldServer
+import net.minecraft.world.{World, WorldServer}
 import net.minecraftforge.event.entity.player.PlayerOpenContainerEvent
 import net.minecraftforge.fml.common.eventhandler.Event.Result
 import net.minecraftforge.fml.common.gameevent.TickEvent
@@ -117,10 +117,12 @@ object ShipManager {
       // Makes things like furnace fire and bedrock particles work.
       shipWorld.doRandomDisplayTick()
       // Tell our ClickSimulator to check if this ship has to process any left clicks
-      ClickSimulator.sendClickBlockToController(shipWorld)
+      //ClickSimulator.sendClickBlockToController(shipWorld)
       // Tell our ClickSimulator to check if the ship has to process any right clicks
+      /*
       if (Minecraft.getMinecraft.gameSettings.keyBindUseItem.isKeyDown && ClickSimulator.rightClickDelayTimer == 0 && !Minecraft.getMinecraft.thePlayer.isUsingItem)
         ClickSimulator.rightClickMouse(shipWorld)
+        */
     }
     if (entityShip.Shipworld.isShipValid) {
       // Handles world logic
@@ -151,9 +153,12 @@ object ShipManager {
         ShipWorld.ShipMouseOver = ShipWorld.DEFUALTMOUSEOVER
         return
       }
-      val shipMouseOverVec = UnifiedVec.convertToWorld(ShipWorld.ShipMouseOver.hitVec,ship.get.Shipworld.OriginVec())
+      val shipMouseOverVec = VectorUtils.getRotatedWorldVec(ShipWorld.ShipMouseOver.hitVec, ship.get)
+
+      val distToMouseOver = player.getDistanceSq(mouseOver.hitVec.xCoord, mouseOver.hitVec.yCoord, mouseOver.hitVec.zCoord)
+      val distToShipMouseOver = player.getDistanceSq(shipMouseOverVec.xCoord, shipMouseOverVec.yCoord, shipMouseOverVec.zCoord)
       // If objectMouseOver is closer...
-      if (player.getDistanceSq(mouseOver.hitVec.xCoord, mouseOver.hitVec.yCoord, mouseOver.hitVec.zCoord) < player.getDistanceSq(shipMouseOverVec.xCoord, shipMouseOverVec.yCoord, shipMouseOverVec.zCoord)) {
+      if (distToMouseOver < distToShipMouseOver) {
         // Then ours is a miss
         ShipWorld.ShipMouseOver = ShipWorld.DEFUALTMOUSEOVER
       }
@@ -161,6 +166,57 @@ object ShipManager {
       // However if ours is closer, then objectMouseOver is a miss
         Minecraft.getMinecraft.objectMouseOver = ShipWorld.DEFUALTMOUSEOVER
     }
+  }
+
+  @SideOnly(Side.CLIENT)
+  def onMouseOverHookExpr(): MovingObjectPosition = {
+    val mouseOver = Minecraft.getMinecraft.objectMouseOver
+
+    val player = Minecraft.getMinecraft.thePlayer
+
+    if (mouseOver.typeOfHit != MovingObjectPosition.MovingObjectType.MISS && ShipWorld.ShipMouseOver.typeOfHit != MovingObjectPosition.MovingObjectType.MISS) {
+      // Convert our block-on-ship hit vector to world coords
+      val ship = ShipLocator.getClientShip(ShipWorld.ShipMouseOverID)
+      if (ship.isEmpty) {
+        ShipWorld.ShipMouseOver = ShipWorld.DEFUALTMOUSEOVER
+        Minecraft.getMinecraft.objectMouseOver
+      }
+      val shipMouseOverVec = VectorUtils.getRotatedWorldVec(ShipWorld.ShipMouseOver.hitVec, ship.get)
+
+      val distToMouseOver = player.getDistanceSq(mouseOver.hitVec.xCoord, mouseOver.hitVec.yCoord, mouseOver.hitVec.zCoord)
+      val distToShipMouseOver = player.getDistanceSq(shipMouseOverVec.xCoord, shipMouseOverVec.yCoord, shipMouseOverVec.zCoord)
+
+      // If the ship hit vec is closer then we return our ship hit vec
+      if (distToMouseOver > distToShipMouseOver)
+        ShipWorld.ShipMouseOver
+      else
+        Minecraft.getMinecraft.objectMouseOver
+    }
+    else if (ShipWorld.ShipMouseOver.typeOfHit != MovingObjectType.MISS)
+      ShipWorld.ShipMouseOver
+    else
+      Minecraft.getMinecraft.objectMouseOver
+  }
+
+  @SideOnly(Side.CLIENT)
+  def objectMouseOverReplacerHook(): MovingObjectPosition = {
+    val shipMouseOver = ShipWorld.ShipMouseOver
+    if (ShipWorld.ShipMouseOver != null && ShipWorld.ShipMouseOver.typeOfHit != MovingObjectType.MISS)
+      ShipWorld.ShipMouseOver
+    else
+      Minecraft.getMinecraft.objectMouseOver
+  }
+
+  @SideOnly(Side.CLIENT)
+  def theWorldHook(): World = {
+    if (ShipWorld.ShipMouseOver != null && ShipWorld.ShipMouseOver.typeOfHit != MovingObjectType.MISS) {
+      val ship = ShipLocator.getClientShip(ShipWorld.ShipMouseOverID)
+      if (ship.isDefined) {
+        return ship.get.Shipworld
+      }
+
+    }
+    Minecraft.getMinecraft.theWorld
   }
 
   //noinspection AccessorLikeMethodIsEmptyParen
